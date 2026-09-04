@@ -1,0 +1,16 @@
+{
+  "name": "@echo/backend",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "node dist/tests/run-simulations.js"
+  },
+  "dependencies": {
+    "@echo/shared": "^1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

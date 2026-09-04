@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+<html class="dark" dir="rtl" lang="he"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ECHO · הד</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&amp;family=Plus+Jakarta+Sans:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config injected from provided anchor -->
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+              "on-secondary": "#422c00",
+              "primary": "#f2ca50",
+              "secondary": "#edbf70",
+              "on-primary-container": "#554300",
+              "tertiary-fixed": "#e0e2ef",
+              "on-surface-variant": "#d0c5af",
+              "tertiary-fixed-dim": "#c4c6d3",
+              "surface-tint": "#e9c349",
+              "surface-container-lowest": "#070e1a",
+              "inverse-on-surface": "#2a313e",
+              "on-tertiary-fixed-variant": "#444651",
+              "secondary-container": "#6a4a01",
+              "surface-container-highest": "#2e3542",
+              "surface": "#0c1420",
+              "surface-dim": "#0c1420",
+              "error": "#ffb4ab",
+              "on-error": "#690005",
+              "tertiary-container": "#b0b2bf",
+              "outline-variant": "#4d4635",
+              "on-primary-fixed-variant": "#574500",
+              "surface-container": "#19202c",
+              "on-tertiary-fixed": "#181b25",
+              "primary-container": "#d4af37",
+              "inverse-surface": "#dce2f4",
+              "surface-variant": "#2e3542",
+              "on-primary-fixed": "#241a00",
+              "on-background": "#dce2f4",
+              "background": "#0c1420",
+              "surface-container-high": "#232a37",
+              "tertiary": "#cccdda",
+              "surface-bright": "#323947",
+              "inverse-primary": "#735c00",
+              "on-tertiary": "#2d303a",
+              "on-surface": "#dce2f4",
+              "on-error-container": "#ffdad6",
+              "secondary-fixed-dim": "#edbf70",
+              "on-secondary-container": "#e9bc6c",
+              "surface-container-low": "#151c28",
+              "error-container": "#93000a",
+              "primary-fixed-dim": "#e9c349",
+              "on-tertiary-container": "#42454f",
+              "secondary-fixed": "#ffdea9",
+              "outline": "#99907c",
+              "on-secondary-fixed-variant": "#5f4100",
+              "on-secondary-fixed": "#271900",
+              "on-primary": "#3c2f00",
+              "primary-fixed": "#ffe088"
+            },
+            "borderRadius": {
+              "DEFAULT": "0.125rem",
+              "lg": "0.25rem",
+              "xl": "0.5rem",
+              "full": "0.75rem"
+            },
+            "spacing": {
+              "margin-mobile": "20px",
+              "unit": "8px",
+              "gutter": "24px",
+              "container-max": "1200px",
+              "margin-desktop": "64px",
+              "section-gap": "80px"
+            },
+            "fontFamily": {
+              "headline-md": ["Noto Serif"],
+              "display-lg": ["Noto Serif"],
+              "body-md": ["Plus Jakarta Sans"],
+              "body-lg": ["Plus Jakarta Sans"],
+              "label-caps": ["Plus Jakarta Sans"],
+              "quote-italic": ["Noto Serif"],
+              "display-mobile": ["Noto Serif"]
+            },
+            "fontSize": {
+              "headline-md": ["24px", {"lineHeight": "1.4", "fontWeight": "600"}],
+              "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+              "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+              "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+              "label-caps": ["12px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "600"}],
+              "quote-italic": ["20px", {"lineHeight": "1.5", "fontWeight": "400"}],
+              "display-mobile": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        /* Custom Animations for UI Flourishes */
+        @keyframes slow-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.5; transform: scale(1); box-shadow: 0 0 20px rgba(242, 202, 80, 0.2); }
+            50% { opacity: 1; transform: scale(1.05); box-shadow: 0 0 40px rgba(242, 202, 80, 0.4); }
+        }
+        @keyframes wave-bounce {
+            0%, 100% { height: 4px; }
+            50% { height: 24px; }
+        }
+        
+        .sacred-orb {
+            animation: pulse-glow 4s ease-in-out infinite;
+        }
+        .sacred-ring {
+            animation: slow-spin 20s linear infinite;
+        }
+        .sacred-ring-reverse {
+            animation: slow-spin 25s linear infinite reverse;
+        }
+        
+        .wave-bar {
+            width: 2px;
+            background-color: theme('colors.primary');
+            border-radius: theme('borderRadius.full');
+            animation: wave-bounce 1.2s ease-in-out infinite;
+        }
+        .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+        .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+        .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+        .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+        .wave-bar:nth-child(6) { animation-delay: 0.3s; }
+        .wave-bar:nth-child(7) { animation-delay: 0.2s; }
+        .wave-bar:nth-child(8) { animation-delay: 0.1s; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen selection:bg-primary/20 selection:text-primary">
+<!-- TopAppBar -->
+<header class="bg-surface/80 backdrop-blur-xl fixed top-0 w-full z-50 border-b border-outline-variant/30 shadow-none flex flex-row-reverse justify-between items-center px-margin-mobile h-16">
+<div class="w-8 flex justify-end">
+<!-- Pulsing Status Indicator (Leading Icon translated) -->
+<span class="material-symbols-outlined text-primary text-[10px] animate-pulse" data-icon="lens" data-weight="fill" style="font-variation-settings: 'FILL' 1;">lens</span>
+</div>
+<div class="flex-1 flex justify-center">
+<h1 class="font-display-mobile text-display-mobile tracking-widest text-primary uppercase text-[16px]">ECHO · הד</h1>
+</div>
+<div class="w-8 flex justify-start">
+<span class="material-symbols-outlined text-on-surface-variant hover:opacity-80 transition-opacity cursor-pointer" data-icon="more_vert">more_vert</span>
+</div>
+</header>
+<!-- Canvas Scroll Area -->
+<main class="pt-[100px] pb-section-gap px-margin-mobile flex flex-col gap-[100px] max-w-container-max mx-auto overflow-x-hidden">
+<!-- HERO: Voice Capture -->
+<section class="flex flex-col items-center justify-center min-h-[574px] relative">
+<!-- Background Ambient Glow -->
+<div class="absolute inset-0 bg-primary/5 blur-[100px] rounded-full w-[300px] h-[300px] mx-auto top-1/2 -translate-y-1/2 -z-10"></div>
+<!-- Sacred Geometry Orb -->
+<div class="relative w-48 h-48 flex items-center justify-center mb-8 cursor-pointer group">
+<!-- Outer Ring -->
+<div class="absolute inset-0 border border-primary/20 rounded-full sacred-ring"></div>
+<div class="absolute inset-2 border border-primary/10 rounded-full sacred-ring-reverse rotate-45"></div>
+<!-- Inner Polygon -->
+<div class="absolute inset-6 border border-primary/30 rounded-lg sacred-ring rotate-12"></div>
+<!-- Core Glowing Button -->
+<div class="w-24 h-24 bg-surface-container rounded-full border border-primary/50 shadow-[0_0_30px_rgba(242,202,80,0.3)] sacred-orb flex items-center justify-center relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-tr from-primary/10 to-transparent"></div>
+<span class="material-symbols-outlined text-primary text-4xl opacity-80" style="font-variation-settings: 'FILL' 1;">mic</span>
+</div>
+</div>
+<!-- Timer & Status -->
+<div class="flex flex-col items-center gap-2 mb-10 text-center">
+<span class="font-display-mobile text-display-mobile text-on-surface tracking-wider">00:42</span>
+<span class="font-body-md text-on-surface-variant tracking-wide opacity-80">מקשיב למחשבה הגולמית שלך...</span>
+</div>
+<!-- Minimalist Waveform -->
+<div class="flex items-end justify-center h-[30px] gap-1 mb-16">
+<div class="wave-bar h-[8px]"></div>
+<div class="wave-bar h-[12px]"></div>
+<div class="wave-bar h-[18px]"></div>
+<div class="wave-bar h-[24px]"></div>
+<div class="wave-bar h-[16px]"></div>
+<div class="wave-bar h-[10px]"></div>
+<div class="wave-bar h-[6px]"></div>
+<div class="wave-bar h-[14px]"></div>
+</div>
+<!-- Scroll Indicator -->
+<div class="flex flex-col items-center gap-2 opacity-60 animate-bounce">
+<span class="font-label-caps text-label-caps text-primary tracking-[0.2em] uppercase">גלול להארה</span>
+<span class="material-symbols-outlined text-primary text-sm">arrow_downward</span>
+</div>
+</section>
+<!-- SECTION 2: Epistemic Mirror (מראה אפיסטמית) -->
+<section class="flex flex-col gap-6 relative">
+<div class="flex items-center gap-4 mb-2">
+<div class="w-8 h-[1px] bg-primary/30"></div>
+<h2 class="font-headline-md text-headline-md text-primary opacity-90">מראה אפיסטמית</h2>
+</div>
+<!-- Bento Grid Structure -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Objective Card -->
+<div class="bg-surface-container/30 backdrop-blur-md border border-primary/20 rounded-xl p-6 relative overflow-hidden hover:bg-surface-container/50 transition-colors">
+<div class="absolute top-0 right-0 w-16 h-16 bg-primary/5 blur-xl"></div>
+<span class="block font-label-caps text-label-caps text-primary mb-3">יעד (Objective)</span>
+<p class="font-body-lg text-body-lg text-on-surface">סבב גיוס A - הערכת שווי והקצאה</p>
+</div>
+<!-- Observations Card -->
+<div class="bg-surface-container/30 backdrop-blur-md border border-outline-variant/30 rounded-xl p-6 relative overflow-hidden hover:border-primary/20 transition-colors">
+<span class="block font-label-caps text-label-caps text-on-surface-variant mb-3">תצפיות עובדתיות (Observations)</span>
+<p class="font-body-md text-body-md text-on-surface/90">צמיחה עקבית 28% MoM, 3 לקוחות Enterprise</p>
+</div>
+<!-- Assumptions Card -->
+<div class="bg-surface-container/30 backdrop-blur-md border border-outline-variant/30 rounded-xl p-6 relative overflow-hidden hover:border-primary/20 transition-colors">
+<span class="block font-label-caps text-label-caps text-on-surface-variant mb-3">הנחות סמויות (Assumptions)</span>
+<p class="font-body-md text-body-md text-on-surface/90">שימור לקוחות ישאר מעל 90% גם לאחר העלאת מחיר</p>
+</div>
+<!-- Unknowns Card -->
+<div class="bg-surface-container/30 backdrop-blur-md border border-outline-variant/30 rounded-xl p-6 relative overflow-hidden hover:border-primary/20 transition-colors">
+<span class="block font-label-caps text-label-caps text-on-surface-variant mb-3">נעלמים קריטיים (Unknowns)</span>
+<p class="font-body-md text-body-md text-on-surface/90">תגובת המתחרה המוביל ברבעון הבא</p>
+</div>
+</div>
+</section>
+<!-- SECTION 3: Single Illumination Question -->
+<section class="py-10">
+<div class="bg-surface-container-high border border-primary/40 rounded-xl p-8 relative shadow-[0_0_40px_rgba(242,202,80,0.05)] overflow-hidden">
+<!-- Edge Highlight -->
+<div class="absolute top-0 right-0 w-1 h-full bg-primary/80"></div>
+<div class="absolute inset-0 bg-gradient-to-bl from-primary/5 to-transparent pointer-events-none"></div>
+<span class="block font-label-caps text-label-caps text-secondary mb-6 tracking-widest">שאלת הארה יחידה</span>
+<h3 class="font-quote-italic text-quote-italic text-on-surface mb-10 leading-relaxed border-r-2 border-primary/30 pr-4">
+                    "מהו הסימן המקדים הראשון שיוכיח כי הנחת המחיר שלך שגויה ביסודה?"
+                </h3>
+<!-- Minimalist Input Prompt -->
+<div class="flex items-center gap-3 border-b border-outline-variant/50 pb-2">
+<span class="material-symbols-outlined text-primary/70 text-sm">edit</span>
+<input class="bg-transparent border-none w-full text-on-surface font-body-md focus:ring-0 focus:outline-none placeholder:text-on-surface-variant/50" placeholder="הקלד תובנה..." type="text"/>
+<button class="w-8 h-8 flex items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-sm">arrow_upward</span>
+</button>
+</div>
+</div>
+</section>
+<!-- SECTION 4: Evaluation Contract & Analogy -->
+<section class="flex flex-col gap-6 pb-20">
+<div class="flex items-center gap-4 mb-2">
+<div class="w-8 h-[1px] bg-outline-variant/50"></div>
+<h2 class="font-label-caps text-label-caps text-on-surface-variant tracking-widest">חוזה הערכה</h2>
+</div>
+<div class="flex flex-wrap gap-3">
+<!-- Metadata Pills -->
+<div class="flex items-center gap-2 border border-outline-variant/40 rounded-full px-5 py-2.5 bg-surface-container/20 hover:border-primary/40 transition-colors cursor-default">
+<span class="material-symbols-outlined text-on-surface-variant text-[16px]">calendar_month</span>
+<span class="font-body-md text-[14px] text-on-surface/80">תאריך ביקורת (Target Review: 15.11.2026)</span>
+</div>
+<div class="flex items-center gap-2 border border-outline-variant/40 rounded-full px-5 py-2.5 bg-surface-container/20 hover:border-primary/40 transition-colors cursor-default">
+<span class="material-symbols-outlined text-on-surface-variant text-[16px]">done_all</span>
+<span class="font-body-md text-[14px] text-on-surface/80">מדד הצלחה מוגדר</span>
+</div>
+<div class="flex items-center gap-2 border border-primary/30 rounded-full px-5 py-2.5 bg-primary/5 hover:bg-primary/10 transition-colors cursor-default shadow-[0_0_15px_rgba(242,202,80,0.05)]">
+<span class="material-symbols-outlined text-primary text-[16px]">account_tree</span>
+<span class="font-body-md text-[14px] text-primary">ציון אנלוגיה מבנית (Tri-Factor Match 89% עם החלטה #2024-04)</span>
+</div>
+</div>
+</section>
+</main>
+</body></html>
