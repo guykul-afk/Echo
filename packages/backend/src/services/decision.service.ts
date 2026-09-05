@@ -5,6 +5,7 @@ import {
   DecisionSignature,
   EpistemicState,
   IlluminationQuestion,
+  FiveHumanDimensions,
   FourHumanDimensions,
   RefinedInsight
 } from '@echo/shared';
@@ -29,7 +30,7 @@ export interface CaseSessionState {
   illuminationQuestion: string;
   epistemicState?: EpistemicState;
   bespokeQuestion?: IlluminationQuestion;
-  humanDimensions?: FourHumanDimensions;
+  humanDimensions?: FiveHumanDimensions;
   refinedInsight?: RefinedInsight;
 }
 
@@ -62,7 +63,7 @@ export class DecisionService {
 
     let epistemicState: EpistemicState | undefined;
     let bespokeQuestion: IlluminationQuestion | undefined;
-    let humanDimensions: FourHumanDimensions | undefined = extracted.fourDimensions;
+    let humanDimensions: FiveHumanDimensions | undefined = extracted.fiveDimensions || (extracted.fourDimensions as FiveHumanDimensions);
     let refinedInsight: RefinedInsight | undefined = extracted.refinedInsight;
 
     if (this.aiProvider.extractCognitiveEngine) {
@@ -90,17 +91,22 @@ export class DecisionService {
       };
     }
 
-    // Default 4 Human Dimensions fallback if not extracted
+    // Default 5 Human Dimensions fallback if not extracted
     if (!humanDimensions) {
+      const obs = extracted.statements.filter(s => s.role === 'observation').map(s => s.text).join(', ');
+      const ass = extracted.statements.filter(s => s.role === 'assumption').map(s => s.text).join(', ');
+      const unk = extracted.statements.filter(s => s.role === 'unknown').map(s => s.text).join(', ');
+
       humanDimensions = {
         consideration: extracted.title,
         goalsPrices: `הבנתי שחשוב לך: ${extracted.goal}`,
-        reliance: extracted.statements.filter(s => s.role === 'observation' || s.role === 'assumption').map(s => s.text).join(', ') || 'נתונים שהוזנו',
-        unknowns: extracted.statements.filter(s => s.role === 'unknown').map(s => s.text).join(', ') || 'פערי מידע טרם הובהרו'
+        facts: obs || 'נתונים שהוזנו בפועל',
+        assumptions: ass || 'הנחות עבודה לגבי העתיד',
+        missingInfo: unk || 'פערי מידע שטרם הובהרו'
       };
     }
 
-    // 3. Construct Decision Case with 4 Human Dimensions & Adaptive Friction
+    // 3. Construct Decision Case with 5 Human Dimensions & Adaptive Friction
     const decisionCase: DecisionCase = {
       id: caseId,
       userId: dto.userId,
@@ -117,8 +123,11 @@ export class DecisionService {
       frictionLevel: dto.frictionLevel || 'focused',
       dimConsideration: humanDimensions.consideration,
       dimGoalsPrices: humanDimensions.goalsPrices,
-      dimReliance: humanDimensions.reliance,
-      dimUnknowns: humanDimensions.unknowns,
+      dimFacts: humanDimensions.facts,
+      dimAssumptions: humanDimensions.assumptions,
+      dimMissingInfo: humanDimensions.missingInfo,
+      dimReliance: `${humanDimensions.facts || ''} | ${humanDimensions.assumptions || ''}`.trim(),
+      dimUnknowns: humanDimensions.missingInfo,
       aiInterventionUsed: bespokeQuestion?.questionText || extracted.illuminationQuestion,
       refinedInsight,
       createdAt: now,
@@ -188,7 +197,7 @@ export class DecisionService {
     return sessionState;
   }
 
-  async updateMirror(caseId: string, updates: Partial<FourHumanDimensions>): Promise<DecisionCase> {
+  async updateMirror(caseId: string, updates: Partial<FiveHumanDimensions>): Promise<DecisionCase> {
     const session = DecisionService.casesCache.get(caseId);
     if (!session) {
       throw new Error(`Case ${caseId} not found.`);
@@ -196,6 +205,9 @@ export class DecisionService {
 
     if (updates.consideration) session.decisionCase.dimConsideration = updates.consideration;
     if (updates.goalsPrices) session.decisionCase.dimGoalsPrices = updates.goalsPrices;
+    if (updates.facts) session.decisionCase.dimFacts = updates.facts;
+    if (updates.assumptions) session.decisionCase.dimAssumptions = updates.assumptions;
+    if (updates.missingInfo) session.decisionCase.dimMissingInfo = updates.missingInfo;
     if (updates.reliance) session.decisionCase.dimReliance = updates.reliance;
     if (updates.unknowns) session.decisionCase.dimUnknowns = updates.unknowns;
 

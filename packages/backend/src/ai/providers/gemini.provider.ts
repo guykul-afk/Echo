@@ -9,8 +9,8 @@ export class GeminiAiProvider implements IAiProvider {
 
   constructor(
     apiKey?: string,
-    cognitiveModel: string = 'gemini-2.0-flash',
-    transcribeModel: string = 'gemini-2.0-flash'
+    cognitiveModel: string = process.env.COGNITIVE_MODEL || 'gemini-3.6',
+    transcribeModel: string = process.env.TRANSCRIBE_MODEL || 'gemini-3.5-transcribe'
   ) {
     this.apiKey = apiKey || process.env.GEMINI_API_KEY || '';
     this.cognitiveModel = cognitiveModel;
@@ -18,7 +18,7 @@ export class GeminiAiProvider implements IAiProvider {
   }
 
   /**
-   * Tier 1: Audio Transcribe
+   * Tier 1: Model 3.5 Transcribe (Verbatim Audio Speech-to-Text)
    */
   async transcribeAudio(audioBuffer: Buffer, mimeType: string = 'audio/mp3'): Promise<string> {
     if (!this.apiKey) {

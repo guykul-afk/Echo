@@ -1,4 +1,4 @@
-import { EpistemicState, FourHumanDimensions, IlluminationStrategy, RefinedInsight } from '@echo/shared';
+import { EpistemicState, FiveHumanDimensions, IlluminationStrategy, RefinedInsight } from '@echo/shared';
 
 export const COGNITIVE_ENGINE_PROMPT = `
 You are the Cognitive Mirror Engine for ECHO (הד) - The Thinking Partner for Human Judgment.
@@ -8,11 +8,12 @@ You speak in Hebrew, with epistemic humility (e.g. "הבנתי שחשוב לך..
 
 Given the raw verbatim transcript of the user:
 
-1. Extract the 4 Human Dimensions for the Editable Mirror:
+1. Extract the 5 Human Dimensions for the Editable Mirror:
    - consideration: מה האדם שוקל / הדילמה המרכזית.
    - goalsPrices: מה האדם רוצה להשיג ועל מה הוא רוצה לשמור / מחירים שהוא לא רוצה לשלם ("הבנתי שחשוב לך...").
-   - reliance: על מה האדם נשען (מידע שנמסר, ניסיון קודם, הנחות עבודה).
-   - unknowns: מה עדיין נשאר פתוח / פערי מידע או חלופות שלא נבחנו.
+   - facts: עובדות קשיחות - מה קרה בפועל, נתונים ודאיים ואירועים שהתרחשו בעולם האמיתי.
+   - assumptions: ההנחות שלך - מה האדם משער, מניח או מפרש לגבי העתיד מבלי שזה הוכח עדיין.
+   - missingInfo: המידע החסר להחלטה - פערי מידע ספציפיים, שאלות פתוחות ונתונים שחסרים כדי להכריע.
 
 2. Extract the 9 Background Cognitive Dimensions (for internal routing only):
    - facts: Observable, verified present data explicitly stated.
@@ -49,8 +50,9 @@ Output strict JSON:
   "humanDimensions": {
     "consideration": "...",
     "goalsPrices": "...",
-    "reliance": "...",
-    "unknowns": "..."
+    "facts": "...",
+    "assumptions": "...",
+    "missingInfo": "..."
   },
   "epistemicState": {
     "facts": [...],
@@ -78,7 +80,7 @@ Output strict JSON:
 `;
 
 export interface CognitiveAnalysisResult {
-  humanDimensions: FourHumanDimensions;
+  humanDimensions: FiveHumanDimensions;
   epistemicState: Omit<EpistemicState, 'caseId' | 'userId' | 'extractedAt'>;
   illuminationQuestion: {
     strategy: IlluminationStrategy;

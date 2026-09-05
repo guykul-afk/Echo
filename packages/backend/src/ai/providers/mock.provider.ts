@@ -25,6 +25,9 @@ export class MockAiProvider implements IAiProvider {
         fourDimensions: {
           consideration: 'מעבר לתפקיד חדש',
           goalsPrices: 'התקדמות והכנסה גבוהה יותר, תוך שמירה על זמן ונוכחות בבית',
+          facts: 'הוצעה הצעה קונקרטית עם שכר משופר',
+          assumptions: 'התפקיד ידרוש שעות מרובות ללא גמישות בערבים',
+          missingInfo: 'מה יהיו שעות העבודה וציפיות הזמינות בערבים בפועל',
           reliance: 'הצעת שכר משופרת, חשש כללי מפגיעה בזמינות',
           unknowns: 'מה יהיו שעות העבודה והזמינות בערבים בפועל'
         },
@@ -67,6 +70,9 @@ export class MockAiProvider implements IAiProvider {
         fourDimensions: {
           consideration: 'המשך השקעה בפרויקט אטלס לעוד 3 חודשים',
           goalsPrices: 'אימות נכונות לשלם מבלי להקריב את כל משאבי הפיתוח',
+          facts: 'שני לקוחות פוטנציאליים רוצים לבדוק את המוצר, כבר הושקעו 200K ואין עדיין לקוח משלם',
+          assumptions: 'הלקוחות המתעניינים יסכימו להמיר לשימוש בתשלום, והפיתוח יסתיים במועד',
+          missingInfo: 'האם נכונות לשלם מחייבת 3 חודשי פיתוח נוספים או ניתנת לבדיקה מקדימה',
           reliance: 'שני לקוחות פוטנציאליים רוצים לבדוק את המוצר, השקענו כבר 200K',
           unknowns: 'האם נכונות לשלם מחייבת 3 חודשים או ניתנת לבדיקה מהירה'
         },
@@ -108,6 +114,9 @@ export class MockAiProvider implements IAiProvider {
       fourDimensions: {
         consideration: rawText.slice(0, 100),
         goalsPrices: 'השגת המטרה במינימום מחיר וסיכון',
+        facts: rawText.slice(0, 80),
+        assumptions: 'קיימת חלופה מרכזית שנבחנת ועשויה להביא תוצאה טובה יותר',
+        missingInfo: 'מידע חסר לבחינה מחודשת של הכיוון',
         reliance: 'הנחות עבודה ונתונים ראשוניים',
         unknowns: 'מידע חסר לבחינה מחודשת'
       },
@@ -143,6 +152,9 @@ export class MockAiProvider implements IAiProvider {
         humanDimensions: {
           consideration: 'מעבר לתפקיד חדש',
           goalsPrices: 'התקדמות והכנסה גבוהה יותר, תוך שמירה על זמן ונוכחות בבית',
+          facts: 'הוצעה הצעת עבודה ממשית עם שכר משופר',
+          assumptions: 'התפקיד החדש יפגע בזמן עם הילדים וידרוש זמינות בערבים',
+          missingInfo: 'מה יהיו שעות העבודה וציפיות הזמינות בערבים בפועל',
           reliance: 'הצעת שכר טובה יותר, חשש כללי מפגיעה בזמינות',
           unknowns: 'מה יהיו שעות העבודה והזמינות בערבים בפועל'
         },
@@ -176,6 +188,9 @@ export class MockAiProvider implements IAiProvider {
         humanDimensions: {
           consideration: 'המשך השקעה בפרויקט אטלס',
           goalsPrices: 'אימות היתכנות מסחרית מבלי לשרוף משאבים',
+          facts: 'שני לקוחות פוטנציאליים רוצים לבדוק את המוצר, כבר הושקעו 200K ואין לקוח משלם עדיין',
+          assumptions: 'הלקוחות המתעניינים יסכימו להמיר לשימוש בתשלום, והפיתוח יסתיים תוך 3 חודשים',
+          missingInfo: 'האם נכונות לשלם מחייבת 3 חודשי פיתוח נוספים או ניתנת לבדיקה מקדימה',
           reliance: 'שני לקוחות רוצים לבדוק, השקעה של 200K',
           unknowns: 'האם נכונות לשלם מחייבת 3 חודשים נוספים'
         },
@@ -208,6 +223,9 @@ export class MockAiProvider implements IAiProvider {
       humanDimensions: {
         consideration: rawText.slice(0, 80),
         goalsPrices: 'השגת היעד בביטחון',
+        facts: rawText.slice(0, 80),
+        assumptions: 'הכיוון המוביל יביא לתוצאה הטובה ביותר',
+        missingInfo: 'תנאי אימות ונתונים נוספים',
         reliance: 'מידע ראשוני שהוזן',
         unknowns: 'מידע חסר לבחינה מחודשת'
       },

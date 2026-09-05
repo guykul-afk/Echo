@@ -4,7 +4,7 @@ import { LuxuryTheme } from './theme/colors.js';
 import { QuickCaptureScreen } from './screens/QuickCaptureScreen.js';
 import { DecisionRoomScreen } from './screens/DecisionRoomScreen.js';
 import { OutcomeModal } from './screens/OutcomeModal.js';
-import { DecisionCase, Option, DecisionSignature, RefinedInsight, QuickLoopStatus } from '@echo/shared';
+import { DecisionCase, Option, DecisionSignature, RefinedInsight, QuickLoopStatus, FiveHumanDimensions } from '@echo/shared';
 
 type AppStep = 'capture' | 'decision_room' | 'outcome';
 
@@ -89,14 +89,17 @@ export const App: React.FC = () => {
   };
 
   // 3. Handle Mirror Live Update
-  const handleMirrorUpdate = (updates: { consideration: string; goalsPrices: string; reliance: string; unknowns: string }) => {
+  const handleMirrorUpdate = (updates: FiveHumanDimensions) => {
     if (activeCase) {
       setActiveCase({
         ...activeCase,
         dimConsideration: updates.consideration,
         dimGoalsPrices: updates.goalsPrices,
-        dimReliance: updates.reliance,
-        dimUnknowns: updates.unknowns,
+        dimFacts: updates.facts,
+        dimAssumptions: updates.assumptions,
+        dimMissingInfo: updates.missingInfo,
+        dimReliance: updates.reliance || `${updates.facts} | ${updates.assumptions}`,
+        dimUnknowns: updates.unknowns || updates.missingInfo,
         updatedAt: Date.now()
       });
     }

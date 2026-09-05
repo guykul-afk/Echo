@@ -63,8 +63,11 @@ export interface DecisionCase {
   frictionLevel?: FrictionLevel;
   dimConsideration?: string; // אתה שוקל
   dimGoalsPrices?: string;   // אתה רוצה להשיג / לשמור
-  dimReliance?: string;      // על מה אתה נשען
-  dimUnknowns?: string;      // עדיין לא ברור
+  dimFacts?: string;         // עובדות קשיחות
+  dimAssumptions?: string;   // ההנחות שלך
+  dimMissingInfo?: string;   // מידע חסר להחלטה
+  dimReliance?: string;      // deprecated: על מה אתה נשען
+  dimUnknowns?: string;      // deprecated: עדיין לא ברור
   aiInterventionUsed?: string;
   nextStep?: string;
   refinedInsight?: RefinedInsight;

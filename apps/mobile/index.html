@@ -167,7 +167,7 @@
           <span class="opacity-90">זה משקף אותך? <strong>כל שדה ניתן לעריכה ישירה ומיידית</strong> — ההחלטה היא שלך.</span>
         </div>
 
-        <!-- 4 Human Dimensions (Live Editable Textareas) -->
+        <!-- 5 Human Dimensions (Live Editable Textareas) -->
         <div class="space-y-3.5 mb-6">
           
           <!-- Dimension 1: Consideration (אתה שוקל) -->
@@ -206,40 +206,60 @@
             ></textarea>
           </div>
 
-          <!-- Dimension 3: Core Reliance (אתה נשען על) -->
-          <div class="p-3.5 rounded-xl border backdrop-blur-sm transition-all focus-within:border-amber-400" style="background-color: var(--c-glass); border-color: var(--c-border);">
+          <!-- Dimension 3: Hard Facts (עובדות קשיחות) -->
+          <div class="p-3.5 rounded-xl border backdrop-blur-sm transition-all focus-within:border-sky-400" style="background-color: var(--c-glass); border-color: var(--c-border);">
             <div class="flex items-center justify-between mb-1.5">
-              <span class="text-[11px] font-semibold text-amber-200/90 flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-amber-300"></span>
-                ▲ אתה נשען על (הנחת ציר):
+              <span class="text-[11px] font-semibold text-sky-300/90 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+                🧱 עובדות קשיחות:
               </span>
-              <span class="text-[10px] opacity-40 font-mono">הנחת היסוד</span>
+              <span class="text-[10px] opacity-40 font-mono text-sky-200">מה כבר קרה בפועל</span>
             </div>
             <textarea 
-              id="editReliance" 
+              id="editFacts" 
               rows="2" 
               oninput="onDimensionEdited(this)"
-              placeholder="על איזו הנחה מרכזית הטיעון או ההחלטה שלך עומדים כרגע..."
+              placeholder="נתונים, התרחשויות קונקרטיות ומידע ודאי..."
               class="w-full bg-transparent border-0 p-0 text-xs text-right focus:outline-none font-light opacity-95 resize-none leading-relaxed overflow-hidden"
             ></textarea>
           </div>
 
-          <!-- Dimension 4: Critical Unknowns (עדיין לא ברור) -->
+          <!-- Dimension 4: Assumptions (ההנחות שלך) -->
           <div class="p-3.5 rounded-xl border backdrop-blur-sm transition-all focus-within:border-amber-400" style="background-color: var(--c-glass); border-color: var(--c-border);">
             <div class="flex items-center justify-between mb-1.5">
-              <span class="text-[11px] font-semibold text-stone-300 flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-stone-500"></span>
-                ? עדיין לא ברור (סימני שאלה):
+              <span class="text-[11px] font-semibold text-amber-200/90 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-300"></span>
+                💭 ההנחות שלך:
               </span>
-              <span class="text-[10px] opacity-40 font-mono">אי-ודאות</span>
+              <span class="text-[10px] opacity-40 font-mono text-amber-300">מה שאתה משער/צופה</span>
             </div>
             <textarea 
-              id="editUnknowns" 
+              id="editAssumptions" 
               rows="2" 
               oninput="onDimensionEdited(this)"
-              placeholder="איזה מידע חסר לך? מה עדיין אינך יודע או לא בדקת..."
+              placeholder="על מה אתה נשען? מה אתה משער שיקרה בעתיד..."
               class="w-full bg-transparent border-0 p-0 text-xs text-right focus:outline-none font-light opacity-95 resize-none leading-relaxed overflow-hidden"
             ></textarea>
+            <input type="hidden" id="editReliance" />
+          </div>
+
+          <!-- Dimension 5: Missing Information (מידע חסר להחלטה) -->
+          <div class="p-3.5 rounded-xl border backdrop-blur-sm transition-all focus-within:border-rose-400" style="background-color: var(--c-glass); border-color: var(--c-border);">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-[11px] font-semibold text-rose-300 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                🔍 מידע חסר לקבלת החלטה:
+              </span>
+              <span class="text-[10px] opacity-40 font-mono text-rose-200">פערי מידע ושאלות</span>
+            </div>
+            <textarea 
+              id="editMissingInfo" 
+              rows="2" 
+              oninput="onDimensionEdited(this)"
+              placeholder="איזה מידע חסר לך כרגע כדי להכריע בוודאות גבוהה יותר..."
+              class="w-full bg-transparent border-0 p-0 text-xs text-right focus:outline-none font-light opacity-95 resize-none leading-relaxed overflow-hidden"
+            ></textarea>
+            <input type="hidden" id="editUnknowns" />
           </div>
 
         </div>
@@ -928,6 +948,15 @@
       const editGoals = document.getElementById('editGoalsPrices');
       if (editGoals) editGoals.value = '';
 
+      const editFacts = document.getElementById('editFacts');
+      if (editFacts) editFacts.value = '';
+
+      const editAss = document.getElementById('editAssumptions');
+      if (editAss) editAss.value = '';
+
+      const editMiss = document.getElementById('editMissingInfo');
+      if (editMiss) editMiss.value = '';
+
       const editRel = document.getElementById('editReliance');
       if (editRel) editRel.value = '';
 
@@ -1392,36 +1421,44 @@
       let title = 'שקילת מעבר לתפקיד חדש מול זמן עם הילדים';
       let consideration = 'מעבר לתפקיד ניהולי חדש עם שכר גבוה יותר, מול שמירה על שעות נוכחות בבית עם הילדים';
       let goalsPrices = 'להשיג: ביטחון כלכלי והתקדמות מקצועית. לשמור: ערבים פנויים עם המשפחה ללא שחיקה';
-      let reliance = 'התפקיד החדש יחייב זמינות מסביב לשעון ללא גמישות';
-      let unknowns = 'מהי תרבות העבודה האמיתית בצוות? האם אפשר לעגן יום ללא עבודה בערב?';
+      let facts = 'הוצעה הצעה רשמית לתפקיד חדש עם שכר גבוה יותר';
+      let assumptions = 'התפקיד החדש יחייב זמינות מסביב לשעון ללא גמישות בערב';
+      let missingInfo = 'מהי תרבות העבודה האמיתית בצוות? האם אפשר לעגן יום ללא עבודה בערב?';
+      let reliance = assumptions;
+      let unknowns = missingInfo;
       let question = 'אם לא ניתן לקבל את שניהם במלואם, על איזה מחיר פחות תהיה מוכן לשלם?';
 
       if (text.includes('אטלס') || text.includes('atlas')) {
         title = 'האם להמשיך להשקיע בפרויקט אטלס לעוד 3 חודשים';
         consideration = 'המשך פיתוח של 3 חודשים נוספים כדי לאמת נכונות לשלם';
         goalsPrices = 'להשיג: אימות שוק ולקוחות משלמים. לשמור: קיבולת הצוות והתקציב';
-        reliance = 'הלקוחות המתעניינים יסכימו לשלם אם המוצר יכלול עוד תכונות';
-        unknowns = 'האם הם יסכימו לפיילוט מצומצם בתשלום סמלי כבר עכשיו?';
+        facts = 'שני לקוחות רוצים לבדוק את המוצר, כבר הושקעו 200K ועדיין אין לקוח משלם בפועל';
+        assumptions = 'הלקוחות המתעניינים יסכימו לשלם אם המוצר יכלול עוד תכונות בתוך 3 חודשים';
+        missingInfo = 'האם הם יסכימו לפיילוט מצומצם בתשלום סמלי כבר עכשיו לפני פיתוח מלא?';
+        reliance = assumptions;
+        unknowns = missingInfo;
         question = 'איזו בדיקה קטנה של שבועיים תפריך או תאמת נכונות לשלם לפני 3 חודשי פיתוח?';
       } else if (!text.includes('תפקיד') && !text.includes('ילדים') && !text.includes('שכר')) {
         title = rawVerbatim.slice(0, 50) + (rawVerbatim.length > 50 ? '...' : '');
         consideration = rawVerbatim;
         goalsPrices = 'לבחון את כדאיות המהלך ולהשיג את המטרה, תוך מזעור עלויות ומניעת פגיעה בשגרה';
+        facts = rawVerbatim.slice(0, 100);
         
-        // Extract reliance if text has "מול", "אבל", "חושש", "כי"
         if (text.includes('אבל') || text.includes('בעייתי') || text.includes('מול')) {
-          reliance = 'החיסרון או המגבלה שנצפו (כגון טווח/זמינות) יקשו באופן משמעותי על ההתנהלות';
+          assumptions = 'המגבלה או החשש שנצפו יקשו באופן משמעותי על ההתנהלות ועל השגת היעד';
         } else {
-          reliance = 'התנאים הנוכחיים וההנחות שבבסיס הבדיקה משקפים את המציאות';
+          assumptions = 'התנאים הנוכחיים וההערכות שבבסיס הבדיקה יתממשו כפי שתוכנן';
         }
 
         if (text.includes('טווח') || text.includes('מרחק') || text.includes('רכב')) {
-          unknowns = 'מהם הנתונים הממשיים בפועל (כגון זמני טעינה, פריסת עמדות, עלויות אמיתיות)?';
+          missingInfo = 'מהם הנתונים הממשיים בפועל (כגון זמני טעינה, פריסת עמדות, עלויות אמיתיות)?';
           question = 'אם יתברר שהמגבלה פחות משמעותית ממה שנדמה כעת, כיצד זה ישנה את החלטתך?';
         } else {
-          unknowns = 'איזה מידע חסר לך כדי להכריע בוודאות גבוהה יותר?';
+          missingInfo = 'איזה מידע חסר לך כדי להכריע בוודאות גבוהה יותר?';
           question = 'מהו הנתון האחד שאם יתברר כשונה לחלוטין ממה שאתה מניח, יהפוך את ההחלטה?';
         }
+        reliance = assumptions;
+        unknowns = missingInfo;
       }
 
       const decisionRecord = {
@@ -1432,10 +1469,13 @@
         title: title,
         consideration: consideration,
         goalsPrices: goalsPrices,
+        facts: facts,
+        assumptions: assumptions,
+        missingInfo: missingInfo,
         reliance: reliance,
         unknowns: unknowns,
         question: `"${question.replace(/^"|"$/g, '').trim()}"`,
-        insightBefore: reliance,
+        insightBefore: assumptions || reliance,
         insightNow: 'בדיקה ממוקדת של הנחת הציר לפני התחייבות',
         insightChosenStep: 'בירור מפורש של שאלת המפתח מול הצד השני',
         selectedDays: 14
@@ -1470,14 +1510,15 @@
 הטקסט הגולמי שהוקפא בלכידה:
 """${rawVerbatim}"""
 
-חלץ פלט JSON מדויק לפי 4 הממדים האנושיים:
+חלץ פלט JSON מדויק לפי 5 הממדים האנושיים:
 - title: כותרת קצרה ומדויקת של הדילמה (עד 7 מילים)
 - consideration: "אתה שוקל:" — ניסוח בהיר בגוף שני של הדילמה או האפשרות הנבחנת
 - goalsPrices: "הבנתי שחשוב לך להשיג ולשמור:" — מה המשתמש שואף להשיג, ועל מה הוא רוצה לשמור או לא לשלם
-- reliance: "אתה נשען על:" — הנחת הציר המרכזית שעליה עומד הטיעון שלו
-- unknowns: "עדיין לא ברור:" — איזה מידע חסר או סימן שאלה מרכזי קיים
-- question: שאלת הארה סוקרטית אחת בלבד, חדה ומאירה, המאתגרת את הנחת הציר ללא שיפוטיות
-- insightBefore: מה המשתמש הניח או חשב בנקודת המוצא (מבוסס על הנחת הציר שלו)
+- facts: "עובדות קשיחות:" — מה כבר קרה בפועל, נתונים מוצקים ומידע ודאי
+- assumptions: "ההנחות שלך:" — מה המשתמש משער, מניח או צופה לגבי העתיד
+- missingInfo: "מידע חסר לקבלת החלטה:" — אילו פערי מידע או שאלות פתוחות מונעים הכרעה
+- question: שאלת הארה סוקרטית אחת בלבד, חדה ומאירה, המאתגרת את ההנחה המרכזית ללא שיפוטיות
+- insightBefore: מה המשתמש הניח או חשב בנקודת המוצא (מבוסס על ההנחות שלו)
 - initialStep: הצעד המעשי והממוקד ביותר להמשך בירור או פעולה
 `;
 
@@ -1496,13 +1537,14 @@
                   title: { type: 'STRING' },
                   consideration: { type: 'STRING' },
                   goalsPrices: { type: 'STRING' },
-                  reliance: { type: 'STRING' },
-                  unknowns: { type: 'STRING' },
+                  facts: { type: 'STRING' },
+                  assumptions: { type: 'STRING' },
+                  missingInfo: { type: 'STRING' },
                   question: { type: 'STRING' },
                   insightBefore: { type: 'STRING' },
                   initialStep: { type: 'STRING' }
                 },
-                required: ['title', 'consideration', 'goalsPrices', 'reliance', 'unknowns', 'question', 'insightBefore', 'initialStep']
+                required: ['title', 'consideration', 'goalsPrices', 'facts', 'assumptions', 'missingInfo', 'question', 'insightBefore', 'initialStep']
               },
               temperature: 0.2
             }
@@ -1523,6 +1565,10 @@
         rawJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsed = JSON.parse(rawJson);
 
+        const factsVal = parsed.facts || 'נתונים שהוזנו בפועל';
+        const assVal = parsed.assumptions || 'הנחות לגבי העתיד';
+        const missVal = parsed.missingInfo || 'פערי מידע שטרם אומתו';
+
         const decisionRecord = {
           id: 'dc-' + Date.now(),
           userId: currentUsername,
@@ -1531,10 +1577,13 @@
           title: parsed.title || 'דילמת שיקול דעת',
           consideration: parsed.consideration || rawVerbatim,
           goalsPrices: parsed.goalsPrices || 'השגת המטרה תוך שמירה על משאבים',
-          reliance: parsed.reliance || 'ההנחה המרכזית בבסיס ההחלטה',
-          unknowns: parsed.unknowns || 'נתונים שטרם אומתו',
+          facts: factsVal,
+          assumptions: assVal,
+          missingInfo: missVal,
+          reliance: assVal || `${factsVal} | ${assVal}`,
+          unknowns: missVal,
           question: parsed.question ? `"${parsed.question.replace(/^"|"$/g, '').trim()}"` : '"מהי הנחת הציר המרכזית שלך?"',
-          insightBefore: parsed.insightBefore || parsed.reliance || 'נקודת המוצא הראשונית',
+          insightBefore: parsed.insightBefore || assVal || 'נקודת המוצא הראשונית',
           insightNow: 'בדיקת הנחת הציר מול תרחיש הפוך',
           insightChosenStep: parsed.initialStep || 'בדיקה ממוקדת של המידע החסר',
           selectedDays: 14
@@ -2365,17 +2414,31 @@
           const cur = existing[existing.length - 1];
           const editCons = document.getElementById('editConsideration');
           const editGoals = document.getElementById('editGoalsPrices');
+          const editFacts = document.getElementById('editFacts');
+          const editAss = document.getElementById('editAssumptions');
+          const editMiss = document.getElementById('editMissingInfo');
           const editRel = document.getElementById('editReliance');
           const editUnk = document.getElementById('editUnknowns');
           
           if (editCons) cur.consideration = editCons.value;
           if (editGoals) cur.goalsPrices = editGoals.value;
-          if (editRel) {
+          if (editFacts) cur.facts = editFacts.value;
+          if (editAss) {
+            cur.assumptions = editAss.value;
+            cur.reliance = editAss.value;
+            const insBefore = document.getElementById('insightBefore');
+            if (insBefore) insBefore.innerText = editAss.value || 'נקודת המוצא שלך';
+          } else if (editRel) {
             cur.reliance = editRel.value;
             const insBefore = document.getElementById('insightBefore');
             if (insBefore) insBefore.innerText = editRel.value || 'נקודת המוצא שלך';
           }
-          if (editUnk) cur.unknowns = editUnk.value;
+          if (editMiss) {
+            cur.missingInfo = editMiss.value;
+            cur.unknowns = editMiss.value;
+          } else if (editUnk) {
+            cur.unknowns = editUnk.value;
+          }
 
           localStorage.setItem(key, JSON.stringify(existing));
           syncDecisionToCloud(cur);
@@ -2395,13 +2458,19 @@
 
       const editCons = document.getElementById('editConsideration');
       const editGoals = document.getElementById('editGoalsPrices');
+      const editFacts = document.getElementById('editFacts');
+      const editAss = document.getElementById('editAssumptions');
+      const editMiss = document.getElementById('editMissingInfo');
       const editRel = document.getElementById('editReliance');
       const editUnk = document.getElementById('editUnknowns');
 
       const considerationVal = editCons ? editCons.value.trim() : '';
       const goalsPricesVal = editGoals ? editGoals.value.trim() : '';
-      const relianceVal = editRel ? editRel.value.trim() : '';
-      const unknownsVal = editUnk ? editUnk.value.trim() : '';
+      const factsVal = editFacts ? editFacts.value.trim() : '';
+      const assumptionsVal = editAss ? editAss.value.trim() : (editRel ? editRel.value.trim() : '');
+      const missingInfoVal = editMiss ? editMiss.value.trim() : (editUnk ? editUnk.value.trim() : '');
+      const relianceVal = assumptionsVal || (editRel ? editRel.value.trim() : '');
+      const unknownsVal = missingInfoVal || (editUnk ? editUnk.value.trim() : '');
       const qText = document.getElementById('dispQuestion') ? document.getElementById('dispQuestion').innerText.trim() : '';
 
       // If user chose low-friction exit "מספיק לי לעכשיו"
@@ -2417,7 +2486,7 @@
         const insNow = document.getElementById('insightNow');
         const insStep = document.getElementById('insightChosenStep');
 
-        if (insBefore) insBefore.innerText = relianceVal || 'הנחת הציר שהוגדרה בנקודת המוצא';
+        if (insBefore) insBefore.innerText = relianceVal || 'הנחת המוצא שהוגדרה';
         if (insNow) insNow.innerText = 'שמירה על בהירות תנאי החשיבה ובחירה שלא להעמיק כרגע';
         if (insStep) insStep.innerText = unknownsVal ? `בירור ממוקד: ${unknownsVal.slice(0, 80)}` : 'המשך מעקב על פי התכנון המקורי';
 
@@ -2456,8 +2525,9 @@
 המשתמש ענה על שאלת ההארה:
 - אתה שוקל: """${considerationVal}"""
 - חשוב לך להשיג ולשמור: """${goalsPricesVal}"""
-- אתה נשען על: """${relianceVal}"""
-- עדיין לא ברור: """${unknownsVal}"""
+- עובדות קשיחות: """${factsVal}"""
+- ההנחות שלך: """${assumptionsVal}"""
+- מידע חסר להחלטה: """${missingInfoVal}"""
 - שאלת ההארה: """${qText}"""
 - מענה המשתמש: """${answerText}"""
 
@@ -2563,15 +2633,33 @@
         autoResizeTextarea(editGoals);
       }
 
+      const editFacts = document.getElementById('editFacts');
+      if (editFacts) {
+        editFacts.value = dec.facts || '';
+        autoResizeTextarea(editFacts);
+      }
+
+      const editAss = document.getElementById('editAssumptions');
+      if (editAss) {
+        editAss.value = dec.assumptions || dec.reliance || '';
+        autoResizeTextarea(editAss);
+      }
+
+      const editMiss = document.getElementById('editMissingInfo');
+      if (editMiss) {
+        editMiss.value = dec.missingInfo || dec.unknowns || '';
+        autoResizeTextarea(editMiss);
+      }
+
       const editRel = document.getElementById('editReliance');
       if (editRel) {
-        editRel.value = dec.reliance || '';
+        editRel.value = dec.reliance || dec.assumptions || '';
         autoResizeTextarea(editRel);
       }
 
       const editUnk = document.getElementById('editUnknowns');
       if (editUnk) {
-        editUnk.value = dec.unknowns || '';
+        editUnk.value = dec.unknowns || dec.missingInfo || '';
         autoResizeTextarea(editUnk);
       }
 

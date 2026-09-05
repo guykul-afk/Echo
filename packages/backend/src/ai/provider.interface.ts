@@ -5,6 +5,7 @@ import {
   EpistemicRole,
   PrincipalAgentTension,
   DecisionTempo,
+  FiveHumanDimensions,
   FourHumanDimensions,
   RefinedInsight
 } from '@echo/shared';
@@ -36,6 +37,7 @@ export interface EpistemicExtractionResult {
   signature: ExtractedSignatureDTO;
   illuminationQuestion: string;
   fourDimensions?: FourHumanDimensions;
+  fiveDimensions?: FiveHumanDimensions;
   refinedInsight?: RefinedInsight;
 }
 

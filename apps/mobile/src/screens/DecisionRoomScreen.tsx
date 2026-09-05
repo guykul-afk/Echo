@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { LuxuryTheme } from '../theme/colors.js';
-import { DecisionCase, Option, DecisionSignature, RefinedInsight } from '@echo/shared';
+import { DecisionCase, Option, DecisionSignature, RefinedInsight, FiveHumanDimensions } from '@echo/shared';
 
 interface DecisionRoomScreenProps {
   decisionCase: DecisionCase;
@@ -11,12 +11,7 @@ interface DecisionRoomScreenProps {
   similarCaseAnalogy?: { title: string; reason: string; strength: string };
   initialRefinedInsight?: RefinedInsight;
   onAnswerSubmit: (answer: string, skip?: boolean) => void;
-  onMirrorUpdate?: (updatedFields: {
-    consideration: string;
-    goalsPrices: string;
-    reliance: string;
-    unknowns: string;
-  }) => void;
+  onMirrorUpdate?: (updatedFields: FiveHumanDimensions) => void;
 }
 
 export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
@@ -27,34 +22,40 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   onAnswerSubmit,
   onMirrorUpdate
 }) => {
-  // 4 Human Dimensions local state for direct live editing
+  // 5 Human Dimensions local state for direct live editing
   const [consideration, setConsideration] = useState(decisionCase.dimConsideration || decisionCase.title);
   const [goalsPrices, setGoalsPrices] = useState(decisionCase.dimGoalsPrices || '');
-  const [reliance, setReliance] = useState(decisionCase.dimReliance || '');
-  const [unknowns, setUnknowns] = useState(decisionCase.dimUnknowns || '');
+  const [facts, setFacts] = useState(decisionCase.dimFacts || decisionCase.dimReliance || '');
+  const [assumptions, setAssumptions] = useState(decisionCase.dimAssumptions || '');
+  const [missingInfo, setMissingInfo] = useState(decisionCase.dimMissingInfo || decisionCase.dimUnknowns || '');
 
   const [userAnswer, setUserAnswer] = useState('');
   const [showRawText, setShowRawText] = useState(false);
   const [activeTab, setActiveTab] = useState<'mirror' | 'insight'>('mirror');
   const [insight, setInsight] = useState<RefinedInsight | null>(initialRefinedInsight || null);
 
-  const handleFieldChange = (field: 'consideration' | 'goalsPrices' | 'reliance' | 'unknowns', val: string) => {
+  const handleFieldChange = (field: 'consideration' | 'goalsPrices' | 'facts' | 'assumptions' | 'missingInfo', val: string) => {
     let nextConsideration = consideration;
     let nextGoalsPrices = goalsPrices;
-    let nextReliance = reliance;
-    let nextUnknowns = unknowns;
+    let nextFacts = facts;
+    let nextAssumptions = assumptions;
+    let nextMissingInfo = missingInfo;
 
     if (field === 'consideration') { nextConsideration = val; setConsideration(val); }
     if (field === 'goalsPrices') { nextGoalsPrices = val; setGoalsPrices(val); }
-    if (field === 'reliance') { nextReliance = val; setReliance(val); }
-    if (field === 'unknowns') { nextUnknowns = val; setUnknowns(val); }
+    if (field === 'facts') { nextFacts = val; setFacts(val); }
+    if (field === 'assumptions') { nextAssumptions = val; setAssumptions(val); }
+    if (field === 'missingInfo') { nextMissingInfo = val; setMissingInfo(val); }
 
     if (onMirrorUpdate) {
       onMirrorUpdate({
         consideration: nextConsideration,
         goalsPrices: nextGoalsPrices,
-        reliance: nextReliance,
-        unknowns: nextUnknowns
+        facts: nextFacts,
+        assumptions: nextAssumptions,
+        missingInfo: nextMissingInfo,
+        reliance: `${nextFacts} | ${nextAssumptions}`,
+        unknowns: nextMissingInfo
       });
     }
   };
@@ -107,7 +108,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         <Text style={styles.screenSubtitle}>זה משקף אותך? כל שדה ניתן לעריכה ישירה וקלה</Text>
       </View>
 
-      {/* The 4 Human Dimensions (Editable) */}
+      {/* The 5 Human Dimensions (Editable) */}
       <View style={styles.mirrorSection}>
         {/* 1. אתה שוקל */}
         <View style={styles.blockCard}>
@@ -137,30 +138,44 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
           />
         </View>
 
-        {/* 3. על מה אתה נשען */}
-        <View style={[styles.blockCard, styles.assumptionCard]}>
-          <Text style={[styles.blockTag, { color: LuxuryTheme.epistemicRoles.assumption }]}>
-            ▲ אתה נשען על
+        {/* 3. עובדות קשיחות */}
+        <View style={styles.blockCard}>
+          <Text style={[styles.blockTag, { color: '#38BDF8' }]}>
+            🧱 עובדות קשיחות (מה כבר קרה בפועל)
           </Text>
           <TextInput
             style={styles.editableInput}
             multiline
-            value={reliance}
-            onChangeText={val => handleFieldChange('reliance', val)}
+            value={facts}
+            onChangeText={val => handleFieldChange('facts', val)}
             textAlign="right"
           />
         </View>
 
-        {/* 4. עדיין לא ברור */}
-        <View style={styles.blockCard}>
-          <Text style={[styles.blockTag, { color: LuxuryTheme.epistemicRoles.unknown }]}>
-            ? עדיין לא ברור
+        {/* 4. ההנחות שלך */}
+        <View style={[styles.blockCard, styles.assumptionCard]}>
+          <Text style={[styles.blockTag, { color: LuxuryTheme.epistemicRoles.assumption }]}>
+            ▲ ההנחות שלך (מה שאתה משער/צופה)
           </Text>
           <TextInput
             style={styles.editableInput}
             multiline
-            value={unknowns}
-            onChangeText={val => handleFieldChange('unknowns', val)}
+            value={assumptions}
+            onChangeText={val => handleFieldChange('assumptions', val)}
+            textAlign="right"
+          />
+        </View>
+
+        {/* 5. מידע חסר להחלטה */}
+        <View style={styles.blockCard}>
+          <Text style={[styles.blockTag, { color: LuxuryTheme.epistemicRoles.unknown }]}>
+            ? המידע החסר להחלטה (פערי מידע ושאלות)
+          </Text>
+          <TextInput
+            style={styles.editableInput}
+            multiline
+            value={missingInfo}
+            onChangeText={val => handleFieldChange('missingInfo', val)}
             textAlign="right"
           />
         </View>

@@ -59,11 +59,12 @@ Schema Fields:
   - friction_level: Enum [quick, focused, deep]
   - status: Enum [captured, deliberating, monitoring, closed, irrelevant]
   
-  # The 4 Human Dimensions (Editable)
+  # The 5 Human Dimensions (Editable)
   - dim_consideration: String (הדילמה)
   - dim_goals_prices: String (מטרות ומחירים)
-  - dim_reliance: String (הנחות ומידע ידוע)
-  - dim_unknowns: String (מה פתוח)
+  - dim_facts: String (עובדות קשיחות)
+  - dim_assumptions: String (הנחות ופרשנויות)
+  - dim_missing_info: String (מידע חסר להחלטה)
   
   # Insights & Interventions
   - ai_intervention_used: String (איזו שאלת הארה הופעלה, אם בכלל)
@@ -125,7 +126,7 @@ Schema Fields:
 
 ### `createDecisionCase` (Callable)
 - מקבל: `rawText`
-- מחזיר: ה-4 ממדים המחולצים (`dim_consideration`, וכו') ושאלת התערבות ממוקדת (`intervention_question`).
+- מחזיר: ה-5 ממדים המחולצים (`dim_consideration`, וכו') ושאלת התערבות ממוקדת (`intervention_question`).
 
 ### `updateMirror` (Callable)
 - מקבל: תיקוני המשתמש לסכמה.

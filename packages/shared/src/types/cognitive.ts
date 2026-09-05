@@ -13,14 +13,22 @@ export type LocusOfControl = 'internal' | 'external' | 'balanced';
 export type ConvictionLevel = 'low' | 'moderate' | 'high' | 'absolute';
 
 /**
- * 4 Human-Facing Mirror Dimensions
+ * 5 Human-Facing Mirror Dimensions
  */
-export interface FourHumanDimensions {
+export interface FiveHumanDimensions {
   consideration: string; // אתה שוקל: הדילמה המרכזית
   goalsPrices: string;   // הבנתי שחשוב לך להשיג/לשמור: מטרות, ערכים ומחירים שלא תרצה לשלם
-  reliance: string;      // אתה נשען על: מידע שנמסר, ניסיון קודם והנחות
-  unknowns: string;      // עדיין לא ברור: מידע חסר, חלופות שלא נבחנו
+  facts: string;         // עובדות קשיחות: נתונים, אירועים שהתרחשו בפועל
+  assumptions: string;   // ההנחות שלך: השערות, פרשנות וציפיות
+  missingInfo: string;   // מידע חסר להחלטה: פערי מידע, שאלות פתוחות
+
+  // Backward compatibility fields (optional)
+  reliance?: string;
+  unknowns?: string;
 }
+
+// Backward compatibility alias
+export type FourHumanDimensions = FiveHumanDimensions;
 
 /**
  * 9 Background Epistemic Dimensions (Internal AI Processing)
@@ -38,8 +46,8 @@ export interface EpistemicState {
   locusOfControl: LocusOfControl;// Loc: Active agency vs victim of circumstance
   conviction: ConvictionLevel;  // Conv: Linguistic certainty level
 
-  // 4 Human dimensions for direct mirror UI
-  humanDimensions?: FourHumanDimensions;
+  // Human dimensions for direct mirror UI
+  humanDimensions?: FiveHumanDimensions;
 
   extractedAt: number;
 }
