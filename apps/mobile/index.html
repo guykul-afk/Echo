@@ -182,9 +182,9 @@
             <textarea 
               id="editConsideration" 
               rows="2" 
-              oninput="onDimensionEdited()"
+              oninput="onDimensionEdited(this)"
               placeholder="מהי הדילמה או האפשרות שאתה בוחן..."
-              class="w-full bg-transparent border-0 p-0 text-xs text-right focus:outline-none font-light opacity-95 resize-none leading-relaxed"
+              class="w-full bg-transparent border-0 p-0 text-xs text-right focus:outline-none font-light opacity-95 resize-none leading-relaxed overflow-hidden"
             ></textarea>
           </div>
 
@@ -200,9 +200,9 @@
             <textarea 
               id="editGoalsPrices" 
               rows="2" 
-              oninput="onDimensionEdited()"
+              oninput="onDimensionEdited(this)"
               placeholder="מה המטרות שאתה שואף להשיג, ועל מה אתה מוכן או לא מוכן לשלם..."
-              class="w-full bg-transparent border-0 p-0 text-xs text-right focus:outline-none font-light opacity-95 resize-none leading-relaxed"
+              class="w-full bg-transparent border-0 p-0 text-xs text-right focus:outline-none font-light opacity-95 resize-none leading-relaxed overflow-hidden"
             ></textarea>
           </div>
 
@@ -218,9 +218,9 @@
             <textarea 
               id="editReliance" 
               rows="2" 
-              oninput="onDimensionEdited()"
+              oninput="onDimensionEdited(this)"
               placeholder="על איזו הנחה מרכזית הטיעון או ההחלטה שלך עומדים כרגע..."
-              class="w-full bg-transparent border-0 p-0 text-xs text-right focus:outline-none font-light opacity-95 resize-none leading-relaxed"
+              class="w-full bg-transparent border-0 p-0 text-xs text-right focus:outline-none font-light opacity-95 resize-none leading-relaxed overflow-hidden"
             ></textarea>
           </div>
 
@@ -236,9 +236,9 @@
             <textarea 
               id="editUnknowns" 
               rows="2" 
-              oninput="onDimensionEdited()"
+              oninput="onDimensionEdited(this)"
               placeholder="איזה מידע חסר לך? מה עדיין אינך יודע או לא בדקת..."
-              class="w-full bg-transparent border-0 p-0 text-xs text-right focus:outline-none font-light opacity-95 resize-none leading-relaxed"
+              class="w-full bg-transparent border-0 p-0 text-xs text-right focus:outline-none font-light opacity-95 resize-none leading-relaxed overflow-hidden"
             ></textarea>
           </div>
 
@@ -1173,6 +1173,12 @@
       urlParams.get('key') ||
       localStorage.getItem('GEMINI_API_KEY') ||
       '';
+    // Fallback: If localStorage or config didn't load, check known cached key
+    if (!GEMINI_API_KEY) {
+      try {
+        GEMINI_API_KEY = window['ENV_CONFIG']?.GEMINI_API_KEY || '';
+      } catch (e) {}
+    }
     let mediaChunks = [];
     let audioContext = null;
     let analyser = null;
@@ -1399,11 +1405,23 @@
         question = 'איזו בדיקה קטנה של שבועיים תפריך או תאמת נכונות לשלם לפני 3 חודשי פיתוח?';
       } else if (!text.includes('תפקיד') && !text.includes('ילדים') && !text.includes('שכר')) {
         title = rawVerbatim.slice(0, 50) + (rawVerbatim.length > 50 ? '...' : '');
-        consideration = rawVerbatim.slice(0, 100);
-        goalsPrices = 'להשיג בהירות החלטתית ולשמור על חופש פעולה';
-        reliance = 'הנתונים שנמסרו משקפים את מירב הסיכון';
-        unknowns = 'איזה מידע נוסף היה משנה את כיוון המחשבה שלך';
-        question = 'מהו הפרט האחד שאם יתברר כשונה לחלוטין, ישנה את ההחלטה שלך?';
+        consideration = rawVerbatim;
+        goalsPrices = 'לבחון את כדאיות המהלך ולהשיג את המטרה, תוך מזעור עלויות ומניעת פגיעה בשגרה';
+        
+        // Extract reliance if text has "מול", "אבל", "חושש", "כי"
+        if (text.includes('אבל') || text.includes('בעייתי') || text.includes('מול')) {
+          reliance = 'החיסרון או המגבלה שנצפו (כגון טווח/זמינות) יקשו באופן משמעותי על ההתנהלות';
+        } else {
+          reliance = 'התנאים הנוכחיים וההנחות שבבסיס הבדיקה משקפים את המציאות';
+        }
+
+        if (text.includes('טווח') || text.includes('מרחק') || text.includes('רכב')) {
+          unknowns = 'מהם הנתונים הממשיים בפועל (כגון זמני טעינה, פריסת עמדות, עלויות אמיתיות)?';
+          question = 'אם יתברר שהמגבלה פחות משמעותית ממה שנדמה כעת, כיצד זה ישנה את החלטתך?';
+        } else {
+          unknowns = 'איזה מידע חסר לך כדי להכריע בוודאות גבוהה יותר?';
+          question = 'מהו הנתון האחד שאם יתברר כשונה לחלוטין ממה שאתה מניח, יהפוך את ההחלטה?';
+        }
       }
 
       const decisionRecord = {
@@ -2331,7 +2349,14 @@
 
     let isRefiningAnswer = false;
 
-    function onDimensionEdited() {
+    function autoResizeTextarea(el) {
+      if (!el) return;
+      el.style.height = 'auto';
+      el.style.height = (el.scrollHeight) + 'px';
+    }
+
+    function onDimensionEdited(el) {
+      if (el) autoResizeTextarea(el);
       // Sync manual edits directly to the active decision in localStorage & cloud
       try {
         const key = getUserStorageKey();
@@ -2527,22 +2552,37 @@
       if (titleEl) titleEl.innerText = dec.title || 'דילמת שיקול דעת';
 
       const editCons = document.getElementById('editConsideration');
-      if (editCons) editCons.value = dec.consideration || dec.rawVerbatim || '';
+      if (editCons) {
+        editCons.value = dec.consideration || dec.rawVerbatim || '';
+        autoResizeTextarea(editCons);
+      }
 
       const editGoals = document.getElementById('editGoalsPrices');
-      if (editGoals) editGoals.value = dec.goalsPrices || '';
+      if (editGoals) {
+        editGoals.value = dec.goalsPrices || '';
+        autoResizeTextarea(editGoals);
+      }
 
       const editRel = document.getElementById('editReliance');
-      if (editRel) editRel.value = dec.reliance || '';
+      if (editRel) {
+        editRel.value = dec.reliance || '';
+        autoResizeTextarea(editRel);
+      }
 
       const editUnk = document.getElementById('editUnknowns');
-      if (editUnk) editUnk.value = dec.unknowns || '';
+      if (editUnk) {
+        editUnk.value = dec.unknowns || '';
+        autoResizeTextarea(editUnk);
+      }
 
       const qEl = document.getElementById('dispQuestion');
       if (qEl) qEl.innerText = dec.question || '"מהי הנחת הציר המרכזית שלך?"';
 
       const ansInput = document.getElementById('inputUserAnswer');
-      if (ansInput) ansInput.value = dec.userAnswer || '';
+      if (ansInput) {
+        ansInput.value = dec.userAnswer || '';
+        autoResizeTextarea(ansInput);
+      }
 
       const insBefore = document.getElementById('insightBefore');
       if (insBefore) insBefore.innerText = dec.insightBefore || dec.reliance || 'טרם הוגדרה נקודת המוצא';
