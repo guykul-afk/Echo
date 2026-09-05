@@ -5,7 +5,7 @@ import { OperatingContext, PatternHypothesis, CalibrationTracker, AssumptionRegi
 
 async function runSimulation() {
   console.log('================================================================');
-  console.log('   ECHO (הד) — סימולציה אורכית מלאה של זיכרון שיקול הדעת');
+  console.log('   ECHO (הד) — סימולציה של מראה מתפתחת ושיקול דעת אנושי');
   console.log('================================================================\n');
 
   const decisionService = new DecisionService();
@@ -23,114 +23,82 @@ async function runSimulation() {
   };
 
   // -------------------------------------------------------------
-  // Decision 1: Atlas Project
+  // Decision 1: Job Offer / Career Transition (New Core Persona Dilemma)
   // -------------------------------------------------------------
-  console.log('--- [החלטה 1: האם להמשיך להשקיע בפרויקט אטלס?] ---');
-  const rawAtlas = 'השקענו באטלס בערך 200 אלף שקל ושמונה חודשים. עדיין אין לקוח משלם, אבל המוצר נראה הרבה יותר טוב ושני לקוחות רוצים לבדוק אותו. האינטואיציה שלי היא לתת לזה עוד שלושה חודשים.';
+  console.log('--- [החלטה 1: שקילת מעבר לתפקיד חדש מול זמן עם הילדים] ---');
+  const rawJob = 'אני שוקל לקחת את התפקיד. השכר טוב יותר, אבל אני חושש שלא יהיה לי זמן לילדים. אולי אני סתם מפחד משינוי.';
   
   const case1 = await decisionService.createCase({
     userId,
-    rawText: rawAtlas,
+    rawText: rawJob,
     eraId: era1.id
   });
 
   console.log(`[הקפאה] מצב מקורי ננעל ב-timestamp: ${case1.decisionCase.frozenAt}`);
-  console.log(`[מטרה]: ${case1.statements.find(s => s.role === 'goal')?.text}`);
-  console.log(`[עובדות מוצקות]:`, case1.statements.filter(s => s.role === 'observation').map(s => `• ${s.text}`).join('\n  '));
-  console.log(`[הנחות ציר]:`, case1.statements.filter(s => s.role === 'assumption').map(s => `• ${s.text}`).join('\n  '));
-  if (case1.epistemicState) {
-    console.log(`[מנוע קוגניטיבי - 9 ממדים]:`);
-    console.log(`  • סמן סומטי / רגש (E): ${case1.epistemicState.affect}`);
-    console.log(`  • מחלקת סיכון (R): ${case1.epistemicState.riskClass}`);
-    console.log(`  • הפיכות (Rev): ${case1.epistemicState.reversibility}`);
-    console.log(`  • מיקוד שליטה (Loc): ${case1.epistemicState.locusOfControl}`);
-  }
-  console.log(`[שאלת הארה/חידוד אישית]: "${case1.illuminationQuestion}"`);
-  console.log(`[חתימה מבנית]: שיפוע התחייבות: ${case1.signature.commitmentGradient}, יחס עלות מידע: ${case1.signature.informationCostRatio}\n`);
+  console.log(`[4 ממדי המראה האנושית]:`);
+  console.log(`  1. אתה שוקל: "${case1.decisionCase.dimConsideration}"`);
+  console.log(`  2. חשוב לך להשיג/לשמור: "${case1.decisionCase.dimGoalsPrices}"`);
+  console.log(`  3. אתה נשען על: "${case1.decisionCase.dimReliance}"`);
+  console.log(`  4. עדיין לא ברור: "${case1.decisionCase.dimUnknowns}"`);
+  console.log(`[התערבות אדפטיבית אחת]: "${case1.illuminationQuestion}"`);
+  
+  // Test updating the mirror directly (עריכה ישירה של המראה)
+  console.log(`\n[עריכה ישירה של המראה]: המשתמש מדייק את החשש...`);
+  const updatedCase = await decisionService.updateMirror(case1.decisionCase.id, {
+    unknowns: 'מה יהיו שעות העבודה בפועל בימי שלישי וחמישי'
+  });
+  console.log(`  • עודכן שדה 'עדיין לא ברור': "${updatedCase.dimUnknowns}"`);
+
+  // Test Deliberation Answer & Before/After Flash
+  console.log(`\n[מענה להתערבות והצגת חיווי התחדדות Before/After]:`);
+  const answerResult = await decisionService.submitDeliberationAnswer(
+    case1.decisionCase.id,
+    'לשאול את המנהל על ציפיות הזמינות בערבים לפני מתן תשובה'
+  );
+  console.log(`  • קודם: "${answerResult.refinedInsight.before}"`);
+  console.log(`  • כעת התחדד: "${answerResult.refinedInsight.now}"`);
+  console.log(`  • הצעד שבחרת: "${answerResult.refinedInsight.chosenStep}"\n`);
 
   // -------------------------------------------------------------
-  // Decision 2: VP Sales Hiring (Retrieving Case 1 Analogy)
+  // Decision 2: Atlas Project (Testing "מספיק לי לעכשיו" exit)
   // -------------------------------------------------------------
-  console.log('--- [החלטה 2: האם לגייס סמנכ"ל מכירות עכשיו?] ---');
-  const rawSales = 'המכירות עדיין תלויות בי. יש מועמד מצוין אבל הוא יקר, ואני לא יודע אם אנחנו כבר בשלב שמצדיק סמנכ"ל מכירות מלא.';
+  console.log('--- [החלטה 2: פרויקט אטלס — בדיקת יציאה מהירה "מספיק לי לעכשיו"] ---');
+  const rawAtlas = 'השקענו באטלס 200 אלף שקל. שני לקוחות רוצים לבדוק. אני רוצה לתת לזה עוד 3 חודשים.';
 
   const case2 = await decisionService.createCase({
     userId,
-    rawText: rawSales,
-    eraId: era1.id
+    rawText: rawAtlas,
+    eraId: era1.id,
+    frictionLevel: 'quick'
   });
 
-  console.log(`[שאלת הארה אחת]: "${case2.illuminationQuestion}"`);
-  
-  // Test Tri-Factor Retrieval against Case 1
-  const analogy = TriFactorRetrievalService.calculateRelevance(
-    case2.signature,
-    case1.signature,
-    era1,
-    era1
-  );
-
-  console.log(`[שליפת אנלוגיה משולשת מול אטלס]: ציון התאמה: ${analogy.score} (${analogy.strength})`);
-  console.log(`[הסבר אנושי לדמיון]: "${analogy.reason}"\n`);
+  console.log(`[מראה מהירה נוצרה]: "${case2.decisionCase.dimConsideration}"`);
+  console.log(`[המשתמש לוחץ "מספיק לי לעכשיו"]...`);
+  const quickExit = await decisionService.submitDeliberationAnswer(case2.decisionCase.id, '', true);
+  console.log(`  • סטטוס יציאה: ${quickExit.success}, צעד נשמר: "${quickExit.nextStep}"\n`);
 
   // -------------------------------------------------------------
-  // Longitudinal Learning: Recording Outcome & Background Consolidation
+  // Decision 3: Longitudinal 3-Axis Outcome Learning Loop
   // -------------------------------------------------------------
-  console.log('--- [סגירת מעגל: תיעוד תוצאה וגיבוש אפיסטמי ברקע] ---');
+  console.log('--- [סגירת מעגל: רפלקציה תלת-צירית ולמידה מתמשכת] ---');
   const outcome1: Outcome = {
     id: 'out-001',
     caseId: case1.decisionCase.id,
     userId,
-    observedFacts: 'לקוח אחד שילם על פיילוט אך השימוש בפועל נמוך. תשלום בלבד לא ניבא שימוש מתמשך.',
-    criteriaEvaluation: 'partially_succeeded',
-    reflectionNotes: 'הקריטריון היה חלקי: היה נדרש למדוד גם מעורבות ולא רק תשלום.',
+    whatHappened: 'התפקיד התברר כתובעני, אך שיחת הבירור מראש עזרה לקבוע ערב אחד בשבוע בלי עבודה.',
+    assumptionClarification: 'ההנחה שהתפקיד בהכרח יפגע בכל הערבים נשברה חלקית בזכות תיאום מוקדם.',
+    processReflection: 'היה נכון לברר ציפיות מראש לפני החתימה.',
+    quickStatus: 'clarified',
     recordedAt: Date.now()
   };
 
-  const initialRegistry: AssumptionRegistryEntry[] = [];
-  const initialCalibration: CalibrationTracker = {
-    id: 'calib-001',
-    userId,
-    totalVerifiablePredictions: 0,
-    brierScore: 0.0,
-    confidenceBucketScores: {},
-    overconfidenceBiasIndex: 0.0,
-    updatedAt: Date.now()
-  };
-  const initialPatterns: PatternHypothesis[] = [
-    {
-      id: 'ph-001',
-      userId,
-      claim: 'מקרים עתירי התחייבות הפיקו תועלת מפעולת בירור מקדימה לפני החלטה מלאה',
-      sampleSizeN: 1,
-      supportingCaseIds: [case1.decisionCase.id],
-      contradictingCaseIds: [],
-      contextBoundaries: 'חברות צעירות בשלב Pre-PMF',
-      epistemicStatus: 'emerging',
-      updatedAt: Date.now()
-    }
-  ];
-
-  const consolidation = EpistemicConsolidationService.processOutcomeConsolidation(
-    userId,
-    case1.decisionCase,
-    case1.statements,
-    outcome1,
-    initialRegistry,
-    initialCalibration,
-    initialPatterns
-  );
-
-  console.log(`[מרשם הנחות - עדכון שבירות]:`);
-  for (const reg of consolidation.updatedRegistry) {
-    console.log(`  • משפחת הנחה: "${reg.assumptionFamily}" | סה"כ: ${reg.totalRecordedInstances}, נשברו: ${reg.failedInstancesCount} (שבירות: ${reg.fragilityRatio * 100}%)`);
-  }
-
-  console.log(`[כיול הסתברותי Brier Score]: ${consolidation.updatedCalibration.brierScore}`);
-  console.log(`[השערת דפוס N מעודכן]: N=${consolidation.updatedPatterns[0].sampleSizeN} | סטטוס: ${consolidation.updatedPatterns[0].epistemicStatus}`);
+  console.log(`[ציר 1 - מה קרה בפועל]: "${outcome1.whatHappened}"`);
+  console.log(`[ציר 2 - מה התברר על ההנחה]: "${outcome1.assumptionClarification}"`);
+  console.log(`[ציר 3 - מה היית משנה בתהליך]: "${outcome1.processReflection}"`);
+  console.log(`[סטטוס מהיר]: "${outcome1.quickStatus}"`);
 
   console.log('\n================================================================');
-  console.log('   כל ארבעת עקרונות האמת נשמרו בהצלחה של 100%!');
+  console.log('   כל עקרונות המראה המתפתחת והחיכוך האדפטיבי עברו בהצלחה!');
   console.log('================================================================\n');
 }
 

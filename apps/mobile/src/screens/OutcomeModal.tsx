@@ -1,82 +1,71 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { LuxuryTheme } from '../theme/colors.js';
-import { CriteriaEvaluation } from '@echo/shared';
+import { QuickLoopStatus } from '@echo/shared';
 
 interface OutcomeModalProps {
   caseTitle: string;
-  originalCriteria: string;
+  nextStepChosen?: string;
   onSubmitOutcome: (outcome: {
-    observedFacts: string;
-    criteriaEvaluation: CriteriaEvaluation;
-    reflectionNotes: string;
+    whatHappened: string;
+    assumptionClarification: string;
+    processReflection: string;
+    quickStatus: QuickLoopStatus;
   }) => void;
 }
 
 export const OutcomeModal: React.FC<OutcomeModalProps> = ({
   caseTitle,
-  originalCriteria,
+  nextStepChosen,
   onSubmitOutcome
 }) => {
-  const [observedFacts, setObservedFacts] = useState('');
-  const [criteriaEval, setCriteriaEval] = useState<CriteriaEvaluation>('succeeded');
-  const [reflectionNotes, setReflectionNotes] = useState('');
+  const [quickStatus, setQuickStatus] = useState<QuickLoopStatus>('clarified');
+  const [whatHappened, setWhatHappened] = useState('');
+  const [assumptionClarification, setAssumptionClarification] = useState('');
+  const [processReflection, setProcessReflection] = useState('');
 
   const handleSubmit = () => {
-    if (observedFacts.trim()) {
-      onSubmitOutcome({
-        observedFacts,
-        criteriaEvaluation: criteriaEval,
-        reflectionNotes
-      });
-    }
+    onSubmitOutcome({
+      whatHappened: whatHappened || 'עודכן סטטוס התקדמות',
+      assumptionClarification,
+      processReflection,
+      quickStatus
+    });
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.heading}>סגירת מעגל: תיעוד תוצאה וכיול</Text>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
+      <Text style={styles.heading}>סגירת מעגל: התקדמות בהבנה ולמידה</Text>
       <Text style={styles.caseSub}>{caseTitle}</Text>
 
-      {/* Original Criterion Box */}
-      <View style={styles.critBox}>
-        <Text style={styles.critLabel}>מה שהגדרת מראש כקריטריון:</Text>
-        <Text style={styles.critText}>"{originalCriteria}"</Text>
-      </View>
+      {/* Reminder Box */}
+      {nextStepChosen && (
+        <View style={styles.reminderBox}>
+          <Text style={styles.reminderLabel}>הצעד שהגדרת לעצמך לבירור:</Text>
+          <Text style={styles.reminderText}>"{nextStepChosen}"</Text>
+        </View>
+      )}
 
-      {/* Observed Facts */}
+      {/* Quick Status Selection */}
       <View style={styles.section}>
-        <Text style={styles.label}>מה נצפה בפועל בעולם? (עובדות בלבד):</Text>
-        <TextInput
-          style={styles.textInput}
-          multiline
-          placeholder="לדוגמה: לקוח אחד שילם אך כמות השימוש נמוכה..."
-          placeholderTextColor={LuxuryTheme.text.tertiary}
-          value={observedFacts}
-          onChangeText={setObservedFacts}
-          textAlign="right"
-        />
-      </View>
-
-      {/* Evaluation Selector */}
-      <View style={styles.section}>
-        <Text style={styles.label}>האם הקריטריון הושג?</Text>
+        <Text style={styles.label}>הספקת לברר?</Text>
         <View style={styles.evalRow}>
           {(
             [
-              ['succeeded', 'הצליח', LuxuryTheme.epistemicRoles.observation],
-              ['partially_succeeded', 'חלקי', LuxuryTheme.epistemicRoles.assumption],
-              ['failed', 'נכשל', LuxuryTheme.epistemicRoles.unknown]
+              ['clarified', 'ביררתי', LuxuryTheme.accent.emeraldSuccess],
+              ['not_yet', 'עדיין לא', LuxuryTheme.accent.amberWarning],
+              ['irrelevant', 'כבר לא רלוונטי', LuxuryTheme.text.tertiary]
             ] as const
           ).map(([val, label, color]) => (
             <TouchableOpacity
               key={val}
               style={[
                 styles.evalChip,
-                criteriaEval === val && { borderColor: color, backgroundColor: 'rgba(255,255,255,0.06)' }
+                quickStatus === val && { borderColor: color, backgroundColor: 'rgba(255,255,255,0.06)' }
               ]}
-              onPress={() => setCriteriaEval(val)}
+              onPress={() => setQuickStatus(val)}
             >
-              <Text style={[styles.evalChipText, criteriaEval === val && { color, fontWeight: '700' }]}>
+              <Text style={[styles.evalChipText, quickStatus === val && { color, fontWeight: '700' }]}>
                 {label}
               </Text>
             </TouchableOpacity>
@@ -84,67 +73,94 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
         </View>
       </View>
 
-      {/* Reflection on the Criterion */}
+      {/* Axis 1: What happened in reality */}
       <View style={styles.section}>
-        <Text style={styles.label}>בחינת הקריטריון (האם הוא היה מדד נכון?):</Text>
+        <Text style={styles.label}>1. מה קרה בפועל? (נתונים ועובדות):</Text>
         <TextInput
-          style={[styles.textInput, { minHeight: 60 }]}
+          style={styles.textInput}
           multiline
-          placeholder="לדוגמה: תשלום לבדו לא מדד שימוש מתמשך..."
+          placeholder="למשל: ביררתי עם המנהל והוא הסכים ליום בית קבוע..."
           placeholderTextColor={LuxuryTheme.text.tertiary}
-          value={reflectionNotes}
-          onChangeText={setReflectionNotes}
+          value={whatHappened}
+          onChangeText={setWhatHappened}
+          textAlign="right"
+        />
+      </View>
+
+      {/* Axis 2: What was clarified about assumptions */}
+      <View style={styles.section}>
+        <Text style={styles.label}>2. מה התברר לגבי ההנחה שעליה נשענת?</Text>
+        <TextInput
+          style={styles.textInput}
+          multiline
+          placeholder="למשל: החשש מזמינות תובענית היה מוגזם ביחס למציאות..."
+          placeholderTextColor={LuxuryTheme.text.tertiary}
+          value={assumptionClarification}
+          onChangeText={setAssumptionClarification}
+          textAlign="right"
+        />
+      </View>
+
+      {/* Axis 3: Process reflection */}
+      <View style={styles.section}>
+        <Text style={styles.label}>3. בהתחשב במה שיכולת לדעת אז, מה היית משנה באופן הבחינה?</Text>
+        <TextInput
+          style={styles.textInput}
+          multiline
+          placeholder="למשל: היה נכון לשאול כבר בריאיון הראשון..."
+          placeholderTextColor={LuxuryTheme.text.tertiary}
+          value={processReflection}
+          onChangeText={setProcessReflection}
           textAlign="right"
         />
       </View>
 
       <TouchableOpacity
-        style={[styles.saveButton, !observedFacts.trim() && styles.saveButtonDisabled]}
-        disabled={!observedFacts.trim()}
+        style={styles.saveButton}
         onPress={handleSubmit}
       >
-        <Text style={styles.saveButtonText}>עדכן זיכרון וכייל השערות ←</Text>
+        <Text style={styles.saveButtonText}>עדכן זיכרון אישי וסגור סבב למידה ←</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
+  scroll: {
+    flex: 1,
+    backgroundColor: LuxuryTheme.background.base
+  },
   container: {
-    backgroundColor: LuxuryTheme.background.surface,
-    padding: 24,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: LuxuryTheme.background.border
+    padding: 20
   },
   heading: {
     color: LuxuryTheme.text.primary,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     textAlign: 'right'
   },
   caseSub: {
     color: LuxuryTheme.text.tertiary,
     fontSize: 13,
-    marginTop: 2,
+    marginTop: 4,
     marginBottom: 16,
     textAlign: 'right'
   },
-  critBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+  reminderBox: {
+    backgroundColor: 'rgba(99, 102, 241, 0.08)',
     borderRightWidth: 3,
     borderRightColor: LuxuryTheme.accent.auraGlow,
-    padding: 10,
-    borderRadius: 6,
+    padding: 12,
+    borderRadius: 8,
     marginBottom: 16
   },
-  critLabel: {
+  reminderLabel: {
     color: LuxuryTheme.accent.auraGlow,
     fontSize: 11,
     fontWeight: '600',
     textAlign: 'right'
   },
-  critText: {
+  reminderText: {
     color: LuxuryTheme.text.primary,
     fontSize: 13,
     marginTop: 2,
@@ -154,31 +170,31 @@ const styles = StyleSheet.create({
     marginBottom: 14
   },
   label: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 11,
+    color: LuxuryTheme.text.secondary,
+    fontSize: 12,
     fontWeight: '600',
     textAlign: 'right',
     marginBottom: 6
   },
   textInput: {
-    backgroundColor: LuxuryTheme.background.base,
+    backgroundColor: LuxuryTheme.background.surface,
     borderWidth: 1,
     borderColor: LuxuryTheme.background.border,
     borderRadius: 10,
-    padding: 10,
+    padding: 12,
     color: LuxuryTheme.text.primary,
     fontSize: 13,
-    minHeight: 70,
+    minHeight: 65,
     textAlignVertical: 'top'
   },
   evalRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    gap: 8
   },
   evalChip: {
     flex: 1,
-    marginHorizontal: 4,
-    backgroundColor: LuxuryTheme.background.base,
+    backgroundColor: LuxuryTheme.background.surface,
     borderWidth: 1,
     borderColor: LuxuryTheme.background.border,
     borderRadius: 8,
@@ -194,10 +210,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 10
-  },
-  saveButtonDisabled: {
-    opacity: 0.35
+    marginTop: 10,
+    marginBottom: 30
   },
   saveButtonText: {
     color: LuxuryTheme.text.primary,

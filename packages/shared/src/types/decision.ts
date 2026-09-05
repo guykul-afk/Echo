@@ -8,6 +8,13 @@ export type DecisionStatus =
 export type ContextStakes = 'low' | 'medium' | 'high' | 'very_high';
 export type ContextReversibility = 'reversible' | 'partially_reversible' | 'irreversible';
 export type ContextTimePressure = 'low' | 'medium' | 'high';
+export type FrictionLevel = 'quick' | 'focused' | 'deep';
+
+export interface RefinedInsight {
+  before: string; // What was initially felt/thought
+  now: string;    // What became clarified
+  chosenStep: string; // The step chosen by the user
+}
 
 export interface Option {
   id: string; // UUID v4
@@ -50,9 +57,20 @@ export interface DecisionCase {
   contextTimePressure: ContextTimePressure;
   rawCaptureText: string;
   rawAudioPath?: string;
-  frozenAt: number; // epoch ms (Crucial: timestamp before AI extraction)
+  frozenAt: number; // epoch ms
+
+  // Adaptive Friction & Developing Mirror
+  frictionLevel?: FrictionLevel;
+  dimConsideration?: string; // אתה שוקל
+  dimGoalsPrices?: string;   // אתה רוצה להשיג / לשמור
+  dimReliance?: string;      // על מה אתה נשען
+  dimUnknowns?: string;      // עדיין לא ברור
+  aiInterventionUsed?: string;
+  nextStep?: string;
+  refinedInsight?: RefinedInsight;
+
   resolvedAt?: number;
-  vectorEmbedding?: number[]; // Vertex AI text-embedding vector
+  vectorEmbedding?: number[];
   createdAt: number;
   updatedAt: number;
 }

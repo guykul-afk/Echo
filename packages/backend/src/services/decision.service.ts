@@ -3,10 +3,10 @@ import {
   Statement,
   Option,
   DecisionSignature,
-  EvaluationContract,
-  Outcome,
   EpistemicState,
-  IlluminationQuestion
+  IlluminationQuestion,
+  FourHumanDimensions,
+  RefinedInsight
 } from '@echo/shared';
 import { AiProviderFactory } from '../ai/factory.js';
 import { IAiProvider } from '../ai/provider.interface.js';
@@ -18,6 +18,7 @@ export interface CreateCaseDTO {
   rawAudioPath?: string;
   mimeType?: string;
   eraId?: string;
+  frictionLevel?: 'quick' | 'focused' | 'deep';
 }
 
 export interface CaseSessionState {
@@ -28,10 +29,13 @@ export interface CaseSessionState {
   illuminationQuestion: string;
   epistemicState?: EpistemicState;
   bespokeQuestion?: IlluminationQuestion;
+  humanDimensions?: FourHumanDimensions;
+  refinedInsight?: RefinedInsight;
 }
 
 export class DecisionService {
   private aiProvider: IAiProvider;
+  private static casesCache: Map<string, CaseSessionState> = new Map();
 
   constructor(aiProvider?: IAiProvider) {
     this.aiProvider = aiProvider || AiProviderFactory.getProvider();
@@ -41,7 +45,7 @@ export class DecisionService {
     const caseId = `dc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const now = Date.now();
 
-    // 1. Tier 1: Dedicated 3.5 Transcribe (if audio provided)
+    // 1. Audio Transcribe (if audio provided)
     let rawCapture = dto.rawText || '';
     if (!rawCapture && dto.rawAudioBuffer) {
       rawCapture = await this.aiProvider.transcribeAudio(dto.rawAudioBuffer, dto.mimeType || 'audio/mp3');
@@ -51,13 +55,52 @@ export class DecisionService {
       throw new Error('INVALID_ARGUMENT: Either rawText or valid rawAudioBuffer must be provided.');
     }
 
-    // Rule #1 of Truth: Raw verbatim thought is frozen and locked immediately
     const frozenAt = now;
 
-    // 2. Tier 2: Model 3.6 Cognitive Reasoning (strictly operates on frozen verbatim text)
+    // 2. Cognitive Reasoning
     const extracted = await this.aiProvider.extractEpistemicSchema(rawCapture);
 
-    // 3. Construct Canonical Decision Case
+    let epistemicState: EpistemicState | undefined;
+    let bespokeQuestion: IlluminationQuestion | undefined;
+    let humanDimensions: FourHumanDimensions | undefined = extracted.fourDimensions;
+    let refinedInsight: RefinedInsight | undefined = extracted.refinedInsight;
+
+    if (this.aiProvider.extractCognitiveEngine) {
+      const cognitiveResult = await this.aiProvider.extractCognitiveEngine(rawCapture);
+      humanDimensions = cognitiveResult.humanDimensions || humanDimensions;
+      refinedInsight = cognitiveResult.refinedInsight || refinedInsight;
+
+      epistemicState = {
+        caseId,
+        userId: dto.userId,
+        ...cognitiveResult.epistemicState,
+        humanDimensions,
+        extractedAt: now
+      };
+
+      bespokeQuestion = {
+        id: `illum-${caseId}`,
+        caseId,
+        strategy: cognitiveResult.illuminationQuestion.strategy,
+        questionText: cognitiveResult.illuminationQuestion.questionText,
+        triggerReason: cognitiveResult.illuminationQuestion.triggerReason,
+        isSecondary: false,
+        canSkip: true,
+        createdAt: now
+      };
+    }
+
+    // Default 4 Human Dimensions fallback if not extracted
+    if (!humanDimensions) {
+      humanDimensions = {
+        consideration: extracted.title,
+        goalsPrices: `הבנתי שחשוב לך: ${extracted.goal}`,
+        reliance: extracted.statements.filter(s => s.role === 'observation' || s.role === 'assumption').map(s => s.text).join(', ') || 'נתונים שהוזנו',
+        unknowns: extracted.statements.filter(s => s.role === 'unknown').map(s => s.text).join(', ') || 'פערי מידע טרם הובהרו'
+      };
+    }
+
+    // 3. Construct Decision Case with 4 Human Dimensions & Adaptive Friction
     const decisionCase: DecisionCase = {
       id: caseId,
       userId: dto.userId,
@@ -71,6 +114,13 @@ export class DecisionService {
       rawCaptureText: rawCapture,
       rawAudioPath: dto.rawAudioPath,
       frozenAt,
+      frictionLevel: dto.frictionLevel || 'focused',
+      dimConsideration: humanDimensions.consideration,
+      dimGoalsPrices: humanDimensions.goalsPrices,
+      dimReliance: humanDimensions.reliance,
+      dimUnknowns: humanDimensions.unknowns,
+      aiInterventionUsed: bespokeQuestion?.questionText || extracted.illuminationQuestion,
+      refinedInsight,
       createdAt: now,
       updatedAt: now
     };
@@ -122,37 +172,70 @@ export class DecisionService {
       decisionTempo: extracted.signature.decisionTempo
     };
 
-    // 7. Extract Cognitive Engine (9 Dimensions & Bespoke Illumination) if supported
-    let epistemicState: EpistemicState | undefined;
-    let bespokeQuestion: IlluminationQuestion | undefined;
-
-    if (this.aiProvider.extractCognitiveEngine) {
-      const cognitiveResult = await this.aiProvider.extractCognitiveEngine(rawCapture);
-      epistemicState = {
-        caseId,
-        userId: dto.userId,
-        ...cognitiveResult.epistemicState,
-        extractedAt: now
-      };
-      bespokeQuestion = {
-        id: `illum-${caseId}`,
-        caseId,
-        strategy: cognitiveResult.illuminationQuestion.strategy,
-        questionText: cognitiveResult.illuminationQuestion.questionText,
-        triggerReason: cognitiveResult.illuminationQuestion.triggerReason,
-        isSecondary: false,
-        createdAt: now
-      };
-    }
-
-    return {
+    const sessionState: CaseSessionState = {
       decisionCase,
       statements,
       options,
       signature,
       illuminationQuestion: bespokeQuestion ? bespokeQuestion.questionText : extracted.illuminationQuestion,
       epistemicState,
-      bespokeQuestion
+      bespokeQuestion,
+      humanDimensions,
+      refinedInsight
     };
+
+    DecisionService.casesCache.set(caseId, sessionState);
+    return sessionState;
+  }
+
+  async updateMirror(caseId: string, updates: Partial<FourHumanDimensions>): Promise<DecisionCase> {
+    const session = DecisionService.casesCache.get(caseId);
+    if (!session) {
+      throw new Error(`Case ${caseId} not found.`);
+    }
+
+    if (updates.consideration) session.decisionCase.dimConsideration = updates.consideration;
+    if (updates.goalsPrices) session.decisionCase.dimGoalsPrices = updates.goalsPrices;
+    if (updates.reliance) session.decisionCase.dimReliance = updates.reliance;
+    if (updates.unknowns) session.decisionCase.dimUnknowns = updates.unknowns;
+
+    session.decisionCase.updatedAt = Date.now();
+    return session.decisionCase;
+  }
+
+  async submitDeliberationAnswer(
+    caseId: string,
+    userAnswer: string,
+    skip: boolean = false
+  ): Promise<{ success: boolean; refinedInsight: RefinedInsight; nextStep: string }> {
+    const session = DecisionService.casesCache.get(caseId);
+    const now = Date.now();
+
+    const refinedInsight: RefinedInsight = session?.refinedInsight || {
+      before: session?.decisionCase.dimConsideration || 'דילמה תחת אי-ודאות',
+      now: skip ? 'נשמר המצב הקיים ללא הרחבה נוספת' : (userAnswer || 'התחדדו השיקולים המרכזיים'),
+      chosenStep: skip ? 'שמירה והמשך מעקב' : (userAnswer.slice(0, 80) || 'בירור מקדים')
+    };
+
+    if (session) {
+      session.decisionCase.nextStep = refinedInsight.chosenStep;
+      session.decisionCase.refinedInsight = refinedInsight;
+      session.decisionCase.status = 'decided';
+      session.decisionCase.updatedAt = now;
+      if (session.bespokeQuestion) {
+        session.bespokeQuestion.userResponseText = skip ? '[דלג / מספיק לי לעכשיו]' : userAnswer;
+        session.bespokeQuestion.respondedAt = now;
+      }
+    }
+
+    return {
+      success: true,
+      refinedInsight,
+      nextStep: refinedInsight.chosenStep
+    };
+  }
+
+  getCase(caseId: string): CaseSessionState | undefined {
+    return DecisionService.casesCache.get(caseId);
   }
 }

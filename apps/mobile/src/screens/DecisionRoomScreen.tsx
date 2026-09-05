@@ -1,44 +1,96 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { LuxuryTheme } from '../theme/colors.js';
-import { DecisionCase, Statement, Option, DecisionSignature } from '@echo/shared';
+import { DecisionCase, Option, DecisionSignature, RefinedInsight } from '@echo/shared';
 
 interface DecisionRoomScreenProps {
   decisionCase: DecisionCase;
-  statements: Statement[];
-  options: Option[];
-  signature: DecisionSignature;
-  illuminationQuestion: string;
+  options?: Option[];
+  signature?: DecisionSignature;
+  illuminationQuestion?: string;
   similarCaseAnalogy?: { title: string; reason: string; strength: string };
-  onAnswerSubmit: (answer: string) => void;
+  initialRefinedInsight?: RefinedInsight;
+  onAnswerSubmit: (answer: string, skip?: boolean) => void;
+  onMirrorUpdate?: (updatedFields: {
+    consideration: string;
+    goalsPrices: string;
+    reliance: string;
+    unknowns: string;
+  }) => void;
 }
 
 export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   decisionCase,
-  statements,
-  options,
   illuminationQuestion,
   similarCaseAnalogy,
-  onAnswerSubmit
+  initialRefinedInsight,
+  onAnswerSubmit,
+  onMirrorUpdate
 }) => {
+  // 4 Human Dimensions local state for direct live editing
+  const [consideration, setConsideration] = useState(decisionCase.dimConsideration || decisionCase.title);
+  const [goalsPrices, setGoalsPrices] = useState(decisionCase.dimGoalsPrices || '');
+  const [reliance, setReliance] = useState(decisionCase.dimReliance || '');
+  const [unknowns, setUnknowns] = useState(decisionCase.dimUnknowns || '');
+
   const [userAnswer, setUserAnswer] = useState('');
   const [showRawText, setShowRawText] = useState(false);
+  const [activeTab, setActiveTab] = useState<'mirror' | 'insight'>('mirror');
+  const [insight, setInsight] = useState<RefinedInsight | null>(initialRefinedInsight || null);
 
-  const goal = statements.find(s => s.role === 'goal')?.text;
-  const observations = statements.filter(s => s.role === 'observation');
-  const assumptions = statements.filter(s => s.role === 'assumption');
-  const unknowns = statements.filter(s => s.role === 'unknown');
+  const handleFieldChange = (field: 'consideration' | 'goalsPrices' | 'reliance' | 'unknowns', val: string) => {
+    let nextConsideration = consideration;
+    let nextGoalsPrices = goalsPrices;
+    let nextReliance = reliance;
+    let nextUnknowns = unknowns;
+
+    if (field === 'consideration') { nextConsideration = val; setConsideration(val); }
+    if (field === 'goalsPrices') { nextGoalsPrices = val; setGoalsPrices(val); }
+    if (field === 'reliance') { nextReliance = val; setReliance(val); }
+    if (field === 'unknowns') { nextUnknowns = val; setUnknowns(val); }
+
+    if (onMirrorUpdate) {
+      onMirrorUpdate({
+        consideration: nextConsideration,
+        goalsPrices: nextGoalsPrices,
+        reliance: nextReliance,
+        unknowns: nextUnknowns
+      });
+    }
+  };
+
+  const handleProceedWithAnswer = () => {
+    const refined: RefinedInsight = {
+      before: consideration,
+      now: userAnswer || 'התחדדו השיקולים המרכזיים',
+      chosenStep: userAnswer.slice(0, 80) || 'בירור מוקדם לפני הכרעה'
+    };
+    setInsight(refined);
+    setActiveTab('insight');
+    onAnswerSubmit(userAnswer, false);
+  };
+
+  const handleSkip = () => {
+    const refined: RefinedInsight = {
+      before: consideration,
+      now: 'נשמר המצב הקיים והשיקולים שנוסחו (מסלול מהיר)',
+      chosenStep: 'שמירה להמשך מעקב'
+    };
+    setInsight(refined);
+    setActiveTab('insight');
+    onAnswerSubmit('', true);
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Top Frozen State Badge */}
+      {/* Frozen Timestamp Badge */}
       <TouchableOpacity
         style={styles.frozenBadge}
         activeOpacity={0.7}
         onPress={() => setShowRawText(!showRawText)}
       >
         <Text style={styles.frozenText}>
-          🔒 מצב חשיבה ראשוני הוקפא @ {new Date(decisionCase.frozenAt).toLocaleTimeString('he-IL')} (לחץ להצגה)
+          🔒 מצב חשיבה ראשוני הוקפא @ {new Date(decisionCase.frozenAt).toLocaleTimeString('he-IL')} (הקש לצפייה במקור)
         </Text>
       </TouchableOpacity>
 
@@ -49,88 +101,151 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         </View>
       )}
 
-      {/* Decision Title & Goal */}
+      {/* Screen Header */}
       <View style={styles.headerSection}>
-        <Text style={styles.caseTitle}>{decisionCase.title}</Text>
-        {goal && (
-          <View style={styles.goalBox}>
-            <Text style={styles.goalLabel}>מטרה מזוקקת:</Text>
-            <Text style={styles.goalText}>{goal}</Text>
-          </View>
-        )}
+        <Text style={styles.screenTitle}>מראת החשיבה המתפתחת</Text>
+        <Text style={styles.screenSubtitle}>זה משקף אותך? כל שדה ניתן לעריכה ישירה וקלה</Text>
       </View>
 
-      {/* Epistemic Schema Breakdown (Read-Only) */}
-      <View style={styles.schemaSection}>
-        <Text style={styles.sectionHeading}>פירוק סכמת חשיבה</Text>
+      {/* The 4 Human Dimensions (Editable) */}
+      <View style={styles.mirrorSection}>
+        {/* 1. אתה שוקל */}
+        <View style={styles.blockCard}>
+          <Text style={[styles.blockTag, { color: LuxuryTheme.epistemicRoles.goal }]}>
+            ● אתה שוקל
+          </Text>
+          <TextInput
+            style={styles.editableInput}
+            multiline
+            value={consideration}
+            onChangeText={val => handleFieldChange('consideration', val)}
+            textAlign="right"
+          />
+        </View>
 
-        {/* Observations / Facts */}
+        {/* 2. חשוב לך להשיג ולשמור */}
         <View style={styles.blockCard}>
           <Text style={[styles.blockTag, { color: LuxuryTheme.epistemicRoles.observation }]}>
-            ● עובדות מוצקות שנמדדו
+            ● הבנתי שחשוב לך להשיג ולשמור
           </Text>
-          {observations.map((obs, idx) => (
-            <Text key={idx} style={styles.itemText}>• {obs.text}</Text>
-          ))}
+          <TextInput
+            style={styles.editableInput}
+            multiline
+            value={goalsPrices}
+            onChangeText={val => handleFieldChange('goalsPrices', val)}
+            textAlign="right"
+          />
         </View>
 
-        {/* Assumptions */}
+        {/* 3. על מה אתה נשען */}
         <View style={[styles.blockCard, styles.assumptionCard]}>
           <Text style={[styles.blockTag, { color: LuxuryTheme.epistemicRoles.assumption }]}>
-            ▲ הנחות עבודה סמויות (טעונות בדיקה)
+            ▲ אתה נשען על
           </Text>
-          {assumptions.map((assump, idx) => (
-            <Text key={idx} style={styles.itemText}>• {assump.text}</Text>
-          ))}
+          <TextInput
+            style={styles.editableInput}
+            multiline
+            value={reliance}
+            onChangeText={val => handleFieldChange('reliance', val)}
+            textAlign="right"
+          />
         </View>
 
-        {/* Unknowns */}
-        {unknowns.length > 0 && (
-          <View style={styles.blockCard}>
-            <Text style={[styles.blockTag, { color: LuxuryTheme.epistemicRoles.unknown }]}>
-              ? פערי מידע מרכזיים
-            </Text>
-            {unknowns.map((u, idx) => (
-              <Text key={idx} style={styles.itemText}>• {u.text}</Text>
-            ))}
+        {/* 4. עדיין לא ברור */}
+        <View style={styles.blockCard}>
+          <Text style={[styles.blockTag, { color: LuxuryTheme.epistemicRoles.unknown }]}>
+            ? עדיין לא ברור
+          </Text>
+          <TextInput
+            style={styles.editableInput}
+            multiline
+            value={unknowns}
+            onChangeText={val => handleFieldChange('unknowns', val)}
+            textAlign="right"
+          />
+        </View>
+      </View>
+
+      {/* Adaptive Intervention Hero Card */}
+      {illuminationQuestion && activeTab === 'mirror' && (
+        <View style={styles.illuminationHero}>
+          <View style={styles.illuminationBadge}>
+            <Text style={styles.illuminationBadgeText}>התערבות ממוקדת אחת</Text>
           </View>
-        )}
-      </View>
+          <Text style={styles.illuminationQuestionText}>"{illuminationQuestion}"</Text>
 
-      {/* HERO: The Single Illumination Question */}
-      <View style={styles.illuminationHero}>
-        <View style={styles.illuminationBadge}>
-          <Text style={styles.illuminationBadgeText}>שאלת הארה אחת</Text>
+          <TextInput
+            style={styles.answerInput}
+            multiline
+            placeholder="מענה קצר או כיוון בירור (או דלג למטה)..."
+            placeholderTextColor={LuxuryTheme.text.tertiary}
+            value={userAnswer}
+            onChangeText={setUserAnswer}
+            textAlign="right"
+          />
+
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.proceedButton, !userAnswer.trim() && styles.proceedButtonDisabled]}
+              disabled={!userAnswer.trim()}
+              onPress={handleProceedWithAnswer}
+            >
+              <Text style={styles.proceedButtonText}>המשך עם התשובה ←</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.skipButton}
+              onPress={handleSkip}
+            >
+              <Text style={styles.skipButtonText}>מספיק לי לעכשיו — שמור והמשך</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <Text style={styles.illuminationQuestionText}>"{illuminationQuestion}"</Text>
+      )}
 
-        <TextInput
-          style={styles.answerInput}
-          multiline
-          placeholder="תשובתך הממוקדת (למשל: פעולת בירור מהירה או תנאי סף)..."
-          placeholderTextColor={LuxuryTheme.text.tertiary}
-          value={userAnswer}
-          onChangeText={setUserAnswer}
-          textAlign="right"
-        />
+      {/* Before & After Flash (חיווי ההתחדדות) */}
+      {activeTab === 'insight' && insight && (
+        <View style={styles.insightCard}>
+          <View style={styles.insightBadge}>
+            <Text style={styles.insightBadgeText}>✨ מה התחדד בחשיבה</Text>
+          </View>
 
-        <TouchableOpacity
-          style={[styles.proceedButton, !userAnswer.trim() && styles.proceedButtonDisabled]}
-          disabled={!userAnswer.trim()}
-          onPress={() => onAnswerSubmit(userAnswer)}
-        >
-          <Text style={styles.proceedButtonText}>המשך לקביעת חוזה הערכה ומועד מעקב ←</Text>
-        </TouchableOpacity>
-      </View>
+          <View style={styles.insightRow}>
+            <Text style={styles.insightLabel}>קודם:</Text>
+            <Text style={styles.insightContent}>{insight.before}</Text>
+          </View>
 
-      {/* Analogous Past Cases (if retrieved) */}
+          <View style={styles.insightRow}>
+            <Text style={[styles.insightLabel, { color: LuxuryTheme.accent.emeraldSuccess }]}>כעת התחדד:</Text>
+            <Text style={[styles.insightContent, { fontWeight: '600' }]}>{insight.now}</Text>
+          </View>
+
+          <View style={styles.insightRow}>
+            <Text style={[styles.insightLabel, { color: LuxuryTheme.accent.auraGlow }]}>הצעד שבחרת:</Text>
+            <Text style={[styles.insightContent, { color: LuxuryTheme.text.primary, fontWeight: '700' }]}>
+              {insight.chosenStep}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.finishButton}
+            onPress={() => onAnswerSubmit(userAnswer, true)}
+          >
+            <Text style={styles.finishButtonText}>שמור לזיכרון שיקול הדעת ←</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Analogous Past Cases (Gentle Memory) */}
       {similarCaseAnalogy && (
         <View style={styles.analogySection}>
-          <Text style={styles.analogyHeading}>הד ממקרה עבר (אנלוגיה מבנית)</Text>
+          <Text style={styles.analogyHeading}>הד מניסיון קודם (אנלוגיה למחשבה)</Text>
           <View style={styles.analogyCard}>
             <Text style={styles.analogyTitle}>{similarCaseAnalogy.title}</Text>
             <Text style={styles.analogyReason}>{similarCaseAnalogy.reason}</Text>
-            <Text style={styles.analogyDisclaimer}>* אנלוגיה מבנית למחשבה בלבד — אינה מהווה המלצה לפעולה</Text>
+            <Text style={styles.analogyDisclaimer}>
+              האם זה רלוונטי גם כאן? באפשרותך להתחשב בכך או לקבוע שההקשר שונה.
+            </Text>
           </View>
         </View>
       )}
@@ -183,53 +298,29 @@ const styles = StyleSheet.create({
     textAlign: 'right'
   },
   headerSection: {
-    marginBottom: 20,
+    marginBottom: 16,
     alignItems: 'flex-end'
   },
-  caseTitle: {
+  screenTitle: {
     color: LuxuryTheme.text.primary,
     fontSize: 22,
     fontWeight: '700',
     textAlign: 'right',
-    marginBottom: 10
+    marginBottom: 4
   },
-  goalBox: {
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
-    borderRightWidth: 3,
-    borderRightColor: LuxuryTheme.epistemicRoles.goal,
-    padding: 10,
-    width: '100%',
-    borderRadius: 6
-  },
-  goalLabel: {
-    color: LuxuryTheme.epistemicRoles.goal,
-    fontSize: 11,
-    fontWeight: '600',
-    textAlign: 'right'
-  },
-  goalText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 14,
-    marginTop: 2,
-    textAlign: 'right'
-  },
-  schemaSection: {
-    marginBottom: 24
-  },
-  sectionHeading: {
+  screenSubtitle: {
     color: LuxuryTheme.text.tertiary,
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    textAlign: 'right',
-    marginBottom: 10
+    fontSize: 13,
+    textAlign: 'right'
+  },
+  mirrorSection: {
+    marginBottom: 20
   },
   blockCard: {
     backgroundColor: LuxuryTheme.background.surface,
     borderRadius: 14,
     padding: 14,
-    marginBottom: 10,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: LuxuryTheme.background.border
   },
@@ -238,17 +329,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(245, 158, 11, 0.04)'
   },
   blockTag: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: 6,
     textAlign: 'right'
   },
-  itemText: {
+  editableInput: {
     color: LuxuryTheme.text.primary,
     fontSize: 14,
     lineHeight: 20,
     textAlign: 'right',
-    marginBottom: 4
+    padding: 0
   },
   illuminationHero: {
     backgroundColor: LuxuryTheme.background.surfaceElevated,
@@ -256,11 +347,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1.5,
     borderColor: 'rgba(99, 102, 241, 0.4)',
-    marginBottom: 24,
-    shadowColor: LuxuryTheme.accent.auraGlow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12
+    marginBottom: 24
   },
   illuminationBadge: {
     alignSelf: 'flex-end',
@@ -291,13 +378,16 @@ const styles = StyleSheet.create({
     padding: 12,
     color: LuxuryTheme.text.primary,
     fontSize: 14,
-    minHeight: 80,
+    minHeight: 70,
     textAlignVertical: 'top',
     marginBottom: 14
   },
+  actionRow: {
+    gap: 10
+  },
   proceedButton: {
     backgroundColor: LuxuryTheme.accent.auraGlow,
-    paddingVertical: 14,
+    paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center'
   },
@@ -305,6 +395,67 @@ const styles = StyleSheet.create({
     opacity: 0.4
   },
   proceedButtonText: {
+    color: LuxuryTheme.text.primary,
+    fontSize: 14,
+    fontWeight: '600'
+  },
+  skipButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    paddingVertical: 11,
+    borderRadius: 12,
+    alignItems: 'center'
+  },
+  skipButtonText: {
+    color: LuxuryTheme.text.secondary,
+    fontSize: 13
+  },
+  insightCard: {
+    backgroundColor: 'rgba(16, 185, 129, 0.06)',
+    borderColor: 'rgba(16, 185, 129, 0.35)',
+    borderWidth: 1.5,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24
+  },
+  insightBadge: {
+    alignSelf: 'flex-end',
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    marginBottom: 14
+  },
+  insightBadgeText: {
+    color: LuxuryTheme.accent.emeraldSuccess,
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  insightRow: {
+    marginBottom: 12
+  },
+  insightLabel: {
+    color: LuxuryTheme.text.tertiary,
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'right',
+    marginBottom: 2
+  },
+  insightContent: {
+    color: LuxuryTheme.text.primary,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'right'
+  },
+  finishButton: {
+    backgroundColor: LuxuryTheme.accent.emeraldSuccess,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8
+  },
+  finishButtonText: {
     color: LuxuryTheme.text.primary,
     fontSize: 14,
     fontWeight: '600'

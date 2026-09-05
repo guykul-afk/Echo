@@ -4,7 +4,9 @@ import {
   ContextTimePressure,
   EpistemicRole,
   PrincipalAgentTension,
-  DecisionTempo
+  DecisionTempo,
+  FourHumanDimensions,
+  RefinedInsight
 } from '@echo/shared';
 import { CognitiveAnalysisResult } from '../prompts/cognitive-engine.prompt.js';
 
@@ -33,22 +35,23 @@ export interface EpistemicExtractionResult {
   contextTimePressure: ContextTimePressure;
   signature: ExtractedSignatureDTO;
   illuminationQuestion: string;
+  fourDimensions?: FourHumanDimensions;
+  refinedInsight?: RefinedInsight;
 }
 
 export interface IAiProvider {
   /**
-   * Tier 1: Dedicated 3.5 Transcribe Engine
-   * Converts raw audio input into high-fidelity verbatim Hebrew text for immediate freezing.
+   * Tier 1: Dedicated Transcribe Engine
+   * Converts raw audio input into verbatim text.
    */
   transcribeAudio(audioBuffer: Buffer, mimeType?: string): Promise<string>;
 
   /**
-   * Tier 2: Model 3.6 Cognitive Engine
-   * Parses frozen verbatim text into canonical epistemic schema and formulates one illumination question.
+   * Tier 2: Cognitive Engine
+   * Parses text into canonical epistemic schema, four dimensions, and illumination question.
    */
   extractEpistemicSchema(rawText: string, activeEraContext?: string): Promise<EpistemicExtractionResult>;
 
   extractCognitiveEngine?(rawText: string): Promise<CognitiveAnalysisResult>;
   generateStructuralEmbedding(signature: ExtractedSignatureDTO, context: Record<string, any>): Promise<number[]>;
 }
-

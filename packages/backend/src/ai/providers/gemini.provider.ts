@@ -1,5 +1,6 @@
 import { IAiProvider, EpistemicExtractionResult, ExtractedSignatureDTO } from '../provider.interface.js';
 import { EPISTEMIC_EXTRACTION_SYSTEM_PROMPT } from '../../prompts/epistemic-extraction.prompt.js';
+import { COGNITIVE_ENGINE_PROMPT, CognitiveAnalysisResult } from '../../prompts/cognitive-engine.prompt.js';
 
 export class GeminiAiProvider implements IAiProvider {
   private apiKey: string;
@@ -8,8 +9,8 @@ export class GeminiAiProvider implements IAiProvider {
 
   constructor(
     apiKey?: string,
-    cognitiveModel: string = 'gemini-3.6',
-    transcribeModel: string = 'gemini-3.5-transcribe'
+    cognitiveModel: string = 'gemini-2.0-flash',
+    transcribeModel: string = 'gemini-2.0-flash'
   ) {
     this.apiKey = apiKey || process.env.GEMINI_API_KEY || '';
     this.cognitiveModel = cognitiveModel;
@@ -17,8 +18,7 @@ export class GeminiAiProvider implements IAiProvider {
   }
 
   /**
-   * Tier 1: Model 3.5 Transcribe
-   * High-fidelity verbatim audio transcription before cognitive parsing.
+   * Tier 1: Audio Transcribe
    */
   async transcribeAudio(audioBuffer: Buffer, mimeType: string = 'audio/mp3'): Promise<string> {
     if (!this.apiKey) {
@@ -42,7 +42,7 @@ export class GeminiAiProvider implements IAiProvider {
                 }
               },
               {
-                text: 'תמלל את הדיבור הבא מילה-במילה (Verbatim). אל תוסיף הקדמות, אל תסכם, אל תערוך ואל תשמיט דבר. שמור על כל מונח מקצועי או לועזי במדויק.'
+                text: 'תמלל את הדיבור הבא מילה-במילה (Verbatim). אל תוסיף הקדמות, אל תסכם ואל תשמיט דבר.'
               }
             ]
           }
@@ -54,29 +54,7 @@ export class GeminiAiProvider implements IAiProvider {
     });
 
     if (!response.ok) {
-      // Graceful fallback to multi-modal flash if 3.5 preview tag is resolving
-      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${this.apiKey}`;
-      const fbResponse = await fetch(fallbackUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { inlineData: { mimeType, data: base64Audio } },
-                { text: 'תמלל את הדיבור הבא מילה-במילה (Verbatim) בדיוק מוחלט.' }
-              ]
-            }
-          ],
-          generationConfig: { temperature: 0.0 }
-        })
-      });
-
-      if (!fbResponse.ok) {
-        throw new Error(`Gemini Transcribe API error (${response.status}): ${await response.text()}`);
-      }
-      const fbData = await fbResponse.json();
-      return fbData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      throw new Error(`Gemini Transcribe API error (${response.status}): ${await response.text()}`);
     }
 
     const data = await response.json();
@@ -84,8 +62,7 @@ export class GeminiAiProvider implements IAiProvider {
   }
 
   /**
-   * Tier 2: Model 3.6 Cognitive Engine
-   * Strictly parses frozen verbatim text into epistemic schema and one illumination question.
+   * Tier 2: Cognitive Engine (4 Dimensions + Adaptive Intervention)
    */
   async extractEpistemicSchema(rawText: string, activeEraContext?: string): Promise<EpistemicExtractionResult> {
     if (!this.apiKey) {
@@ -99,7 +76,7 @@ Raw Capture Input:
 """
 ${rawText}
 """
-Extract the epistemic breakdown, decision signature, and the single illumination question.
+Extract the epistemic breakdown, decision signature, four human dimensions, and adaptive intervention question.
 `;
 
     const response = await fetch(url, {
@@ -129,9 +106,43 @@ Extract the epistemic breakdown, decision signature, and the single illumination
     return JSON.parse(candidateText) as EpistemicExtractionResult;
   }
 
-  async generateStructuralEmbedding(signature: ExtractedSignatureDTO, context: Record<string, any>): Promise<number[]> {
+  async extractCognitiveEngine(rawText: string): Promise<CognitiveAnalysisResult> {
     if (!this.apiKey) {
-      // Fallback local vector
+      throw new Error('GEMINI_API_KEY is not configured.');
+    }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.cognitiveModel}:generateContent?key=${this.apiKey}`;
+    const userPrompt = `Raw capture: """${rawText}"""`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: COGNITIVE_ENGINE_PROMPT }] },
+        contents: [{ parts: [{ text: userPrompt }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.2
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini Cognitive API error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!candidateText) {
+      throw new Error('No content returned from Gemini Cognitive Engine.');
+    }
+
+    return JSON.parse(candidateText) as CognitiveAnalysisResult;
+  }
+
+  async generateStructuralEmbedding(signature: ExtractedSignatureDTO, _context: Record<string, any>): Promise<number[]> {
+    if (!this.apiKey) {
       return [signature.commitmentGradient, signature.informationCostRatio, 0.5];
     }
 

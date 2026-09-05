@@ -3,30 +3,73 @@ import { CognitiveAnalysisResult } from '../../prompts/cognitive-engine.prompt.j
 
 export class MockAiProvider implements IAiProvider {
   /**
-   * Tier 1: Model 3.5 Transcribe Simulation
+   * Tier 1: Dedicated Transcribe Simulation
    */
   async transcribeAudio(audioBuffer: Buffer, _mimeType?: string): Promise<string> {
     const raw = audioBuffer.toString('utf8');
-    // If test passed raw text in the buffer, return it as verbatim transcription
     if (raw && raw.length > 5 && !raw.includes('\u0000')) {
       return raw.trim();
     }
-    // Default high-fidelity Hebrew verbatim capture
-    return `אנחנו מתלבטים האם להמשיך להשקיע בפרויקט אטלס לעוד 3 חודשים.
-השקענו כבר 200 אלף ש"ח ו-8 חודשי עבודה.
-אין לנו לקוח משלם עדיין, אבל שני לקוחות אמרו שהם רוצים לבדוק את זה לעומק.
-אני חושש שאם נפסיק עכשיו כל ההשקעה תרד לטמיון.`;
+    return `אני שוקל לקחת את התפקיד. השכר טוב יותר, אבל אני חושש שלא יהיה לי זמן לילדים. אולי אני סתם מפחד משינוי.`;
   }
 
-  async extractEpistemicSchema(rawText: string, activeEraContext?: string): Promise<EpistemicExtractionResult> {
+  async extractEpistemicSchema(rawText: string, _activeEraContext?: string): Promise<EpistemicExtractionResult> {
     const lower = rawText.toLowerCase();
 
-    // Case 1: Atlas Project (continue or stop)
+    // Case 1: Job Offer & Family Balance
+    if (lower.includes('תפקיד') || lower.includes('ילדים') || lower.includes('שכר') || lower.includes('job')) {
+      return {
+        title: 'שקילת מעבר לתפקיד חדש מול זמן עם הילדים',
+        family: 'career_transition',
+        goal: 'התקדמות מקצועית והכנסה גבוהה יותר לצד שימור נוכחות בבית',
+        fourDimensions: {
+          consideration: 'מעבר לתפקיד חדש',
+          goalsPrices: 'התקדמות והכנסה גבוהה יותר, תוך שמירה על זמן ונוכחות בבית',
+          reliance: 'הצעת שכר משופרת, חשש כללי מפגיעה בזמינות',
+          unknowns: 'מה יהיו שעות העבודה והזמינות בערבים בפועל'
+        },
+        statements: [
+          { text: 'הוצעה הצעה לשכר טוב יותר', role: 'observation', confidenceScore: 0.98 },
+          { text: 'קיים חשש מחוסר זמן לילדים', role: 'evaluation', confidenceScore: 0.95 },
+          { text: 'התפקיד ידרוש שעות מרובות ללא גמישות', role: 'assumption', confidenceScore: 0.88 },
+          { text: 'שעות העבודה וציפיות הזמינות בפועל', role: 'unknown', confidenceScore: 0.92 }
+        ],
+        options: [
+          'קבלת התפקיד במתכונתו הנוכחית',
+          'בירור ציפיות זמינות ובקשת יום קבוע ללא עבודה בערב',
+          'דחיית ההצעה והישארות בתפקיד הנוכחי'
+        ],
+        contextStakes: 'high',
+        contextReversibility: 'partially_reversible',
+        contextTimePressure: 'medium',
+        signature: {
+          commitmentGradient: 0.75,
+          informationCostRatio: 0.9,
+          reversibilityDecayDays: 60,
+          principalAgentTension: 'sole_actor',
+          decisionTempo: 'tactical_weeks'
+        },
+        illuminationQuestion: 'אם אי אפשר לקבל גם שכר מלא וגם גמישות מלאה, איזה בירור קטן לפני מתן תשובה יוכל לעזור לך להחליט?',
+        refinedInsight: {
+          before: 'חשש כללי שהתפקיד יפגע בזמן עם הילדים או שזה סתם פחד משינוי',
+          now: 'החשש ממוקד בזמינות בשעות הערב שעדיין לא בוררה ישירות',
+          chosenStep: 'לשאול את המנהל על ציפיות הזמינות בערבים לפני מתן תשובה'
+        }
+      };
+    }
+
+    // Case 2: Atlas Project
     if (lower.includes('אטלס') || lower.includes('atlas')) {
       return {
         title: 'האם להמשיך להשקיע בפרויקט אטלס',
         family: 'continue_or_stop',
         goal: 'אימות היתכנות מסחרית מבלי לבזבז קיבולת צוות מוגבלת',
+        fourDimensions: {
+          consideration: 'המשך השקעה בפרויקט אטלס לעוד 3 חודשים',
+          goalsPrices: 'אימות נכונות לשלם מבלי להקריב את כל משאבי הפיתוח',
+          reliance: 'שני לקוחות פוטנציאליים רוצים לבדוק את המוצר, השקענו כבר 200K',
+          unknowns: 'האם נכונות לשלם מחייבת 3 חודשים או ניתנת לבדיקה מהירה'
+        },
         statements: [
           { text: 'אין לקוח משלם עדיין', role: 'observation', confidenceScore: 0.98 },
           { text: 'שני לקוחות פוטנציאליים רוצים לבדוק את המוצר', role: 'observation', confidenceScore: 0.95 },
@@ -36,94 +79,43 @@ export class MockAiProvider implements IAiProvider {
         ],
         options: [
           'להמשיך השקעה למשך 3 חודשים נוספים',
-          'לעצור פרויקט ולהקצות 2 מפתחים מחדש'
+          'להציע פיילוט בתשלום בתוך שבועיים'
         ],
         contextStakes: 'high',
         contextReversibility: 'partially_reversible',
         contextTimePressure: 'medium',
         signature: {
           commitmentGradient: 0.8,
-          informationCostRatio: 0.9, // Inexpensive test available (paid pilot)
+          informationCostRatio: 0.9,
           reversibilityDecayDays: 90,
           principalAgentTension: 'team_alignment',
           decisionTempo: 'tactical_weeks'
         },
-        illuminationQuestion: 'האם צריך באמת שלושה חודשים כדי לבדוק נכונות לשלם, או שיש דרך זולה ומהירה יותר לקבל את המידע?'
-      };
-    }
-
-    // Case 2: VP Sales Hiring
-    if (lower.includes('סמנכ"ל מכירות') || lower.includes('vp sales') || lower.includes('מכירות')) {
-      return {
-        title: 'האם לגייס סמנכ"ל מכירות עכשיו',
-        family: 'hire_or_wait',
-        goal: 'הפחתת תלות המייסד במכירות תוך שמירה על ה-Runway',
-        statements: [
-          { text: 'המכירות כרגע תלויות לחלוטין במייסד', role: 'observation', confidenceScore: 0.97 },
-          { text: 'המועמד המוביל יקר מאוד לארגון', role: 'observation', confidenceScore: 0.94 },
-          { text: 'המועמד מצוין בתחומו', role: 'evaluation', confidenceScore: 0.91 },
-          { text: 'מנהיגות מכירות בכירה תפצח תהליך מכירות משוכפל', role: 'assumption', confidenceScore: 0.88 },
-          { text: 'מוכנות הארגון לשילוב סמנכ"ל מכירות במשרה מלאה', role: 'unknown', confidenceScore: 0.84 }
-        ],
-        options: [
-          'גיוס סמנכ"ל מכירות מלא עכשיו',
-          'המתנה ובניית מנוע יציב יותר קודם'
-        ],
-        contextStakes: 'high',
-        contextReversibility: 'partially_reversible',
-        contextTimePressure: 'high',
-        signature: {
-          commitmentGradient: 0.85,
-          informationCostRatio: 0.85, // Fractional trial available
-          reversibilityDecayDays: 60,
-          principalAgentTension: 'external_dependency',
-          decisionTempo: 'tactical_weeks'
-        },
-        illuminationQuestion: 'האם קיימת דרך לבדוק את הערך של הנהגת מכירות בכירה לפני גיוס מלא (כגון מודל חלקי או תקופת ניסיון)?'
-      };
-    }
-
-    // Case 3: German Market Entry
-    if (lower.includes('גרמניה') || lower.includes('גרמני') || lower.includes('germany')) {
-      return {
-        title: 'האם להיכנס לשוק הגרמני',
-        family: 'market_entry',
-        goal: 'בדיקת פוטנציאל השוק בגרמניה מבלי לפצל את המוצר והצוות',
-        statements: [
-          { text: 'שני לקוחות התעניינו בגרמניה', role: 'observation', confidenceScore: 0.96 },
-          { text: 'המוצר והתמיכה מותאמים כיום רק לישראל', role: 'observation', confidenceScore: 0.98 },
-          { text: 'חלון ההזדמנות בשוק הגרמני עלול להיסגר', role: 'evaluation', confidenceScore: 0.86 },
-          { text: 'העניין הראשוני יתורגם לרכש חרף פערי רגולציה ושפה', role: 'assumption', confidenceScore: 0.9 },
-          { text: 'עלות ההתאמה האמיתית של המוצר והרכש המקומי', role: 'unknown', confidenceScore: 0.87 }
-        ],
-        options: [
-          'הקמת פעילות מלאה בגרמניה וגיוס נציג מקומי',
-          'דחיית הכניסה עד להתבססות מלאה בישראל'
-        ],
-        contextStakes: 'high',
-        contextReversibility: 'partially_reversible',
-        contextTimePressure: 'medium',
-        signature: {
-          commitmentGradient: 0.75,
-          informationCostRatio: 0.8, // Design partner trial available
-          reversibilityDecayDays: 90,
-          principalAgentTension: 'external_dependency',
-          decisionTempo: 'tactical_weeks'
-        },
-        illuminationQuestion: 'איזה ניסוי קטן יבדוק ביקוש אמיתי וגם את עלות ההתאמה, בלי להקים עדיין פעילות מלאה?'
+        illuminationQuestion: 'האם קיימת בדיקה קטנה או פיילוט קצר שיכולים לאמת נכונות לשלם לפני התחייבות ל-3 חודשים?',
+        refinedInsight: {
+          before: 'התלבטות בין השקעת 3 חודשים לבין נטישת הפרויקט',
+          now: 'התחדד שניתן לבצע בדיקת נכונות לשלם זולה תוך שבועיים',
+          chosenStep: 'להציע לשני הלקוחות פיילוט ממוקד בתשלום'
+        }
       };
     }
 
     // Default Fallback
     return {
-      title: 'החלטה משמעותית תחת אי-ודאות',
+      title: 'החלטה תחת אי-ודאות',
       family: 'general_deliberation',
-      goal: 'קבלת הכרעה מושכלת עם ניהול סיכונים',
+      goal: 'קבלת החלטה מושכלת ומדויקת',
+      fourDimensions: {
+        consideration: rawText.slice(0, 100),
+        goalsPrices: 'השגת המטרה במינימום מחיר וסיכון',
+        reliance: 'הנחות עבודה ונתונים ראשוניים',
+        unknowns: 'מידע חסר לבחינה מחודשת'
+      },
       statements: [
-        { text: rawText.slice(0, 100), role: 'observation', confidenceScore: 0.9 },
-        { text: 'קיימת חלופה מרכזית שנבחנת מול סטטוס קוו', role: 'assumption', confidenceScore: 0.8 }
+        { text: rawText.slice(0, 80), role: 'observation', confidenceScore: 0.9 },
+        { text: 'קיימת חלופה מרכזית שנבחנת', role: 'assumption', confidenceScore: 0.8 }
       ],
-      options: ['אימוץ הכיוון המוביל', 'השהיה או בדיקה חלופית'],
+      options: ['אימוץ הכיוון המוביל', 'בחינת דרך ביניים'],
       contextStakes: 'medium',
       contextReversibility: 'partially_reversible',
       contextTimePressure: 'medium',
@@ -134,15 +126,59 @@ export class MockAiProvider implements IAiProvider {
         principalAgentTension: 'sole_actor',
         decisionTempo: 'tactical_weeks'
       },
-      illuminationQuestion: 'מהי העובדה החזקה ביותר נגד הכיוון שאתה מעדיף כרגע?'
+      illuminationQuestion: 'אם יתברר שהפרט המרכזי שונה, האם תשקול אחרת?',
+      refinedInsight: {
+        before: rawText.slice(0, 80),
+        now: 'הדילמה נוסחה והוגדרו כיווני פעולה',
+        chosenStep: 'אימות ההנחה המרכזית'
+      }
     };
   }
 
   async extractCognitiveEngine(rawText: string): Promise<CognitiveAnalysisResult> {
     const lower = rawText.toLowerCase();
 
+    if (lower.includes('תפקיד') || lower.includes('ילדים') || lower.includes('שכר') || lower.includes('job')) {
+      return {
+        humanDimensions: {
+          consideration: 'מעבר לתפקיד חדש',
+          goalsPrices: 'התקדמות והכנסה גבוהה יותר, תוך שמירה על זמן ונוכחות בבית',
+          reliance: 'הצעת שכר טובה יותר, חשש כללי מפגיעה בזמינות',
+          unknowns: 'מה יהיו שעות העבודה והזמינות בערבים בפועל'
+        },
+        epistemicState: {
+          facts: ['השכר טוב יותר'],
+          assumptions: ['אולי אני סתם מפחד משינוי', 'התפקיד יפגע בזמן עם הילדים'],
+          unknowns: ['מה יהיו שעות העבודה בפועל'],
+          affect: 'anxious',
+          riskClass: 'mediocristan',
+          reversibility: 'partially_reversible',
+          contradictions: ['רצון בהתקדמות ושכר מול חשש מפגיעה בזמן בית'],
+          locusOfControl: 'internal',
+          conviction: 'moderate'
+        },
+        illuminationQuestion: {
+          strategy: 'competing_goals',
+          questionText: 'אם אי אפשר לקבל את שניהם במלואם, על מה פחות תרצה לוותר?',
+          triggerReason: 'שתי מטרות מתחרות: הכנסה מול נוכחות בבית',
+          canSkip: true
+        },
+        refinedInsight: {
+          before: 'חשש שהתפקיד יפגע בזמן עם הילדים',
+          now: 'החשש מתמקד בזמינות בערבים שעדיין לא בוררה',
+          chosenStep: 'לשאול את המנהל על ציפיות הזמינות בערב לפני מתן תשובה'
+        }
+      };
+    }
+
     if (lower.includes('אטלס') || lower.includes('atlas')) {
       return {
+        humanDimensions: {
+          consideration: 'המשך השקעה בפרויקט אטלס',
+          goalsPrices: 'אימות היתכנות מסחרית מבלי לשרוף משאבים',
+          reliance: 'שני לקוחות רוצים לבדוק, השקעה של 200K',
+          unknowns: 'האם נכונות לשלם מחייבת 3 חודשים נוספים'
+        },
         epistemicState: {
           facts: ['אין לקוח משלם עדיין', 'שני לקוחות פוטנציאליים רוצים לבדוק את המוצר'],
           assumptions: ['הלקוחות המתעניינים יסכימו להמיר לשימוש בתשלום', 'המוצר החדש נראה הרבה יותר טוב'],
@@ -155,18 +191,30 @@ export class MockAiProvider implements IAiProvider {
           conviction: 'moderate'
         },
         illuminationQuestion: {
-          strategy: 'cheap_information_action',
-          questionText: 'ציינת ששני לקוחות רוצים לבדוק את המוצר. האם צריך באמת שלושה חודשים כדי לבדוק נכונות לשלם, או שיש דרך זולה ומהירה יותר לקבל את המידע?',
-          triggerReason: 'High unknowns with cheap verification probe available'
+          strategy: 'missing_crucial_detail',
+          questionText: 'אם יתברר שניסוי של שבועיים מספיק לבדיקת נכונות לשלם, האם תשקול אחרת?',
+          triggerReason: 'הנחה שחייבים 3 חודשים לבדיקת ביקוש',
+          canSkip: true
+        },
+        refinedInsight: {
+          before: 'התלבטות בין 3 חודשי פיתוח נוספים לעצירה מלאה',
+          now: 'התחדד שניתן לבצע בדיקה קצרה בשבועיים',
+          chosenStep: 'הצעת פיילוט ממוקד לשני הלקוחות'
         }
       };
     }
 
     return {
+      humanDimensions: {
+        consideration: rawText.slice(0, 80),
+        goalsPrices: 'השגת היעד בביטחון',
+        reliance: 'מידע ראשוני שהוזן',
+        unknowns: 'מידע חסר לבחינה מחודשת'
+      },
       epistemicState: {
         facts: [rawText.slice(0, 80)],
-        assumptions: ['קיימת חלופה מובילה שתוכיח את עצמה'],
-        unknowns: ['סיכוני ביצוע מרכזיים שלא פורטו'],
+        assumptions: ['קיימת חלופה מובילה'],
+        unknowns: ['תנאי אימות'],
         affect: 'neutral',
         riskClass: 'mediocristan',
         reversibility: 'reversible',
@@ -175,15 +223,20 @@ export class MockAiProvider implements IAiProvider {
         conviction: 'moderate'
       },
       illuminationQuestion: {
-        strategy: 'tacit_knowledge_gap',
-        questionText: 'דילגת על ציון הסיכונים המרכזיים בלוח הזמנים שקבעת. מה אתה יודע על המשאבים שלנו שלא ציינת ומצדיק את זה?',
-        triggerReason: 'Tacit knowledge gap detected'
+        strategy: 'no_intervention',
+        questionText: 'תיארת את השיקולים ואת אי-הוודאות המרכזית. אפשר לשמור כך ולהמשיך.',
+        triggerReason: 'Balanced description',
+        canSkip: true
+      },
+      refinedInsight: {
+        before: rawText.slice(0, 80),
+        now: 'הדילמה נוסחה והוצגה במראה נקייה',
+        chosenStep: 'שמירה להמשך מעקב'
       }
     };
   }
 
-  async generateStructuralEmbedding(signature: ExtractedSignatureDTO, context: Record<string, any>): Promise<number[]> {
-    // Generate a deterministic 16-dimensional vector for local similarity calculations
+  async generateStructuralEmbedding(signature: ExtractedSignatureDTO, _context: Record<string, any>): Promise<number[]> {
     return [
       signature.commitmentGradient,
       signature.informationCostRatio,

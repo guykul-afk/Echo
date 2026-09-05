@@ -3,12 +3,10 @@ import { SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
 import { LuxuryTheme } from './theme/colors.js';
 import { QuickCaptureScreen } from './screens/QuickCaptureScreen.js';
 import { DecisionRoomScreen } from './screens/DecisionRoomScreen.js';
-import { EvaluationContractScreen } from './screens/EvaluationContractScreen.js';
 import { OutcomeModal } from './screens/OutcomeModal.js';
-import { EpistemicMirrorScreen } from './screens/EpistemicMirrorScreen.js';
-import { DecisionCase, Statement, Option, DecisionSignature, EpistemicState, IlluminationQuestion } from '@echo/shared';
+import { DecisionCase, Option, DecisionSignature, RefinedInsight, QuickLoopStatus } from '@echo/shared';
 
-type AppStep = 'capture' | 'mirror' | 'decision_room' | 'contract' | 'outcome';
+type AppStep = 'capture' | 'decision_room' | 'outcome';
 
 export const App: React.FC = () => {
   const [step, setStep] = useState<AppStep>('capture');
@@ -16,13 +14,11 @@ export const App: React.FC = () => {
 
   // Active Case State
   const [activeCase, setActiveCase] = useState<DecisionCase | null>(null);
-  const [statements, setStatements] = useState<Statement[]>([]);
   const [options, setOptions] = useState<Option[]>([]);
   const [signature, setSignature] = useState<DecisionSignature | null>(null);
   const [illuminationQuestion, setIlluminationQuestion] = useState<string>('');
-  const [targetCriteria, setTargetCriteria] = useState<string>('');
-  const [epistemicState, setEpistemicState] = useState<EpistemicState | null>(null);
-  const [bespokeQuestion, setBespokeQuestion] = useState<IlluminationQuestion | null>(null);
+  const [refinedInsight, setRefinedInsight] = useState<RefinedInsight | undefined>(undefined);
+  const [chosenNextStep, setChosenNextStep] = useState<string>('');
 
   // 1. Handle Quick Capture
   const handleCaptureSubmit = (rawText: string) => {
@@ -31,96 +27,89 @@ export const App: React.FC = () => {
       const now = Date.now();
       const mockCase: DecisionCase = {
         id: 'dc-001',
-        userId: 'noam-user',
-        title: 'האם להמשיך להשקיע בפרויקט אטלס',
+        userId: 'user-noam',
+        title: 'שקילת מעבר לתפקיד חדש מול זמן עם הילדים',
         status: 'deliberating',
-        family: 'continue_or_stop',
+        family: 'career_transition',
         contextStakes: 'high',
         contextReversibility: 'partially_reversible',
         contextTimePressure: 'medium',
-        rawCaptureText: rawText,
+        rawCaptureText: rawText || 'אני שוקל לקחת את התפקיד. השכר טוב יותר, אבל אני חושש שלא יהיה לי זמן לילדים. אולי אני סתם מפחד משינוי.',
         frozenAt: now,
+        frictionLevel: 'focused',
+        dimConsideration: 'מעבר לתפקיד חדש',
+        dimGoalsPrices: 'התקדמות והכנסה גבוהה יותר, תוך שמירה על זמן ונוכחות בבית',
+        dimReliance: 'הצעת שכר טובה יותר, תחושת חשש כללית',
+        dimUnknowns: 'מה יהיו שעות העבודה והזמינות בערבים בפועל',
         createdAt: now,
         updatedAt: now
       };
 
-      const mockEpistemic: EpistemicState = {
-        caseId: 'dc-001',
-        userId: 'noam-user',
-        facts: ['אין לקוח משלם עדיין', 'שני לקוחות רוצים לבדוק את המוצר'],
-        assumptions: ['הלקוחות יסכימו להמיר לתשלום', 'המוצר נראה הרבה יותר טוב'],
-        unknowns: ['האם נכונות לשלם מחייבת שלושה חודשים נוספים'],
-        affect: 'anxious',
-        riskClass: 'mediocristan',
-        reversibility: 'partially_reversible',
-        contradictions: [],
-        locusOfControl: 'internal',
-        conviction: 'moderate',
-        extractedAt: now
-      };
+      const mockQuestion = 'אם אי אפשר לקבל את שניהם במלואם, על מה פחות תרצה לוותר?';
 
-      const mockBespoke: IlluminationQuestion = {
-        id: 'illum-001',
-        caseId: 'dc-001',
-        strategy: 'cheap_information_action',
-        questionText: 'ציינת ששני לקוחות רוצים לבדוק את המוצר. האם צריך באמת שלושה חודשים כדי לבדוק נכונות לשלם, או שיש דרך זולה ומהירה יותר לקבל את המידע?',
-        triggerReason: 'High unknowns with cheap test available',
-        isSecondary: false,
-        createdAt: now
+      const mockInsight: RefinedInsight = {
+        before: 'חשש שהתפקיד יפגע בזמן עם הילדים או פחד משינוי',
+        now: 'החשש מתמקד בזמינות בערבים שעדיין לא בוררה',
+        chosenStep: 'לשאול את המנהל על ציפיות הזמינות בערב לפני מתן תשובה'
       };
-
-      const mockStatements: Statement[] = [
-        { id: '1', caseId: 'dc-001', userId: 'noam', text: 'אימות היתכנות מסחרית מבלי לבזבז קיבולת צוות מוגבלת', role: 'goal', provenanceSource: 'inferred_by_ai', confidenceScore: 0.95, createdAt: now },
-        { id: '2', caseId: 'dc-001', userId: 'noam', text: 'אין לקוח משלם עדיין', role: 'observation', provenanceSource: 'inferred_by_ai', confidenceScore: 0.98, createdAt: now },
-        { id: '3', caseId: 'dc-001', userId: 'noam', text: 'שני לקוחות רוצים לבדוק את המוצר', role: 'observation', provenanceSource: 'inferred_by_ai', confidenceScore: 0.96, createdAt: now },
-        { id: '4', caseId: 'dc-001', userId: 'noam', text: 'המוצר נראה הרבה יותר טוב', role: 'evaluation', provenanceSource: 'inferred_by_ai', confidenceScore: 0.9, createdAt: now },
-        { id: '5', caseId: 'dc-001', userId: 'noam', text: 'הלקוחות המתעניינים יסכימו להמיר לשימוש בתשלום', role: 'assumption', provenanceSource: 'inferred_by_ai', confidenceScore: 0.88, createdAt: now },
-        { id: '6', caseId: 'dc-001', userId: 'noam', text: 'האם נכונות לשלם מחייבת שלושה חודשים נוספים', role: 'unknown', provenanceSource: 'inferred_by_ai', confidenceScore: 0.84, createdAt: now }
-      ];
 
       const mockOptions: Option[] = [
-        { id: 'opt-1', caseId: 'dc-001', userId: 'noam', title: 'להמשיך השקעה למשך 3 חודשים נוספים', origin: 'proposed_by_user', wasSelected: false, createdAt: now },
-        { id: 'opt-2', caseId: 'dc-001', userId: 'noam', title: 'להציע פיילוט בתשלום בתוך שבועיים', origin: 'proposed_by_user', wasSelected: false, createdAt: now }
+        { id: 'opt-1', caseId: 'dc-001', userId: 'noam', title: 'קבלת התפקיד במתכונתו הנוכחית', origin: 'proposed_by_user', wasSelected: false, createdAt: now },
+        { id: 'opt-2', caseId: 'dc-001', userId: 'noam', title: 'בירור ציפיות זמינות ותיאום יום קבוע ללא ערב', origin: 'proposed_by_user', wasSelected: false, createdAt: now }
       ];
 
       const mockSignature: DecisionSignature = {
         id: 'sig-001',
         caseId: 'dc-001',
         userId: 'noam',
-        commitmentGradient: 0.8,
+        commitmentGradient: 0.75,
         informationCostRatio: 0.9,
-        reversibilityDecayDays: 90,
-        principalAgentTension: 'team_alignment',
+        reversibilityDecayDays: 60,
+        principalAgentTension: 'sole_actor',
         decisionTempo: 'tactical_weeks'
       };
 
       setActiveCase(mockCase);
-      setEpistemicState(mockEpistemic);
-      setBespokeQuestion(mockBespoke);
-      setStatements(mockStatements);
       setOptions(mockOptions);
       setSignature(mockSignature);
-      setIlluminationQuestion(mockBespoke.questionText);
+      setIlluminationQuestion(mockQuestion);
+      setRefinedInsight(mockInsight);
 
       setIsLoading(false);
-      setStep('mirror');
-    }, 1200);
+      setStep('decision_room');
+    }, 1000);
   };
 
-  // 2. Handle Epistemic Mirror / Illumination Answer
-  const handleMirrorProceed = (_answer: string) => {
-    setStep('contract');
+  // 2. Handle Decision Room Answer / Skip
+  const handleDecisionAnswer = (_answer: string, skip: boolean = false) => {
+    if (skip) {
+      setChosenNextStep(refinedInsight?.chosenStep || 'בירור מוקדם לפני הכרעה');
+      setStep('outcome');
+    }
   };
 
-  // 3. Handle Finalizing Evaluation Contract
-  const handleFinalizeContract = (contractData: { targetCriteria: string }) => {
-    setTargetCriteria(contractData.targetCriteria);
-    setStep('outcome');
+  // 3. Handle Mirror Live Update
+  const handleMirrorUpdate = (updates: { consideration: string; goalsPrices: string; reliance: string; unknowns: string }) => {
+    if (activeCase) {
+      setActiveCase({
+        ...activeCase,
+        dimConsideration: updates.consideration,
+        dimGoalsPrices: updates.goalsPrices,
+        dimReliance: updates.reliance,
+        dimUnknowns: updates.unknowns,
+        updatedAt: Date.now()
+      });
+    }
   };
 
-  // 4. Handle Outcome Submit
-  const handleOutcomeSubmit = (_outcome: any) => {
-    // Reset to capture for next decision
+  // 4. Handle 3-Axis Outcome Submit
+  const handleOutcomeSubmit = (_outcome: {
+    whatHappened: string;
+    assumptionClarification: string;
+    processReflection: string;
+    quickStatus: QuickLoopStatus;
+  }) => {
+    // Reset back to capture
     setStep('capture');
   };
 
@@ -135,41 +124,27 @@ export const App: React.FC = () => {
           />
         )}
 
-        {step === 'mirror' && epistemicState && bespokeQuestion && (
-          <EpistemicMirrorScreen
-            epistemicState={epistemicState}
-            illuminationQuestion={bespokeQuestion}
-            onProceedToContract={handleMirrorProceed}
-          />
-        )}
-
-        {step === 'decision_room' && activeCase && signature && (
+        {step === 'decision_room' && activeCase && (
           <DecisionRoomScreen
             decisionCase={activeCase}
-            statements={statements}
             options={options}
-            signature={signature}
+            signature={signature || undefined}
             illuminationQuestion={illuminationQuestion}
+            initialRefinedInsight={refinedInsight}
             similarCaseAnalogy={{
-              title: 'החלטה קודמת: המשך השקעה במוצר מול אימות ראשוני',
-              reason: 'התאמה מבנית גבוהה: התחייבות גדולה + אותות ראשוניים חיוביים + אפשרות לבדיקה זולה יותר.',
+              title: 'החלטה קודמת על תפקיד (2024)',
+              reason: 'ציינת לאחר חודשיים שהעצמאות וזמן הבית היו חשובים לך יותר משציפית.',
               strength: 'strong'
             }}
-            onAnswerSubmit={handleMirrorProceed}
-          />
-        )}
-
-        {step === 'contract' && (
-          <EvaluationContractScreen
-            options={options}
-            onFinalize={handleFinalizeContract}
+            onAnswerSubmit={handleDecisionAnswer}
+            onMirrorUpdate={handleMirrorUpdate}
           />
         )}
 
         {step === 'outcome' && activeCase && (
           <OutcomeModal
-            caseTitle={activeCase.title}
-            originalCriteria={targetCriteria || 'לקוח אחד משלם תוך 6 שבועות'}
+            caseTitle={activeCase.dimConsideration || activeCase.title}
+            nextStepChosen={chosenNextStep}
             onSubmitOutcome={handleOutcomeSubmit}
           />
         )}
