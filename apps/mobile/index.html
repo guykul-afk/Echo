@@ -8,6 +8,7 @@
   <!-- Firebase SDKs for Real-time Cloud Persistence -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="env-config.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600&family=Frank+Ruhl+Libre:wght@400;600;700&display=swap" rel="stylesheet">
@@ -1174,7 +1175,10 @@
 
     // ================= GEMINI REAL AI ENGINE (TIER 1 & 2) =================
     const urlParams = new URLSearchParams(window.location.search);
-    let GEMINI_API_KEY = urlParams.get('key') || localStorage.getItem('GEMINI_API_KEY') || '';
+    let GEMINI_API_KEY = (window.ENV_CONFIG && window.ENV_CONFIG.GEMINI_API_KEY) ||
+      urlParams.get('key') ||
+      localStorage.getItem('GEMINI_API_KEY') ||
+      '';
     let mediaChunks = [];
     let audioContext = null;
     let analyser = null;
