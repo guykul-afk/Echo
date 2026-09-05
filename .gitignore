@@ -7,3 +7,4 @@ build/
 .turbo/
 .DS_Store
 *.log
+.firebase/

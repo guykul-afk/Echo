@@ -36,8 +36,19 @@ export interface EpistemicExtractionResult {
 }
 
 export interface IAiProvider {
+  /**
+   * Tier 1: Dedicated 3.5 Transcribe Engine
+   * Converts raw audio input into high-fidelity verbatim Hebrew text for immediate freezing.
+   */
+  transcribeAudio(audioBuffer: Buffer, mimeType?: string): Promise<string>;
+
+  /**
+   * Tier 2: Model 3.6 Cognitive Engine
+   * Parses frozen verbatim text into canonical epistemic schema and formulates one illumination question.
+   */
   extractEpistemicSchema(rawText: string, activeEraContext?: string): Promise<EpistemicExtractionResult>;
+
   extractCognitiveEngine?(rawText: string): Promise<CognitiveAnalysisResult>;
   generateStructuralEmbedding(signature: ExtractedSignatureDTO, context: Record<string, any>): Promise<number[]>;
-  transcribeAudio?(audioBuffer: Buffer): Promise<string>;
 }
+

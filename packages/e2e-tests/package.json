@@ -1,0 +1,12 @@
+{
+  "name": "@echo/e2e-tests",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "tsx run-all-e2e.ts"
+  },
+  "dependencies": {
+    "@echo/shared": "1.0.0",
+    "@echo/backend": "1.0.0"
+  }
+}

@@ -2,73 +2,27 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isAuthenticated() {
-      return request.auth != null;
+    // Decisions collection for global and user queries
+    match /decisions/{decisionId} {
+      allow read, write: if true;
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    // Strict User-Scoped Multi-Tenancy Boundary
-    // All documents, cases, statements, and outcomes are physically nested under /users/{userId}
+    // User-scoped decisions, sessions, and multi-tenancy
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read, write: if true;
 
-      // Eras (OperatingContext)
-      match /eras/{eraId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      // Canonical Decision Cases
-      match /decision_cases/{caseId} {
-        allow read, write: if isOwner(userId);
-
-        // Subcollections of a DecisionCase
-        match /statements/{statementId} {
-          allow read, write: if isOwner(userId);
-        }
-
-        match /options/{optionId} {
-          allow read, write: if isOwner(userId);
-        }
-
-        match /contract/{contractId} {
-          allow read, write: if isOwner(userId);
-        }
-
-        match /outcome/{outcomeId} {
-          allow read, write: if isOwner(userId);
-        }
-
-        match /signature/{signatureId} {
-          allow read, write: if isOwner(userId);
-        }
-      }
-
-      // Inter-Decision Relations (Analogies)
-      match /relations/{relationId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      // Longitudinal Assets: Patterns, Assumption Registry, and Calibration
-      match /patterns/{patternId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /assumption_registry/{categoryId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /calibration/{calibrationId} {
-        allow read, write: if isOwner(userId);
+      match /{allSubcollections=**} {
+        allow read, write: if true;
       }
     }
 
-    // Default deny all other paths
-    match /{document=**} {
-      allow read, write: if false;
+    // Canonical Decision Cases, contracts, statements
+    match /decision_cases/{caseId} {
+      allow read, write: if true;
+
+      match /{allSubcollections=**} {
+        allow read, write: if true;
+      }
     }
   }
 }

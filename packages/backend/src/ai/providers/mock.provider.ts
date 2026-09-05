@@ -2,6 +2,22 @@ import { IAiProvider, EpistemicExtractionResult, ExtractedSignatureDTO } from '.
 import { CognitiveAnalysisResult } from '../../prompts/cognitive-engine.prompt.js';
 
 export class MockAiProvider implements IAiProvider {
+  /**
+   * Tier 1: Model 3.5 Transcribe Simulation
+   */
+  async transcribeAudio(audioBuffer: Buffer, _mimeType?: string): Promise<string> {
+    const raw = audioBuffer.toString('utf8');
+    // If test passed raw text in the buffer, return it as verbatim transcription
+    if (raw && raw.length > 5 && !raw.includes('\u0000')) {
+      return raw.trim();
+    }
+    // Default high-fidelity Hebrew verbatim capture
+    return `אנחנו מתלבטים האם להמשיך להשקיע בפרויקט אטלס לעוד 3 חודשים.
+השקענו כבר 200 אלף ש"ח ו-8 חודשי עבודה.
+אין לנו לקוח משלם עדיין, אבל שני לקוחות אמרו שהם רוצים לבדוק את זה לעומק.
+אני חושש שאם נפסיק עכשיו כל ההשקעה תרד לטמיון.`;
+  }
+
   async extractEpistemicSchema(rawText: string, activeEraContext?: string): Promise<EpistemicExtractionResult> {
     const lower = rawText.toLowerCase();
 

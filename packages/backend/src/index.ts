@@ -6,3 +6,4 @@ export * from './services/decision.service.js';
 export * from './services/triFactorRetrieval.service.js';
 export * from './services/consolidation.service.js';
 export * from './prompts/cognitive-engine.prompt.js';
+export * from './functions/index.js';

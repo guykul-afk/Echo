@@ -13,8 +13,10 @@ import { IAiProvider } from '../ai/provider.interface.js';
 
 export interface CreateCaseDTO {
   userId: string;
-  rawText: string;
+  rawText?: string;
+  rawAudioBuffer?: Buffer;
   rawAudioPath?: string;
+  mimeType?: string;
   eraId?: string;
 }
 
@@ -39,11 +41,20 @@ export class DecisionService {
     const caseId = `dc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const now = Date.now();
 
-    // 1. Freeze raw state immediately (Rule #1 of Truth: Raw source is never rewritten)
-    const rawCapture = dto.rawText;
+    // 1. Tier 1: Dedicated 3.5 Transcribe (if audio provided)
+    let rawCapture = dto.rawText || '';
+    if (!rawCapture && dto.rawAudioBuffer) {
+      rawCapture = await this.aiProvider.transcribeAudio(dto.rawAudioBuffer, dto.mimeType || 'audio/mp3');
+    }
+
+    if (!rawCapture || rawCapture.trim().length === 0) {
+      throw new Error('INVALID_ARGUMENT: Either rawText or valid rawAudioBuffer must be provided.');
+    }
+
+    // Rule #1 of Truth: Raw verbatim thought is frozen and locked immediately
     const frozenAt = now;
 
-    // 2. Call Model-Agnostic Epistemic Extraction
+    // 2. Tier 2: Model 3.6 Cognitive Reasoning (strictly operates on frozen verbatim text)
     const extracted = await this.aiProvider.extractEpistemicSchema(rawCapture);
 
     // 3. Construct Canonical Decision Case

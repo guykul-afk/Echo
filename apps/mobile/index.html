@@ -5,12 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>הד | Echo — Continuous Judgment Stream</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <!-- Firebase SDKs for Real-time Cloud Persistence -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600&family=Frank+Ruhl+Libre:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      /* Theme A: Obsidian & Warm Amber (Strictly 3 Colors: Void #07080B, Text #E6E8EE, Accent #D4AF37) */
+      /* Strictly 3 Colors: Void #07080B, Text #E6E8EE, Accent #D4AF37 */
       --c-void: #07080B;
       --c-text: #E6E8EE;
       --c-accent: #D4AF37;
@@ -20,29 +23,10 @@
       --font-sans: 'Assistant', sans-serif;
     }
 
-    body.theme-indigo {
-      /* Theme B: Titanium & Indigo (Void #06070B, Text #E6E8EE, Accent #6366F1) */
-      --c-void: #06070B;
-      --c-text: #E6E8EE;
-      --c-accent: #6366F1;
-      --c-border: rgba(99, 102, 241, 0.18);
-      --c-glass: rgba(255, 255, 255, 0.03);
-    }
-
-    body.theme-champagne {
-      /* Theme C: Slate & Pale Champagne (Void #0B0E14, Text #E6E8EE, Accent #E2C889) */
-      --c-void: #0B0E14;
-      --c-text: #E6E8EE;
-      --c-accent: #E2C889;
-      --c-border: rgba(226, 200, 137, 0.15);
-      --c-glass: rgba(255, 255, 255, 0.03);
-    }
-
     body {
       background-color: var(--c-void);
       color: var(--c-text);
       font-family: var(--font-sans);
-      transition: background-color 0.6s ease;
     }
 
     /* All text throughout the entire app strictly uses the single typography color */
@@ -70,28 +54,31 @@
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-3 sm:p-6 select-none">
 
-  <!-- Top Palette Switcher Bar (Strictly 3 Colors per theme) -->
-  <div class="mb-4 flex items-center gap-2 bg-white/[0.03] border border-white/10 rounded-full px-4 py-1.5 backdrop-blur-md">
-    <span class="text-[11px] opacity-60 ml-1 font-light">3 צבעי יוקרה:</span>
-    <button onclick="setTheme('amber')" id="btnThemeAmber" class="px-3 py-1 rounded-full text-xs transition-all border font-semibold" style="border-color: var(--c-accent); background: rgba(212, 175, 55, 0.1);">
-      בזלת וענבר
-    </button>
-    <button onclick="setTheme('indigo')" id="btnThemeIndigo" class="px-3 py-1 rounded-full text-xs opacity-60 hover:opacity-100 transition-all border border-transparent">
-      טיטניום ואינדיגו
-    </button>
-    <button onclick="setTheme('champagne')" id="btnThemeChampagne" class="px-3 py-1 rounded-full text-xs opacity-60 hover:opacity-100 transition-all border border-transparent">
-      סלייט ושמפניה
+  <!-- Active User Identity Header (Isolated Data Boundary per User) -->
+  <div class="mb-4 flex items-center justify-between gap-2 bg-white/[0.03] border border-white/10 rounded-full px-3.5 py-1.5 backdrop-blur-md w-full max-w-[395px]">
+    <div class="flex items-center gap-2">
+      <div class="w-2 h-2 rounded-full animate-pulse" style="background-color: var(--c-accent);"></div>
+      <span id="currentUserNameDisplay" class="text-xs font-semibold tracking-wider text-[#E6E8EE]">@guy_founder</span>
+      <button onclick="promptSwitchUser()" class="px-2 py-0.5 rounded-full text-[10px] border border-white/10 bg-white/[0.04] opacity-60 hover:opacity-100 transition-all font-light">
+        החלף
+      </button>
+      <span id="cloudSyncStatus" class="text-[9px] font-light text-amber-300/80 flex items-center gap-0.5 transition-all" title="Firebase Cloud Firestore">☁️ ענן מחובר</span>
+    </div>
+    
+    <button onclick="openDecisionsJournal()" class="px-3 py-1 rounded-full text-[10px] border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-all font-medium flex items-center gap-1.5">
+      <span>📋 יומן ומעקב</span>
+      <span id="badgeDueFollowUps" class="hidden px-1.5 py-0.2 text-[9px] rounded-full bg-amber-400 text-black font-bold animate-pulse">0</span>
     </button>
   </div>
 
   <!-- Mobile Frame Mockup (Continuous Vertical Scroll Stream) -->
-  <div class="relative w-full max-w-[395px] h-[810px] rounded-[50px] border-[6px] border-[#202330] shadow-[0_25px_70px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col" style="background-color: var(--bg-void);">
+  <div class="relative w-full max-w-[395px] h-[810px] rounded-[50px] border-[6px] border-[#202330] shadow-[0_25px_70px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col" style="background-color: var(--c-void);">
 
     <!-- Mobile Top Header Bar -->
     <div class="pt-3 px-7 flex justify-between items-center text-xs text-zinc-400 shrink-0 z-30">
       <span class="font-semibold tracking-wider">09:41</span>
       <div class="w-20 h-4 bg-black/60 rounded-full flex items-center justify-center">
-        <div class="w-2 h-2 rounded-full" style="background-color: var(--accent);"></div>
+        <div class="w-2 h-2 rounded-full" style="background-color: var(--c-accent);"></div>
       </div>
       <div class="flex items-center gap-1.5 opacity-80">
         <span class="text-[10px]">5G</span>
@@ -103,47 +90,57 @@
     <div id="scrollStream" class="flex-1 overflow-y-auto custom-scroll px-6 py-4 space-y-16 scroll-smooth">
 
       <!-- ================= SECTION 1: SACRED SLOW MORPHING CAPTURE ================= -->
-      <section class="min-h-[670px] flex flex-col justify-between items-center text-center pt-6 pb-2 relative">
+      <section class="min-h-[690px] flex flex-col justify-between items-center text-center pt-5 pb-3 relative">
         
-        <div>
-          <h1 class="font-editorial text-4xl font-bold tracking-widest">הד</h1>
-          <p class="text-[11px] mt-1 tracking-widest uppercase font-light opacity-50">The Learning Memory of Judgment</p>
+        <!-- Simplified Luxurious Amber Branding -->
+        <div class="pt-2">
+          <h1 class="font-editorial text-4xl sm:text-5xl font-bold tracking-[0.25em] pl-1 select-none" style="color: var(--c-accent);">ECHO</h1>
         </div>
 
-        <!-- Dynamic Sacred Geometry Canvas Button (No Text Inside, Slow Dynamics, Fluid Fill) -->
-        <div class="relative flex flex-col items-center justify-center my-4">
+        <!-- Dynamic Sacred Geometry Canvas Button (Enlarged with In-Shape Status V / X) -->
+        <div class="relative flex flex-col items-center justify-center my-auto">
           <div 
             id="morphButton" 
-            onclick="toggleSpeechCapture()"
-            class="relative w-56 h-56 flex items-center justify-center cursor-pointer select-none"
+            class="relative w-[280px] h-[280px] flex items-center justify-center cursor-pointer select-none active:scale-[0.98] transition-transform"
           >
             <!-- Ambient Soft Halo -->
-            <div id="morphAuraRing" class="absolute w-56 h-56 rounded-full opacity-25 blur-2xl pointer-events-none transition-opacity duration-1000" style="background: radial-gradient(circle, var(--c-accent) 0%, transparent 70%);"></div>
+            <div id="morphAuraRing" class="absolute w-[280px] h-[280px] rounded-full opacity-25 blur-2xl pointer-events-none transition-opacity duration-700" style="background: radial-gradient(circle, var(--c-accent) 0%, transparent 70%);"></div>
 
-            <!-- Canvas Drawing Pure Morphing Geometry & Dynamic Fill -->
-            <canvas id="geoCanvas" width="240" height="240" class="relative z-10"></canvas>
+            <!-- Canvas Drawing Pure Morphing Geometry, Dynamic Fill & Inner V/X Indicator -->
+            <canvas id="geoCanvas" width="280" height="280" class="relative z-10"></canvas>
           </div>
 
-          <!-- Minimal Status Below Button (Single Typography Color) -->
-          <p id="geoStatusHint" class="text-xs mt-4 tracking-wide font-light opacity-70 transition-opacity duration-500">
-            גע בצורה לתחילת לכידה
+          <!-- Minimal Status Below Button -->
+          <p id="geoStatusHint" class="text-xs mt-3 tracking-wide font-light opacity-60 transition-all duration-300">
+            גע בלכידה
           </p>
 
-          <!-- Fast Simulation Presets -->
-          <div class="flex gap-2 mt-4">
-            <button onclick="simulateDecision('אטלס')" class="text-[11px] px-3.5 py-1 rounded-full border border-white/10 bg-white/[0.03] opacity-75 hover:opacity-100 transition-all font-light">
-              דוגמה 1: אטלס
+          <!-- Direct Text Option Toggle -->
+          <div class="mt-2 flex flex-col items-center justify-center">
+            <button onclick="toggleTextInputModal()" class="text-[11px] text-[#D4AF37] opacity-60 hover:opacity-100 transition-opacity underline underline-offset-4 font-light">
+              או הקלד דילמה בטקסט
             </button>
-            <button onclick="simulateDecision('סמנכל')" class="text-[11px] px-3.5 py-1 rounded-full border border-white/10 bg-white/[0.03] opacity-75 hover:opacity-100 transition-all font-light">
-              דוגמה 2: סמנכ"ל מכירות
-            </button>
+          </div>
+
+          <!-- Optional Direct Text Input Box (Initially Hidden) -->
+          <div id="rawTextInputContainer" class="hidden w-full max-w-[320px] mt-3 p-3 rounded-2xl border bg-white/[0.02] text-right" style="border-color: var(--c-border);">
+            <textarea 
+              id="rawTextInput" 
+              rows="3" 
+              placeholder="תאר את הדילמה, ההחלטה העומדת בפניך, והשיקולים..."
+              class="w-full bg-transparent text-xs p-1 focus:outline-none font-light resize-none placeholder:opacity-30"
+            ></textarea>
+            <div class="flex justify-end gap-2 mt-2">
+              <button onclick="toggleTextInputModal()" class="text-[10px] px-2.5 py-1 rounded-lg border border-white/10 opacity-50 font-light">ביטול</button>
+              <button onclick="processDirectTextCapture()" class="text-[10px] px-3 py-1 rounded-lg border font-medium" style="border-color: var(--c-accent); background: rgba(212, 175, 55, 0.1);">חלץ שיקול דעת</button>
+            </div>
           </div>
         </div>
 
-        <!-- Scroll down indicator thread -->
-        <div class="flex flex-col items-center cursor-pointer opacity-50 hover:opacity-80 transition-opacity" onclick="scrollToNext('stageDeliberation')">
-          <span class="text-[10px] tracking-wider mb-2 font-light">גלול לעומק שיקול הדעת</span>
-          <div class="w-[1px] h-10 stream-thread"></div>
+        <!-- Scroll down indicator thread (Shown ONLY after capture & analysis finish!) -->
+        <div id="scrollNextBtn" class="flex flex-col items-center opacity-0 pointer-events-none transition-all duration-700 min-h-[50px] justify-end" onclick="attemptScrollToNext('stageDeliberation')">
+          <span id="scrollNextLabel" class="text-[11px] tracking-widest mb-1.5 font-light opacity-70"></span>
+          <div class="w-[1px] h-8 stream-thread"></div>
         </div>
       </section>
 
@@ -156,27 +153,27 @@
           <span class="text-[10px] font-mono tracking-wider opacity-40">🔒 FROZEN BEFORE OUTCOME</span>
         </div>
 
-        <h2 id="dispTitle" class="font-editorial text-2xl font-bold leading-snug mb-3">
-          האם להמשיך להשקיע בפרויקט אטלס?
+        <h2 id="dispTitle" class="font-editorial text-2xl font-bold leading-snug mb-3 opacity-90">
+          ממתין ללכידת שיקול דעת ראשונה
         </h2>
 
         <div class="p-4 rounded-xl border mb-5 backdrop-blur-sm" style="background-color: var(--c-glass); border-color: var(--c-border);">
           <span class="text-[10px] uppercase tracking-wider block font-semibold opacity-60">מטרה מזוקקת</span>
-          <p id="dispGoal" class="text-xs mt-1 font-light leading-relaxed opacity-90">
-            אימות היתכנות מסחרית מבלי לבזבז קיבולת צוות מוגבלת
+          <p id="dispGoal" class="text-xs mt-1 font-light leading-relaxed opacity-60">
+            הקלט מחשבה או דילמה למעלה כדי לחלץ את גרעין ההחלטה.
           </p>
         </div>
 
         <!-- Cognitive Engine 9-Dimensions Badges (Monochromatic & Unified Text) -->
         <div class="flex flex-wrap gap-1.5 mb-5">
-          <span id="dispAffectBadge" class="text-[10px] px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.02] font-light opacity-75">
-            סמן סומטי: מונע מחרדה (Anxious)
+          <span id="dispAffectBadge" class="text-[10px] px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.02] font-light opacity-50">
+            סמן סומטי: —
           </span>
-          <span id="dispRiskBadge" class="text-[10px] px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.02] font-light opacity-75">
-            מחלקת סיכון: Mediocristan (מתוחם)
+          <span id="dispRiskBadge" class="text-[10px] px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.02] font-light opacity-50">
+            מחלקת סיכון: —
           </span>
-          <span id="dispLocusBadge" class="text-[10px] px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.02] font-light opacity-75">
-            מיקוד שליטה: פנימי (Internal)
+          <span id="dispLocusBadge" class="text-[10px] px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.02] font-light opacity-50">
+            מיקוד שליטה: —
           </span>
         </div>
 
@@ -184,18 +181,15 @@
         <div class="space-y-4 mb-8">
           <div>
             <span class="text-[11px] font-medium tracking-wider block mb-2 opacity-60">● עובדות מוצקות</span>
-            <div id="dispObservations" class="space-y-1.5 text-xs pr-2 border-r font-light opacity-85" style="border-color: var(--c-border);">
-              <p>• הושקעו 200 אלף ש"ח ו-8 חודשים</p>
-              <p>• אין לקוח משלם עדיין</p>
-              <p>• 2 לקוחות פוטנציאליים רוצים לבדוק</p>
+            <div id="dispObservations" class="space-y-1.5 text-xs pr-2 border-r font-light opacity-50" style="border-color: var(--c-border);">
+              <p class="italic">טרם נלכדו עובדות</p>
             </div>
           </div>
 
           <div>
             <span class="text-[11px] font-medium tracking-wider block mb-2 opacity-60">△ הנחות ציר טעונות בדיקה</span>
-            <div id="dispAssumptions" class="space-y-1.5 text-xs pr-2 border-r font-light opacity-85" style="border-color: var(--c-accent);">
-              <p>• נכונות לבדוק משמעה נכונות לשלם</p>
-              <p>• 3 חודשים נדרשים כדי לאמת נכונות לשלם</p>
+            <div id="dispAssumptions" class="space-y-1.5 text-xs pr-2 border-r font-light opacity-50" style="border-color: var(--c-accent);">
+              <p class="italic">טרם נחלצו הנחות</p>
             </div>
           </div>
         </div>
@@ -217,157 +211,804 @@
 
         <!-- Hero Question Box (Unified Single Color Typography) -->
         <div class="p-6 rounded-2xl border my-auto backdrop-blur-sm" style="background-color: var(--c-glass); border-color: var(--c-border);">
-          <p id="dispQuestion" class="font-editorial text-xl font-medium leading-relaxed opacity-95">
-            "האם צריך באמת שלושה חודשים כדי לבדוק נכונות לשלם, או שיש דרך זולה ומהירה יותר לקבל את המידע?"
+          <p id="dispQuestion" class="font-editorial text-xl font-medium leading-relaxed opacity-90 italic">
+            "לאחר הקלטת הדילמה, כאן תופיע השאלה המאירה היחידה המאתגרת את הנחת הציר שלך."
           </p>
 
           <div class="mt-6">
-            <label class="text-[10px] block mb-2 font-light opacity-50">תשובתך המזוקקת לפעולה:</label>
-            <input 
-              type="text" 
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-[11px] block font-light opacity-60">תשובתך המזוקקת לפעולה:</label>
+              <span class="text-[10px] opacity-40 font-mono">TEXT OR VOICE</span>
+            </div>
+            
+            <textarea 
               id="inputUserAnswer" 
-              value="נציע פיילוט בתשלום סמלי בתוך שבועיים"
-              class="w-full bg-white/[0.03] border rounded-xl p-3 text-xs text-right focus:outline-none font-light"
+              rows="3" 
+              placeholder="השב כאן בקול או בטקסט: כיצד תשובתך משנה את הפעולה..."
+              class="w-full bg-white/[0.03] border rounded-xl p-3 text-xs text-right focus:outline-none font-light opacity-90 resize-none placeholder:opacity-30 leading-relaxed"
               style="border-color: var(--c-border);"
-            />
+            ></textarea>
+
+            <!-- Action Controls: Voice Record + Submit Refinement -->
+            <div class="flex items-center gap-2 mt-3">
+              <button 
+                id="btnVoiceAnswer" 
+                type="button"
+                onclick="toggleRefinementVoiceCapture()" 
+                class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] transition-all font-light shrink-0"
+              >
+                <span id="voiceAnswerIcon">🎙️</span>
+                <span id="voiceAnswerLabel">הקלט מענה</span>
+              </button>
+
+              <button 
+                id="btnSubmitRefinement" 
+                type="button"
+                onclick="submitRefinementAnswer()" 
+                class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-all active:scale-[0.98]"
+                style="border-color: var(--c-accent); background: rgba(212, 175, 55, 0.12);"
+              >
+                <span>✨ חדד וזקק שיקול דעת</span>
+              </button>
+            </div>
+
+            <!-- Real-time Refinement Status Hint -->
+            <p id="refineStatusHint" class="text-[11px] mt-2.5 text-center font-light opacity-60 min-h-[16px] transition-all duration-300"></p>
+
+            <!-- Dynamic Refinement Result Card (Appears after analysis) -->
+            <div id="dispRefinedCard" class="hidden mt-4 p-4 rounded-xl border backdrop-blur-sm text-right space-y-3 transition-all duration-500" style="background-color: rgba(255,255,255,0.02); border-color: var(--c-border);">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-mono tracking-wider" style="color: var(--c-accent);">✨ REFINED ACTION & INSIGHT</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full border border-white/10 bg-white/[0.02] opacity-70 font-light">עודכן במערכת ✓</span>
+              </div>
+              <div class="border-t border-white/5 pt-2">
+                <span class="text-[10px] block opacity-50 font-light mb-1">פעולה מזוקקת קונקרטית:</span>
+                <p id="dispRefinedAction" class="text-xs font-medium leading-relaxed" style="color: var(--c-text);"></p>
+              </div>
+              <div class="border-t border-white/5 pt-2">
+                <span class="text-[10px] block opacity-50 font-light mb-1">תובנת שיקול הדעת:</span>
+                <p id="dispInsightSummary" class="text-[11px] font-light italic leading-relaxed opacity-80"></p>
+              </div>
+              <p class="text-[10px] text-center opacity-50 font-light pt-1">
+                העובדות, הנחות הציר וקריטריון הנעילה עודכנו בהתאם ↓
+              </p>
+            </div>
           </div>
         </div>
 
         <!-- Retrieved Analogy Snippet -->
         <div id="dispAnalogyCard" class="hidden p-3.5 rounded-xl border mb-6 backdrop-blur-sm" style="background-color: var(--c-glass); border-color: var(--c-border);">
           <div class="flex items-center gap-1.5 mb-1">
-            <span class="text-[10px] font-medium opacity-60">הד ממקרה עבר (0.94)</span>
+            <span class="text-[10px] font-medium opacity-60">הד ממקרה עבר</span>
           </div>
           <p id="dispAnalogyReason" class="text-xs font-light leading-normal opacity-80"></p>
         </div>
 
         <!-- Scroll down thread -->
         <div class="mt-auto flex flex-col items-center cursor-pointer opacity-50 hover:opacity-80 transition-opacity" onclick="scrollToNext('stageContract')">
-          <span class="text-[10px] tracking-wider mb-2 font-light">נעילה וחוזה אימות</span>
+          <span class="text-[10px] tracking-wider mb-2 font-light">סיכום תהליך</span>
           <div class="w-[1px] h-8 stream-thread"></div>
         </div>
       </section>
 
-      <!-- ================= SECTION 4: THE EVALUATION SEAL (LOCK) ================= -->
+      <!-- ================= SECTION 4: PROCESS SUMMARY (HUMAN-CENTRIC) ================= -->
       <section id="stageContract" class="min-h-[640px] flex flex-col justify-between pt-6 pb-6 text-right relative">
         
-        <div>
-          <div class="flex items-center justify-between mb-3">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between mb-1">
             <div class="w-1.5 h-1.5 rounded-full" style="background-color: var(--c-accent);"></div>
-            <span class="text-[10px] font-mono tracking-wider opacity-40">EVALUATION SEAL</span>
+            <span class="text-[10px] font-mono tracking-wider opacity-40">PROCESS SUMMARY</span>
           </div>
 
-          <h3 class="font-editorial text-2xl font-bold mb-1">חוזה הערכה ונעילת החלטה</h3>
-          <p class="text-xs mb-6 font-light opacity-50">קביעת תנאי הבדיקה לפני שנודעת התוצאה.</p>
+          <div>
+            <h3 class="font-editorial text-2xl font-bold mb-1">סיכום תהליך</h3>
+            <p class="text-xs font-light opacity-50">בחירת קריטריון אימות והגדרת שאילתת מעקב — ממוקד אדם.</p>
+          </div>
 
-          <div class="space-y-4">
-            <div>
-              <span class="text-[11px] block mb-1 font-light opacity-60">קריטריון הצלחה חד-משמעי:</span>
-              <div class="p-3 rounded-xl border text-xs font-light opacity-90 backdrop-blur-sm" style="background-color: var(--c-glass); border-color: var(--c-border);">
-                לפחות לקוח אחד שילם על פיילוט בתוך שבועיים
-              </div>
+          <!-- 1. Criteria Selection: 3 proposed options + custom option with voice/text -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-medium opacity-80">קריטריון הצלחה לבדיקה:</span>
+              <span class="text-[10px] opacity-40 font-light">בחר קריטריון או הגדר משלך</span>
             </div>
 
-            <div>
-              <span class="text-[11px] block mb-1 font-light opacity-60">מועד אות מעקב:</span>
-              <div class="grid grid-cols-3 gap-2 text-center text-xs font-light">
-                <div class="py-2.5 rounded-lg border font-medium opacity-95" style="background-color: rgba(255,255,255,0.04); border-color: var(--c-accent);">14 ימים</div>
-                <div class="py-2.5 rounded-lg border opacity-40" style="border-color: var(--c-border);">30 ימים</div>
-                <div class="py-2.5 rounded-lg border opacity-40" style="border-color: var(--c-border);">90 ימים</div>
+            <!-- Option 1 -->
+            <div id="critCard0" onclick="selectCriterion(0)" class="p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-start gap-2.5" style="border-color: var(--c-accent); background-color: rgba(212,175,55,0.06);">
+              <span id="critDot0" class="mt-0.5 w-3.5 h-3.5 rounded-full border border-amber-400 flex items-center justify-center flex-shrink-0">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+              </span>
+              <p id="critText0" class="leading-relaxed opacity-95">קריטריון מוצע ראשון — ייקבע עם לכידת הדילמה</p>
+            </div>
+
+            <!-- Option 2 -->
+            <div id="critCard1" onclick="selectCriterion(1)" class="p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-start gap-2.5" style="border-color: var(--c-border); background-color: var(--c-glass); opacity: 0.7;">
+              <span id="critDot1" class="mt-0.5 w-3.5 h-3.5 rounded-full border border-stone-600 flex items-center justify-center flex-shrink-0">
+                <span class="w-1.5 h-1.5 rounded-full bg-transparent"></span>
+              </span>
+              <p id="critText1" class="leading-relaxed opacity-95">קריטריון מוצע שני</p>
+            </div>
+
+            <!-- Option 3 -->
+            <div id="critCard2" onclick="selectCriterion(2)" class="p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-start gap-2.5" style="border-color: var(--c-border); background-color: var(--c-glass); opacity: 0.7;">
+              <span id="critDot2" class="mt-0.5 w-3.5 h-3.5 rounded-full border border-stone-600 flex items-center justify-center flex-shrink-0">
+                <span class="w-1.5 h-1.5 rounded-full bg-transparent"></span>
+              </span>
+              <p id="critText2" class="leading-relaxed opacity-95">קריטריון מוצע שלישי</p>
+            </div>
+
+            <!-- Custom Option -->
+            <div id="critCardCustom" onclick="selectCriterion('custom')" class="p-3 rounded-xl border text-xs transition-all space-y-2 cursor-pointer" style="border-color: var(--c-border); background-color: var(--c-glass); opacity: 0.8;">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span id="critDotCustom" class="w-3.5 h-3.5 rounded-full border border-stone-600 flex items-center justify-center flex-shrink-0">
+                    <span class="w-1.5 h-1.5 rounded-full bg-transparent"></span>
+                  </span>
+                  <span class="font-medium opacity-90">או הגדר קריטריון מותאם אישית:</span>
+                </div>
+                <button 
+                  id="btnVoiceCriterion" 
+                  type="button" 
+                  onclick="event.stopPropagation(); toggleCriterionVoiceCapture()" 
+                  class="px-2.5 py-1 rounded-lg border flex items-center gap-1 text-[11px] font-medium text-amber-300 transition-all hover:bg-amber-500/10 active:scale-95" 
+                  style="border-color: rgba(212,175,55,0.4); background-color: rgba(212,175,55,0.06);"
+                >
+                  <span id="btnVoiceCriterionIcon">🎙️</span>
+                  <span id="btnVoiceCriterionLabel">הקלט קריטריון</span>
+                </button>
               </div>
+
+              <textarea 
+                id="inputCustomCriterion" 
+                rows="2" 
+                onclick="event.stopPropagation(); selectCriterion('custom')"
+                oninput="onCustomCriterionInput()"
+                placeholder="הקלד קריטריון משלך או הקלט באמצעות המיקרופון..."
+                class="w-full bg-black/40 border rounded-lg p-2 text-xs text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-400/80 transition-all resize-none"
+                style="border-color: var(--c-border);"
+              ></textarea>
+              <p id="criterionVoiceHint" class="text-[10px] text-amber-300/80 font-light"></p>
             </div>
           </div>
+
+          <!-- 2. Timeframe Selection: 3, 7, 14, 30, 60 or custom number -->
+          <div class="space-y-2 pt-1">
+            <span class="text-[11px] block font-medium opacity-80">מועד אות מעקב:</span>
+            <div class="grid grid-cols-5 gap-1.5 text-center text-xs font-light">
+              <button type="button" onclick="selectDays(3)" id="btnDay3" class="day-btn py-2 rounded-lg border transition-all" style="border-color: var(--c-border); opacity: 0.5;">3 ימים</button>
+              <button type="button" onclick="selectDays(7)" id="btnDay7" class="day-btn py-2 rounded-lg border transition-all" style="border-color: var(--c-border); opacity: 0.5;">7 ימים</button>
+              <button type="button" onclick="selectDays(14)" id="btnDay14" class="day-btn py-2 rounded-lg border transition-all font-medium" style="border-color: var(--c-accent); background-color: rgba(212,175,55,0.15); opacity: 1;">14 ימים</button>
+              <button type="button" onclick="selectDays(30)" id="btnDay30" class="day-btn py-2 rounded-lg border transition-all" style="border-color: var(--c-border); opacity: 0.5;">30 ימים</button>
+              <button type="button" onclick="selectDays(60)" id="btnDay60" class="day-btn py-2 rounded-lg border transition-all" style="border-color: var(--c-border); opacity: 0.5;">60 ימים</button>
+            </div>
+            <div class="flex items-center gap-2 text-xs font-light pt-1">
+              <span class="opacity-50 text-[11px]">או מספר ימים מותאם:</span>
+              <input 
+                id="inputCustomDays" 
+                type="number" 
+                min="1" 
+                max="365" 
+                placeholder="מספר" 
+                class="w-20 bg-black/40 border rounded-lg py-1 px-2 text-center text-xs text-stone-200 focus:outline-none focus:border-amber-400/80" 
+                style="border-color: var(--c-border);"
+                oninput="onCustomDaysInput(this.value)" 
+              />
+              <span class="opacity-50 text-[11px]">יום</span>
+            </div>
+          </div>
+
         </div>
 
-        <div>
+        <div class="pt-4">
           <button 
             onclick="triggerSealSuccess()"
             class="w-full py-3.5 rounded-xl text-xs font-medium tracking-widest uppercase transition-all shadow-lg active:scale-[0.98] border"
             style="background-color: rgba(255,255,255,0.04); border-color: var(--c-accent);"
           >
-            נעל ושמור לזיכרון שיקול הדעת ✓
+            סכם תהליך ושמור לזיכרון שיקול הדעת ✓
           </button>
-          <p class="text-[10px] text-center mt-3 font-light opacity-40">החלטה זו תקפיא את תנאי החשיבה ותחזור כאנלוגיה בעתיד</p>
+          <p class="text-[10px] text-center mt-2.5 font-light opacity-40">החלטה זו תקפיא את תנאי החשיבה, הקריטריון הנבחר ושאילתת המעקב לזיכרון העתידי</p>
         </div>
       </section>
 
     </div>
   </div>
 
-  <script>
-    let isSpeaking = false;
-    let currentTheme = 'amber';
+  <!-- ================= MODAL: DECISIONS JOURNAL & FOLLOW-UP CENTER ================= -->
+  <div id="modalDecisionsJournal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md">
+    <div class="w-full max-w-[440px] sm:max-w-[480px] rounded-3xl border p-5 space-y-4 text-right overflow-y-auto max-h-[88vh] shadow-2xl custom-scroll" style="background-color: var(--c-void); border-color: var(--c-border);">
+      
+      <div class="flex items-center justify-between">
+        <button onclick="closeDecisionsJournal()" class="text-xs px-2.5 py-1 rounded-full border border-stone-700 opacity-60 hover:opacity-100 transition-opacity">✕ סגור</button>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[10px] font-mono tracking-wider opacity-50">DECISION JOURNAL</span>
+          <div class="w-1.5 h-1.5 rounded-full" style="background-color: var(--c-accent);"></div>
+        </div>
+      </div>
 
-    // 3 Color Palettes definitions
-    const palettes = {
-      amber: {
-        void: '#07080B',
-        text: '#E6E8EE',
-        accent: '#D4AF37',
-        accentRgb: [212, 175, 55],
-        voidRgb: [7, 8, 11],
-        textRgb: [230, 232, 238]
-      },
-      indigo: {
-        void: '#06070B',
-        text: '#E6E8EE',
-        accent: '#6366F1',
-        accentRgb: [99, 102, 241],
-        voidRgb: [6, 7, 11],
-        textRgb: [230, 232, 238]
-      },
-      champagne: {
-        void: '#0B0E14',
-        text: '#E6E8EE',
-        accent: '#E2C889',
-        accentRgb: [226, 200, 137],
-        voidRgb: [11, 14, 20],
-        textRgb: [230, 232, 238]
-      }
+      <div>
+        <h3 class="font-editorial text-xl font-bold">מעקב החלטות ושיקול דעת</h3>
+        <p class="text-xs opacity-50 font-light mt-0.5">כלל ההחלטות שהוקפאו, אותות המעקב והלכידות המקושרות.</p>
+      </div>
+
+      <!-- Decision Cards Container -->
+      <div id="journalDecisionsList" class="space-y-3 pt-1">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: REALITY FOLLOW-UP EVALUATION PROMPT ================= -->
+  <div id="modalFollowUpEvaluation" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md">
+    <div class="w-full max-w-[380px] rounded-3xl border p-5 space-y-4 text-right overflow-y-auto max-h-[90vh] shadow-2xl custom-scroll" style="background-color: var(--c-void); border-color: var(--c-accent); box-shadow: 0 0 50px rgba(212,175,55,0.15);">
+      
+      <!-- Top Header -->
+      <div class="flex items-center justify-between">
+        <button onclick="closeFollowUpModal()" class="text-xs px-2.5 py-1 rounded-full border border-stone-700 opacity-60 hover:opacity-100 transition-opacity">✕ סגור</button>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[10px] font-mono tracking-wider text-amber-300">REALITY EVALUATION</span>
+          <div class="w-2 h-2 rounded-full animate-ping bg-amber-400"></div>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="font-editorial text-xl font-bold text-stone-100">אות מעקב ובדיקת מציאות</h3>
+        <p id="fuModalDecisionTitle" class="text-xs font-light text-amber-300/90 mt-1"></p>
+        <p id="fuModalMeta" class="text-[10px] opacity-40 font-light mt-0.5"></p>
+      </div>
+
+      <!-- Original Criterion Card -->
+      <div class="p-3 rounded-xl border bg-white/[0.02]" style="border-color: var(--c-border);">
+        <span class="text-[10px] block opacity-50 font-light mb-1">קריטריון ההצלחה שהוגדר מראש:</span>
+        <p id="fuModalCriterionText" class="text-xs font-medium text-stone-200 leading-relaxed"></p>
+      </div>
+
+      <!-- Automated Follow-Up Query -->
+      <div class="p-3 rounded-xl border" style="background-color: rgba(212,175,55,0.06); border-color: rgba(212,175,55,0.3);">
+        <span class="text-[10px] block text-amber-300 font-medium mb-1">שאילתת המעקב:</span>
+        <p id="fuModalQueryText" class="text-xs font-serif italic text-stone-200 leading-relaxed"></p>
+      </div>
+
+      <!-- Verdict Selection -->
+      <div class="space-y-1.5">
+        <span class="text-[11px] block font-light opacity-70">הערכת תוצאה במציאות:</span>
+        <div class="grid grid-cols-3 gap-1.5 text-center text-[11px]">
+          <button type="button" onclick="setFuVerdict('met')" id="btnFuVerdictMet" class="py-2 px-1 rounded-lg border font-medium transition-all" style="border-color: var(--c-accent); background-color: rgba(212,175,55,0.15); opacity: 1;">✓ התקיים</button>
+          <button type="button" onclick="setFuVerdict('partial')" id="btnFuVerdictPartial" class="py-2 px-1 rounded-lg border border-stone-700 opacity-60 transition-all">⚠️ חלקי</button>
+          <button type="button" onclick="setFuVerdict('unmet')" id="btnFuVerdictUnmet" class="py-2 px-1 rounded-lg border border-stone-700 opacity-60 transition-all">✕ לא התקיים</button>
+        </div>
+      </div>
+
+      <!-- Voice & Text Capture for Results -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-light opacity-80">תיעוד תוצאות וממצאים:</span>
+          <button id="btnVoiceFuResult" type="button" onclick="toggleFuVoiceCapture()" class="px-2.5 py-1 rounded-lg border flex items-center gap-1 text-[11px] font-medium text-amber-300 transition-all hover:bg-amber-500/10 active:scale-95" style="border-color: rgba(212,175,55,0.4); background-color: rgba(212,175,55,0.06);">
+            <span id="btnVoiceFuResultIcon">🎙️</span>
+            <span id="btnVoiceFuResultLabel">הקלט תוצאות</span>
+          </button>
+        </div>
+
+        <textarea 
+          id="inputFuResults" 
+          rows="3" 
+          class="w-full bg-black/40 border rounded-lg p-2 text-xs text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-400/80 transition-all resize-none" 
+          style="border-color: var(--c-border);"
+          placeholder="מה התרחש בפועל? מה היו הנתונים והתוצאות? מה השתנה בהנחות היסוד?..."
+        ></textarea>
+        <p id="fuVoiceHint" class="text-[10px] text-amber-300/80 font-light"></p>
+      </div>
+
+      <!-- Save & Close Loop -->
+      <div class="pt-2">
+        <button 
+          onclick="saveFollowUpResults()" 
+          class="w-full py-3 rounded-xl text-xs font-medium tracking-widest uppercase transition-all shadow-lg active:scale-[0.98] border text-stone-100" 
+          style="background-color: rgba(212,175,55,0.15); border-color: var(--c-accent);"
+        >
+          תעד תוצאות וסגור מעגל למידה ✓
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= MODAL: SWITCH / CREATE USER PROFILE ================= -->
+  <div id="modalSwitchUser" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md">
+    <div class="w-full max-w-[360px] rounded-3xl border p-5 space-y-4 text-right shadow-2xl custom-scroll" style="background-color: var(--c-void); border-color: var(--c-border);">
+      
+      <div class="flex items-center justify-between">
+        <button onclick="closeSwitchUserModal()" class="text-xs px-2.5 py-1 rounded-full border border-stone-700 opacity-60 hover:opacity-100 transition-opacity">✕ סגור</button>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[10px] font-mono tracking-wider opacity-50">USER IDENTITY</span>
+          <div class="w-1.5 h-1.5 rounded-full" style="background-color: var(--c-accent);"></div>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="font-editorial text-xl font-bold">החלפת משתמש / מרחב חדש</h3>
+        <p class="text-xs opacity-50 font-light mt-1 leading-relaxed">
+          כל משתמש מקבל מרחב החלטות מבודד בענן ובמכשיר. הקלדת שם חדש תפתח מרחב נקי חדש לחלוטין.
+        </p>
+      </div>
+
+      <!-- Input for User Name -->
+      <div class="space-y-1.5">
+        <label class="text-[11px] block font-light opacity-80">שם משתמש (עברית או אנגלית):</label>
+        <div class="flex items-center gap-2 bg-black/40 border rounded-xl px-3 py-2" style="border-color: var(--c-border);">
+          <span class="text-amber-400 font-mono text-sm">@</span>
+          <input 
+            id="inputSwitchUserName" 
+            type="text" 
+            placeholder="לדוגמה: גיא, דנה, user_123..." 
+            class="w-full bg-transparent text-xs text-stone-100 placeholder-stone-600 focus:outline-none"
+            onkeydown="if(event.key === 'Enter') confirmSwitchUser()"
+          />
+        </div>
+      </div>
+
+      <!-- Recent / Known Users List -->
+      <div id="recentUsersSection" class="space-y-1.5 pt-1">
+        <span class="text-[10px] block opacity-50 font-light">מרחבים קיימים במכשיר:</span>
+        <div id="recentUsersChips" class="flex flex-wrap gap-1.5">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="pt-2 space-y-2">
+        <button 
+          onclick="confirmSwitchUser()" 
+          class="w-full py-2.5 rounded-xl text-xs font-medium tracking-widest uppercase transition-all shadow-lg active:scale-[0.98] border text-stone-100" 
+          style="background-color: rgba(212,175,55,0.15); border-color: var(--c-accent);"
+        >
+          אישור ומעבר למרחב ✓
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Strictly 3 Colors: Obsidian & Warm Amber
+    const palette = {
+      void: '#07080B',
+      text: '#E6E8EE',
+      accent: '#D4AF37',
+      accentRgb: [212, 175, 55],
+      voidRgb: [7, 8, 11],
+      textRgb: [230, 232, 238]
     };
 
-    function setTheme(theme) {
-      currentTheme = theme;
-      document.body.className = '';
-      document.getElementById('btnThemeAmber').className = 'px-3 py-1 rounded-full text-xs opacity-60 hover:opacity-100 transition-all border border-transparent';
-      document.getElementById('btnThemeAmber').style.background = 'transparent';
-      document.getElementById('btnThemeAmber').style.borderColor = 'transparent';
+    // ================= FIREBASE CLOUD FIRESTORE INITIALIZATION =================
+    const firebaseConfig = {
+      projectId: "echo-guy-2026",
+      appId: "1:381403602046:web:70405fb558613613038c2f",
+      storageBucket: "echo-guy-2026.firebasestorage.app",
+      apiKey: "AIzaSyCjxLuDQ7EktomeXveVoXHaDe6vrfDDxMY",
+      authDomain: "echo-guy-2026.firebaseapp.com",
+      messagingSenderId: "381403602046",
+      projectNumber: "381403602046"
+    };
 
-      document.getElementById('btnThemeIndigo').className = 'px-3 py-1 rounded-full text-xs opacity-60 hover:opacity-100 transition-all border border-transparent';
-      document.getElementById('btnThemeIndigo').style.background = 'transparent';
-      document.getElementById('btnThemeIndigo').style.borderColor = 'transparent';
+    let firestoreDb = null;
+    let isCloudReady = false;
 
-      document.getElementById('btnThemeChampagne').className = 'px-3 py-1 rounded-full text-xs opacity-60 hover:opacity-100 transition-all border border-transparent';
-      document.getElementById('btnThemeChampagne').style.background = 'transparent';
-      document.getElementById('btnThemeChampagne').style.borderColor = 'transparent';
-
-      if (theme === 'amber') {
-        document.getElementById('btnThemeAmber').className = 'px-3 py-1 rounded-full text-xs font-semibold border';
-        document.getElementById('btnThemeAmber').style.borderColor = 'var(--c-accent)';
-        document.getElementById('btnThemeAmber').style.background = 'rgba(212, 175, 55, 0.1)';
-      } else if (theme === 'indigo') {
-        document.body.classList.add('theme-indigo');
-        document.getElementById('btnThemeIndigo').className = 'px-3 py-1 rounded-full text-xs font-semibold border';
-        document.getElementById('btnThemeIndigo').style.borderColor = 'var(--c-accent)';
-        document.getElementById('btnThemeIndigo').style.background = 'rgba(99, 102, 241, 0.12)';
-      } else if (theme === 'champagne') {
-        document.body.classList.add('theme-champagne');
-        document.getElementById('btnThemeChampagne').className = 'px-3 py-1 rounded-full text-xs font-semibold border';
-        document.getElementById('btnThemeChampagne').style.borderColor = 'var(--c-accent)';
-        document.getElementById('btnThemeChampagne').style.background = 'rgba(226, 200, 137, 0.1)';
+    function initFirebaseCloud() {
+      try {
+        if (typeof firebase !== 'undefined') {
+          if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+          }
+          firestoreDb = firebase.firestore();
+          isCloudReady = true;
+          setCloudStatus(true);
+          console.log('[ECHO Cloud]: Firestore connected successfully');
+        } else {
+          console.warn('[ECHO Cloud]: Firebase SDK not loaded, running in local mode');
+          setCloudStatus(false);
+        }
+      } catch (err) {
+        console.warn('[ECHO Cloud]: Initialization error:', err);
+        setCloudStatus(false);
       }
     }
 
+    function setCloudStatus(synced, label) {
+      const el = document.getElementById('cloudSyncStatus');
+      if (el) {
+        if (synced) {
+          el.innerHTML = label || '☁️ ענן מחובר';
+          el.className = 'text-[9px] font-light text-amber-300/80 flex items-center gap-0.5 transition-all';
+        } else {
+          el.innerHTML = label || '☁️ ענן מקומי';
+          el.className = 'text-[9px] font-light opacity-40 flex items-center gap-0.5 transition-all';
+        }
+      }
+    }
+
+    async function syncDecisionToCloud(decision) {
+      if (!decision || !decision.id) return;
+      if (!firestoreDb) return;
+      try {
+        setCloudStatus(true, '☁️ מסנכרן...');
+        const payload = {
+          ...decision,
+          userId: currentUsername,
+          lastSyncedAt: Date.now()
+        };
+
+        // 1. Save in user-scoped collection
+        await firestoreDb
+          .collection('users')
+          .doc(currentUsername)
+          .collection('decisions')
+          .doc(decision.id)
+          .set(payload, { merge: true });
+
+        // 2. Also save in root decisions collection for global queries & backup
+        await firestoreDb
+          .collection('decisions')
+          .doc(decision.id)
+          .set(payload, { merge: true });
+
+        setCloudStatus(true, '☁️ נשמר בענן ✓');
+        setTimeout(() => setCloudStatus(true, '☁️ ענן מחובר'), 3000);
+      } catch (err) {
+        console.warn('[ECHO Cloud]: Save error:', err);
+        setCloudStatus(false, '⚠️ שגיאת ענן');
+      }
+    }
+
+    async function deleteDecisionFromCloud(decisionId) {
+      if (!decisionId || !firestoreDb) return;
+      try {
+        setCloudStatus(true, '☁️ מוחק מהענן...');
+        await firestoreDb
+          .collection('users')
+          .doc(currentUsername)
+          .collection('decisions')
+          .doc(decisionId)
+          .delete();
+
+        await firestoreDb
+          .collection('decisions')
+          .doc(decisionId)
+          .delete();
+
+        setCloudStatus(true, '☁️ נמחק מהענן ✓');
+        setTimeout(() => setCloudStatus(true, '☁️ ענן מחובר'), 3000);
+      } catch (err) {
+        console.warn('[ECHO Cloud]: Delete error:', err);
+      }
+    }
+
+    async function syncWithCloud(username) {
+      if (!firestoreDb) return;
+      try {
+        setCloudStatus(true, '☁️ מושך מהענן...');
+        const snapshot = await firestoreDb
+          .collection('users')
+          .doc(username)
+          .collection('decisions')
+          .get();
+
+        const cloudDecisions = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data && !isMockOrLegacy(data)) {
+            cloudDecisions.push(data);
+          }
+        });
+
+        const key = `echo_decisions_${username}`;
+        const localDecisions = JSON.parse(localStorage.getItem(key) || '[]').filter(d => !isMockOrLegacy(d));
+        
+        // Merge by id, newest timestamp wins
+        const map = new Map();
+        localDecisions.forEach(d => map.set(d.id, d));
+        cloudDecisions.forEach(d => {
+          const existing = map.get(d.id);
+          if (!existing || (d.lastSyncedAt || d.frozenAt || 0) >= (existing.lastSyncedAt || existing.frozenAt || 0)) {
+            map.set(d.id, d);
+          }
+        });
+
+        const merged = Array.from(map.values()).sort((a, b) => (a.frozenAt || 0) - (b.frozenAt || 0));
+        localStorage.setItem(key, JSON.stringify(merged));
+
+        // If latest decision is unsealed, apply to UI
+        if (merged.length > 0) {
+          const latest = merged[merged.length - 1];
+          if (!latest.sealed) {
+            applyDecisionToUI(latest);
+            captureResultIcon = 'success';
+          }
+        }
+
+        // Push any local decisions that might not be in cloud yet
+        for (const d of localDecisions) {
+          if (!cloudDecisions.some(cd => cd.id === d.id)) {
+            syncDecisionToCloud(d);
+          }
+        }
+
+        checkAndPromptDueFollowUps();
+        const journalModal = document.getElementById('modalDecisionsJournal');
+        if (journalModal && !journalModal.classList.contains('hidden')) {
+          renderDecisionsJournal();
+        }
+
+        setCloudStatus(true, '☁️ ענן מחובר');
+      } catch (err) {
+        console.warn('[ECHO Cloud]: Sync error:', err);
+        setCloudStatus(false);
+      }
+    }
+
+    // ================= USER IDENTITY & MULTI-TENANCY =================
+    let currentUsername = localStorage.getItem('echo_username') || 'guy_founder';
+    updateUserDisplay();
+    addKnownUser(currentUsername);
+
+    function getKnownUsers() {
+      try {
+        const raw = localStorage.getItem('echo_known_users');
+        const list = raw ? JSON.parse(raw) : ['guy_founder'];
+        if (!list.includes(currentUsername)) list.push(currentUsername);
+        return list;
+      } catch (e) {
+        return ['guy_founder'];
+      }
+    }
+
+    function addKnownUser(username) {
+      try {
+        const list = getKnownUsers();
+        if (!list.includes(username)) {
+          list.push(username);
+          localStorage.setItem('echo_known_users', JSON.stringify(list));
+        }
+      } catch (e) {
+        console.warn('Error saving known users:', e);
+      }
+    }
+
+    function openSwitchUserModal() {
+      const modal = document.getElementById('modalSwitchUser');
+      const input = document.getElementById('inputSwitchUserName');
+      const chips = document.getElementById('recentUsersChips');
+      
+      if (input) {
+        input.value = currentUsername;
+      }
+
+      if (chips) {
+        const users = getKnownUsers();
+        chips.innerHTML = users.map(u => `
+          <button 
+            type="button" 
+            onclick="selectUserChip('${u}')" 
+            class="px-2.5 py-1 rounded-full text-[10px] border transition-all ${u === currentUsername ? 'border-amber-400 bg-amber-400/20 text-amber-300 font-medium' : 'border-stone-800 bg-white/[0.02] text-stone-300 hover:border-amber-400/40'}"
+          >
+            @${u}
+          </button>
+        `).join('');
+      }
+
+      if (modal) modal.classList.remove('hidden');
+      if (input) setTimeout(() => input.focus(), 100);
+    }
+
+    function closeSwitchUserModal() {
+      const modal = document.getElementById('modalSwitchUser');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function selectUserChip(username) {
+      const input = document.getElementById('inputSwitchUserName');
+      if (input) input.value = username;
+      confirmSwitchUser();
+    }
+
+    function confirmSwitchUser() {
+      const input = document.getElementById('inputSwitchUserName');
+      let rawVal = input ? input.value.trim() : '';
+      if (!rawVal) {
+        alert('אנא הזן שם משתמש');
+        if (input) input.focus();
+        return;
+      }
+
+      // Clean leading @ and sanitize spaces/slashes
+      rawVal = rawVal.replace(/^@+/, '').trim().replace(/[\s\/\\#\?]/g, '_');
+      if (!rawVal) rawVal = 'user_' + Date.now();
+
+      const isNewUser = !getKnownUsers().includes(rawVal);
+      currentUsername = rawVal;
+      localStorage.setItem('echo_username', currentUsername);
+      addKnownUser(currentUsername);
+
+      updateUserDisplay();
+      closeSwitchUserModal();
+
+      // Clean current screen state for the switched user
+      resetToEmptyState();
+
+      // Load history and sync with Cloud Firestore for this user
+      loadUserDecisionHistory();
+
+      if (isNewUser) {
+        alert(`נפתח מרחב שיקול דעת חדש ונקי עבור @${currentUsername}!\nכל החלטה שתקליט תישמר בנפרד בענן ובמכשיר.`);
+      }
+    }
+
+    function promptSwitchUser() {
+      openSwitchUserModal();
+    }
+
+    function updateUserDisplay() {
+      const formatted = '@' + currentUsername;
+      const navDisplay = document.getElementById('currentUserNameDisplay');
+      const badgeDisplay = document.getElementById('badgeUserTag');
+      if (navDisplay) navDisplay.innerText = formatted;
+      if (badgeDisplay) badgeDisplay.innerText = formatted;
+    }
+
+    function getUserStorageKey() {
+      return `echo_decisions_${currentUsername}`;
+    }
+
+    const ECHO_STORAGE_VERSION = 'v5_pure_live_2026';
+
+    function isMockOrLegacy(record) {
+      if (!record || typeof record !== 'object') return true;
+      const str = JSON.stringify(record).toLowerCase();
+      if (str.includes('אטלס') || str.includes('אולס') || str.includes('atlas') || str.includes('olas')) return true;
+      if (str.includes('500k') || str.includes('האם להשקיע 500')) return true;
+      if (!record.rawVerbatim || typeof record.rawVerbatim !== 'string' || record.rawVerbatim.trim().length === 0) return true;
+      return false;
+    }
+
+    function purgeMockStorage() {
+      try {
+        const ver = localStorage.getItem('echo_storage_version');
+        if (ver !== ECHO_STORAGE_VERSION) {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && (k.startsWith('echo_decisions_') || k.includes('atlas') || k.includes('guyfounder'))) {
+              localStorage.removeItem(k);
+            }
+          }
+          localStorage.setItem('echo_storage_version', ECHO_STORAGE_VERSION);
+        }
+      } catch (e) {
+        console.warn('Storage purge error:', e);
+      }
+    }
+    purgeMockStorage();
+
+    function formatBullets(val) {
+      if (Array.isArray(val)) {
+        const clean = val.filter(item => item && typeof item === 'string' && item.trim().length > 0);
+        if (clean.length > 0) {
+          return clean.map(item => `<p>• ${item.replace(/^[•\-\*]\s*/, '').trim()}</p>`).join('');
+        }
+      }
+      if (typeof val === 'string' && val.trim().length > 0) {
+        const lines = val.split(/[\n;•]+/).map(s => s.trim()).filter(s => s.length > 0);
+        if (lines.length > 0) {
+          return lines.map(line => `<p>• ${line.replace(/^[•\-\*]\s*/, '').trim()}</p>`).join('');
+        }
+        return `<p>• ${val.trim()}</p>`;
+      }
+      return '<p class="italic">טרם נלכדו נתונים</p>';
+    }
+
+    // ================= SECTION 4: PROCESS SUMMARY STATE =================
+    let selectedCriterionType = 0; // 0, 1, 2, or 'custom'
+    let proposedCriteriaList = [
+      'קריטריון מוצע ראשון — ייקבע עם לכידת הדילמה',
+      'קריטריון מוצע שני',
+      'קריטריון מוצע שלישי'
+    ];
+    let selectedDays = 14;
+
+    function resetToEmptyState() {
+      document.getElementById('dispTitle').innerText = 'ממתין ללכידת שיקול דעת ראשונה';
+      document.getElementById('dispGoal').innerText = 'הקלט מחשבה או דילמה למעלה כדי לחלץ את גרעין ההחלטה.';
+      document.getElementById('dispObservations').innerHTML = '<p class="italic">טרם נלכדו עובדות</p>';
+      document.getElementById('dispAssumptions').innerHTML = '<p class="italic">טרם נחלצו הנחות</p>';
+      document.getElementById('dispQuestion').innerText = '"לאחר הקלטת הדילמה, כאן תופיע השאלה המאירה היחידה המאתגרת את הנחת הציר שלך."';
+      document.getElementById('dispAffectBadge').innerText = 'סמן סומטי: —';
+      document.getElementById('dispRiskBadge').innerText = 'מחלקת סיכון: —';
+      document.getElementById('dispLocusBadge').innerText = 'מיקוד שליטה: —';
+      const analogyCard = document.getElementById('dispAnalogyCard');
+      if (analogyCard) analogyCard.classList.add('hidden');
+      const analogyReason = document.getElementById('dispAnalogyReason');
+      if (analogyReason) analogyReason.innerText = '';
+
+      const ansInput = document.getElementById('inputUserAnswer');
+      if (ansInput) ansInput.value = '';
+
+      const refinedCard = document.getElementById('dispRefinedCard');
+      if (refinedCard) refinedCard.classList.add('hidden');
+      const refinedAction = document.getElementById('dispRefinedAction');
+      if (refinedAction) refinedAction.innerText = '';
+      const insightSummary = document.getElementById('dispInsightSummary');
+      if (insightSummary) insightSummary.innerText = '';
+      const refineHint = document.getElementById('refineStatusHint');
+      if (refineHint) refineHint.innerText = '';
+
+      // Reset Section 4: Process Summary
+      proposedCriteriaList = [
+        'קריטריון מוצע ראשון — ייקבע עם לכידת הדילמה',
+        'קריטריון מוצע שני',
+        'קריטריון מוצע שלישי'
+      ];
+      selectedCriterionType = 0;
+      selectedDays = 14;
+
+      const customCritInput = document.getElementById('inputCustomCriterion');
+      if (customCritInput) customCritInput.value = '';
+      const customDaysInput = document.getElementById('inputCustomDays');
+      if (customDaysInput) customDaysInput.value = '';
+
+      const critHint = document.getElementById('criterionVoiceHint');
+      if (critHint) critHint.innerText = '';
+
+      if (typeof updateCriteriaUI === 'function') updateCriteriaUI();
+      if (typeof updateDaysUI === 'function') updateDaysUI(false);
+      if (typeof updateFollowUpQuery === 'function') updateFollowUpQuery();
+      if (typeof checkAndPromptDueFollowUps === 'function') checkAndPromptDueFollowUps();
+
+      if (typeof setScrollLock === 'function') {
+        setScrollLock(true);
+      }
+    }
+
+    function loadUserDecisionHistory() {
+      const key = getUserStorageKey();
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        try {
+          const cases = JSON.parse(saved);
+          if (Array.isArray(cases) && cases.length > 0) {
+            const valid = cases.filter(c => !isMockOrLegacy(c));
+            if (valid.length !== cases.length) {
+              localStorage.setItem(key, JSON.stringify(valid));
+            }
+            if (valid.length > 0) {
+              const latest = valid[valid.length - 1];
+              // If the latest decision was already sealed, we stay in clean state ready for new capture
+              if (!latest.sealed) {
+                applyDecisionToUI(latest);
+                captureResultIcon = 'success';
+              }
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        resetToEmptyState();
+      }
+
+      // Sync with Cloud Firestore in background
+      syncWithCloud(currentUsername);
+    }
+
     // ================= SACRED GEOMETRY CANVAS ANIMATION =================
-    // Much slower dynamics, zero text inside, dynamic fluid gradient fill with the 3 palette colors
     const canvas = document.getElementById('geoCanvas');
     const ctx = canvas.getContext('2d');
     let animTime = 0;
     let rotationAngle = 0;
     let speechEnergy = 0; // Smooth speech level interpolation
+    let isRecording = false; // Toggle state: 1st click = start, 2nd click = stop
+    let captureResultIcon = null; // null | 'success' | 'error'
+    let mediaRecorder = null;
+    let audioStream = null;
 
     function drawSacredGeometry() {
-      const p = palettes[currentTheme];
       const w = canvas.width;
       const h = canvas.height;
       const cx = w / 2;
@@ -375,51 +1016,60 @@
 
       ctx.clearRect(0, 0, w, h);
 
-      // Much slower time evolution (slow harmonic breathing)
-      const speed = isSpeaking ? 0.008 : 0.003;
+      // Slow harmonic breathing
+      const speed = isRecording ? 0.009 : 0.003;
       animTime += speed;
 
-      // Slow majestic rotation
-      const rotSpeed = isSpeaking ? 0.0025 : 0.001;
+      // Slow rotation
+      const rotSpeed = isRecording ? 0.003 : 0.001;
       rotationAngle += rotSpeed;
 
-      // Smooth speech envelope interpolation
-      const targetEnergy = isSpeaking ? 1.0 : 0.0;
-      speechEnergy += (targetEnergy - speechEnergy) * 0.04;
+      // Real audio energy sampling if recording
+      let liveVolume = 0;
+      if (isRecording && analyser && dataArray) {
+        analyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          sum += dataArray[i];
+        }
+        liveVolume = Math.min((sum / dataArray.length) / 80, 1.2);
+      }
+
+      // Smooth speech envelope interpolation with live audio energy boost
+      const targetEnergy = isRecording ? (0.6 + liveVolume * 0.7) : 0.0;
+      speechEnergy += (targetEnergy - speechEnergy) * 0.08;
 
       const numVertices = 12;
-      const baseRadius = 74 + Math.sin(animTime * 1.2) * (3 + speechEnergy * 6);
+      const baseRadius = 92 + Math.sin(animTime * 1.2) * (3.5 + speechEnergy * 8);
       const points = [];
 
       for (let i = 0; i < numVertices; i++) {
         const theta = (i / numVertices) * Math.PI * 2 + rotationAngle;
-        // Slow organic harmonic modulation
-        const wave = Math.sin(theta * 3 + animTime) * (5 + speechEnergy * 8) +
-                     Math.cos(theta * 2 - animTime * 0.7) * (3 + speechEnergy * 5);
+        const wave = Math.sin(theta * 3 + animTime) * (5 + speechEnergy * 9) +
+                     Math.cos(theta * 2 - animTime * 0.7) * (3 + speechEnergy * 6);
         const r = baseRadius + wave;
         const x = cx + Math.cos(theta) * r;
         const y = cy + Math.sin(theta) * r;
         points.push({ x, y });
       }
 
-      // --- 1. DYNAMIC INTERNAL FILL (3 Palette Colors) ---
-      // Radial gradient smoothly moving and shifting colors with voice rhythm
-      const gradShiftX = cx + Math.sin(animTime * 0.8) * (15 + speechEnergy * 25);
-      const gradShiftY = cy + Math.cos(animTime * 0.6) * (15 + speechEnergy * 25);
-      const gradR = baseRadius * (1.1 + speechEnergy * 0.2);
+      // --- 1. DYNAMIC INTERNAL FILL (Strictly 3 Palette Colors) ---
+      const gradShiftX = cx + Math.sin(animTime * 0.8) * (15 + speechEnergy * 28);
+      const gradShiftY = cy + Math.cos(animTime * 0.6) * (15 + speechEnergy * 28);
+      const gradR = baseRadius * (1.1 + speechEnergy * 0.25);
 
       const radGrad = ctx.createRadialGradient(gradShiftX, gradShiftY, 4, cx, cy, gradR);
 
-      // Color 3: Accent with dynamic breathing alpha
-      const accentAlpha = 0.22 + 0.18 * Math.sin(animTime * 1.5) + speechEnergy * 0.35;
-      radGrad.addColorStop(0, `rgba(${p.accentRgb[0]}, ${p.accentRgb[1]}, ${p.accentRgb[2]}, ${Math.min(accentAlpha, 0.85)})`);
+      // Color 3: Warm Amber Accent with dynamic breathing alpha
+      const accentAlpha = 0.22 + 0.18 * Math.sin(animTime * 1.5) + speechEnergy * 0.45;
+      radGrad.addColorStop(0, `rgba(${palette.accentRgb[0]}, ${palette.accentRgb[1]}, ${palette.accentRgb[2]}, ${Math.min(accentAlpha, 0.9)})`);
 
       // Color 2: Typography Pearl blend
-      const textAlpha = 0.08 + 0.06 * Math.cos(animTime * 1.1) + speechEnergy * 0.12;
-      radGrad.addColorStop(0.55, `rgba(${p.textRgb[0]}, ${p.textRgb[1]}, ${p.textRgb[2]}, ${textAlpha})`);
+      const textAlpha = 0.08 + 0.06 * Math.cos(animTime * 1.1) + speechEnergy * 0.15;
+      radGrad.addColorStop(0.55, `rgba(${palette.textRgb[0]}, ${palette.textRgb[1]}, ${palette.textRgb[2]}, ${textAlpha})`);
 
-      // Color 1: Void Canvas Background
-      radGrad.addColorStop(1, `rgba(${p.voidRgb[0]}, ${p.voidRgb[1]}, ${p.voidRgb[2]}, 0.85)`);
+      // Color 1: Obsidian Void Background
+      radGrad.addColorStop(1, `rgba(${palette.voidRgb[0]}, ${palette.voidRgb[1]}, ${palette.voidRgb[2]}, 0.88)`);
 
       // Fill the organic morphed shape
       ctx.beginPath();
@@ -436,13 +1086,13 @@
       ctx.fill();
 
       // Outer hairline border
-      ctx.strokeStyle = `rgba(${p.accentRgb[0]}, ${p.accentRgb[1]}, ${p.accentRgb[2]}, ${0.4 + speechEnergy * 0.4})`;
-      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = `rgba(${palette.accentRgb[0]}, ${palette.accentRgb[1]}, ${palette.accentRgb[2]}, ${0.45 + speechEnergy * 0.45})`;
+      ctx.lineWidth = 1.3;
       ctx.stroke();
 
       // --- 2. SACRED GEOMETRY WIREFRAME CHORDS ---
       ctx.beginPath();
-      ctx.strokeStyle = `rgba(${p.accentRgb[0]}, ${p.accentRgb[1]}, ${p.accentRgb[2]}, ${0.12 + speechEnergy * 0.2})`;
+      ctx.strokeStyle = `rgba(${palette.accentRgb[0]}, ${palette.accentRgb[1]}, ${palette.accentRgb[2]}, ${0.12 + speechEnergy * 0.25})`;
       ctx.lineWidth = 0.8;
       for (let i = 0; i < numVertices; i++) {
         const targetA = points[(i + 4) % numVertices];
@@ -453,17 +1103,51 @@
 
       // Delicate concentric inner ring
       ctx.beginPath();
-      const innerR = 26 + Math.cos(animTime * 1.4) * (2 + speechEnergy * 5);
+      const innerR = 32 + Math.cos(animTime * 1.4) * (2.5 + speechEnergy * 5);
       ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(${p.textRgb[0]}, ${p.textRgb[1]}, ${p.textRgb[2]}, ${0.15 + speechEnergy * 0.2})`;
+      ctx.strokeStyle = `rgba(${palette.textRgb[0]}, ${palette.textRgb[1]}, ${palette.textRgb[2]}, ${0.15 + speechEnergy * 0.2})`;
       ctx.lineWidth = 0.8;
       ctx.stroke();
 
-      // Small central spark of living light
-      ctx.beginPath();
-      ctx.arc(cx, cy, 2 + speechEnergy * 1.5, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${p.accentRgb[0]}, ${p.accentRgb[1]}, ${p.accentRgb[2]}, ${0.7 + speechEnergy * 0.3})`;
-      ctx.fill();
+      // --- 3. IN-SHAPE STATUS INDICATOR (Amber V on Success, Amber X on Error) ---
+      if (captureResultIcon === 'success') {
+        // Draw elegant glowing amber checkmark V inside the shape
+        ctx.save();
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(${palette.accentRgb[0]}, ${palette.accentRgb[1]}, ${palette.accentRgb[2]}, 0.95)`;
+        ctx.lineWidth = 3.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.shadowColor = `rgba(${palette.accentRgb[0]}, ${palette.accentRgb[1]}, ${palette.accentRgb[2]}, 0.8)`;
+        ctx.shadowBlur = 12;
+        ctx.moveTo(cx - 13, cy - 1);
+        ctx.lineTo(cx - 4, cy + 9);
+        ctx.lineTo(cx + 15, cy - 10);
+        ctx.stroke();
+        ctx.restore();
+      } else if (captureResultIcon === 'error') {
+        // Draw elegant glowing amber cross X inside the shape
+        ctx.save();
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(${palette.accentRgb[0]}, ${palette.accentRgb[1]}, ${palette.accentRgb[2]}, 0.95)`;
+        ctx.lineWidth = 3.5;
+        ctx.lineCap = 'round';
+        ctx.shadowColor = `rgba(${palette.accentRgb[0]}, ${palette.accentRgb[1]}, ${palette.accentRgb[2]}, 0.8)`;
+        ctx.shadowBlur = 12;
+        const s = 10;
+        ctx.moveTo(cx - s, cy - s);
+        ctx.lineTo(cx + s, cy + s);
+        ctx.moveTo(cx + s, cy - s);
+        ctx.lineTo(cx - s, cy + s);
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        // Small central spark of living light
+        ctx.beginPath();
+        ctx.arc(cx, cy, 2.5 + speechEnergy * 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${palette.accentRgb[0]}, ${palette.accentRgb[1]}, ${palette.accentRgb[2]}, ${0.7 + speechEnergy * 0.3})`;
+        ctx.fill();
+      }
 
       requestAnimationFrame(drawSacredGeometry);
     }
@@ -471,57 +1155,1451 @@
     // Start drawing loop
     drawSacredGeometry();
 
-    function toggleSpeechCapture() {
-      isSpeaking = !isSpeaking;
+    // ================= RECORDING TOGGLE: 1st Click = Start, 2nd Click = Stop =================
+    const canvasEl = document.getElementById('geoCanvas');
+    const morphBtnEl = document.getElementById('morphButton');
+
+    canvasEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleSpeechCapture();
+    });
+    canvasEl.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+      toggleSpeechCapture();
+    }, { passive: true });
+
+    morphBtnEl.addEventListener('click', (e) => {
+      toggleSpeechCapture();
+    });
+
+    // ================= GEMINI REAL AI ENGINE (TIER 1 & 2) =================
+    const GEMINI_API_KEY = '';
+    let mediaChunks = [];
+    let audioContext = null;
+    let analyser = null;
+    let dataArray = null;
+    let recordingStartTime = 0;
+
+    function toggleTextInputModal() {
+      const box = document.getElementById('rawTextInputContainer');
+      box.classList.toggle('hidden');
+    }
+
+    async function processDirectTextCapture() {
+      const input = document.getElementById('rawTextInput');
+      const text = input.value.trim();
+      if (!text) {
+        alert('אנא הזן טקסט לניתוח שיקול הדעת');
+        return;
+      }
+      captureResultIcon = null;
+      toggleTextInputModal();
+      input.value = '';
+      await runFullAiPipeline(text);
+    }
+
+    async function toggleSpeechCapture() {
       const hint = document.getElementById('geoStatusHint');
       const aura = document.getElementById('morphAuraRing');
 
-      if (isSpeaking) {
-        hint.innerText = 'מקשיב... מילוי הצורה משתנה בקצב המחשבה';
-        hint.style.opacity = '1';
-        aura.style.opacity = '0.55';
+      if (!isRecording) {
+        // --- 1. FIRST CLICK: START RECORDING ---
+        isRecording = true;
+        captureResultIcon = null;
+        mediaChunks = [];
+        recordingStartTime = Date.now();
+        hint.innerText = 'מקליט ומקשיב... (גע שוב לעצירה)';
+        aura.style.opacity = '0.7';
 
-        // Auto transition after deliberate 4.5s
-        setTimeout(() => {
-          if (isSpeaking) {
-            toggleSpeechCapture();
-            scrollToNext('stageDeliberation');
+        try {
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            audioStream = await navigator.mediaDevices.getUserMedia({ 
+              audio: {
+                channelCount: 1,
+                sampleRate: 16000,
+                echoCancellation: true,
+                noiseSuppression: true
+              } 
+            });
+
+            // Setup real-time audio energy analyser
+            try {
+              audioContext = new (window.AudioContext || window.webkitAudioContext)();
+              const source = audioContext.createMediaStreamSource(audioStream);
+              analyser = audioContext.createAnalyser();
+              analyser.fftSize = 64;
+              source.connect(analyser);
+              dataArray = new Uint8Array(analyser.frequencyBinCount);
+            } catch (e) {
+              console.warn('AudioContext analyser not supported:', e);
+            }
+
+            let selectedMimeType = '';
+            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+              selectedMimeType = 'audio/webm;codecs=opus';
+            } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+              selectedMimeType = 'audio/webm';
+            } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+              selectedMimeType = 'audio/mp4';
+            }
+
+            mediaRecorder = selectedMimeType 
+              ? new MediaRecorder(audioStream, { mimeType: selectedMimeType })
+              : new MediaRecorder(audioStream);
+
+            mediaRecorder.ondataavailable = (e) => {
+              if (e.data && e.data.size > 0) mediaChunks.push(e.data);
+            };
+            mediaRecorder.start(100);
           }
-        }, 4500);
+        } catch (err) {
+          console.warn('Microphone error:', err);
+          captureResultIcon = 'error';
+          hint.innerText = 'גישה למיקרופון נדחתה או שאינה זמינה';
+          isRecording = false;
+        }
       } else {
-        hint.innerText = 'גע בצורה לתחילת לכידה';
-        hint.style.opacity = '0.7';
-        aura.style.opacity = '0.25';
+        // --- 2. SECOND CLICK: STOP RECORDING & PROCEED TO REAL ANALYSIS ---
+        isRecording = false;
+        const durationSec = (Date.now() - recordingStartTime) / 1000;
+        aura.style.opacity = '0.35';
+
+        if (durationSec < 1.0) {
+          hint.innerText = 'ההקלטה קצרה מדי (פחות משנייה)';
+          if (audioStream) {
+            audioStream.getTracks().forEach(t => t.stop());
+            audioStream = null;
+          }
+          if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+          }
+          return;
+        }
+
+        hint.innerText = 'מעבד הקלטה קולית...';
+
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.onstop = async () => {
+            const actualMime = mediaRecorder.mimeType || 'audio/webm';
+            const audioBlob = new Blob(mediaChunks, { type: actualMime });
+            if (audioStream) {
+              audioStream.getTracks().forEach(t => t.stop());
+              audioStream = null;
+            }
+            if (audioContext) {
+              audioContext.close();
+              audioContext = null;
+            }
+
+            await transcribeAndExtractAudio(audioBlob);
+          };
+          mediaRecorder.stop();
+        } else {
+          hint.innerText = 'גע בלכידה';
+        }
       }
     }
 
-    function simulateDecision(type) {
-      if (type === 'אטלס') {
-        document.getElementById('dispTitle').innerText = 'האם להמשיך להשקיע בפרויקט אטלס?';
-        document.getElementById('dispGoal').innerText = 'אימות היתכנות מסחרית מבלי לבזבז קיבולת צוות מוגבלת';
-        document.getElementById('dispObservations').innerHTML = '<p>• הושקעו 200 אלף ש"ח ו-8 חודשים</p><p>• אין לקוח משלם עדיין</p><p>• 2 לקוחות רוצים לבדוק</p>';
-        document.getElementById('dispAssumptions').innerHTML = '<p>• נכונות לבדוק משמעה נכונות לשלם</p><p>• נדרשים 3 חודשים לבדיקת נכונות לשלם</p>';
-        document.getElementById('dispQuestion').innerText = '"ציינת ששני לקוחות רוצים לבדוק את המוצר. האם צריך באמת שלושה חודשים כדי לבדוק נכונות לשלם, או שיש דרך זולה ומהירה יותר לקבל את המידע?"';
-        document.getElementById('dispAnalogyCard').classList.add('hidden');
-        document.getElementById('dispAffectBadge').innerText = 'סמן סומטי: מונע מחרדה (Anxious)';
-        document.getElementById('dispRiskBadge').innerText = 'מחלקת סיכון: Mediocristan (מתוחם)';
-        document.getElementById('dispLocusBadge').innerText = 'מיקוד שליטה: פנימי (Internal)';
-      } else {
-        document.getElementById('dispTitle').innerText = 'האם לגייס סמנכ"ל מכירות עכשיו?';
-        document.getElementById('dispGoal').innerText = 'הפחתת תלות המייסד במכירות תוך שמירה על ה-Runway';
-        document.getElementById('dispObservations').innerHTML = '<p>• המכירות תלויות כרגע רק במייסד</p><p>• מועמד מצוין אך יקר מאוד לארגון</p>';
-        document.getElementById('dispAssumptions').innerHTML = '<p>• הנהגת מכירות בכירה תפצח תהליך מכירות משוכפל</p>';
-        document.getElementById('dispQuestion').innerText = '"דילגת על ציון הסיכונים המרכזיים בלוח הזמנים שקבעת. מה אתה יודע על המשאבים שלנו שלא ציינת ומצדיק את זה?"';
+    // Convert Blob to Base64
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const res = reader.result;
+          const base64 = res.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function transcribeAndExtractAudio(audioBlob) {
+      const hint = document.getElementById('geoStatusHint');
+      const subHint = document.getElementById('geoStatusSubHint');
+      isAnalyzing = true;
+
+      try {
+        const base64Audio = await blobToBase64(audioBlob);
+        let mimeType = audioBlob.type.split(';')[0] || 'audio/webm';
+
+        hint.innerText = 'ההקלטה בתהליך ניתוח: מתמלל דיבור...';
+        subHint.innerText = 'Tier 1 Gemini Audio Transcribe (עברית מילה-במילה)';
+
+        // Tier 1: Multimodal Audio Transcription via Gemini API (Primary: gemini-3.6-flash, Fallback: gemini-3.7-flash)
+        let rawVerbatim = '';
         
-        const card = document.getElementById('dispAnalogyCard');
-        card.classList.remove('hidden');
-        document.getElementById('dispAnalogyReason').innerText = 'התאמה מבנית לפרויקט אטלס: התחייבות כבדה תחת אי-ודאות מול אפשרות לבדיקה זולה מראש.';
-        document.getElementById('dispAffectBadge').innerText = 'סמן סומטי: מונע מ-FOMO/לחץ זמן';
-        document.getElementById('dispRiskBadge').innerText = 'מחלקת סיכון: Mediocristan';
-        document.getElementById('dispLocusBadge').innerText = 'מיקוד שליטה: מאוזן';
+        async function callTranscribe(modelName) {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { inlineData: { mimeType: mimeType, data: base64Audio } },
+                  { text: 'תמלל במדויק מילה-במילה (Verbatim) את מה שנאמר בעברית בקובץ הקול. אם אין דיבור או שהקובץ שקט לגמרי, השב בדיוק במילה: ריק.' }
+                ]
+              }],
+              generationConfig: { temperature: 0.1 }
+            })
+          });
+          const data = await res.json();
+          if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+          
+          const parts = data.candidates?.[0]?.content?.parts || [];
+          let text = '';
+          for (const p of parts) {
+            if (p.text) text += p.text + ' ';
+          }
+          return text.trim();
+        }
+
+        try {
+          rawVerbatim = await callTranscribe('gemini-3.6-flash');
+        } catch (e36) {
+          console.warn('gemini-3.6-flash transcribe fallback:', e36.message);
+          hint.innerText = 'מנסה שרת תמלול משני...';
+          rawVerbatim = await callTranscribe('gemini-3.7-flash');
+        }
+
+        // Check if transcription returned empty or silent placeholder
+        const clean = rawVerbatim.replace(/[\s.,!?:;]+/g, '').trim();
+        if (!rawVerbatim || clean === '' || clean === 'ריק' || clean.toLowerCase() === 'empty') {
+          throw new Error('לא זוהה דיבור ברור בהקלטה. אנא דבר בקול רם וברור, או הקלד את הדילמה בטקסט.');
+        }
+
+        console.log('[ECHO Frozen Verbatim]:', rawVerbatim);
+        await runFullAiPipeline(rawVerbatim);
+
+      } catch (err) {
+        console.error('Transcription error:', err);
+        isAnalyzing = false;
+        captureResultIcon = 'error';
+        hint.innerText = 'הלכידה לא נותחה (גע לניסיון חוזר)';
+        setScrollLock(true);
+      }
+    }
+
+    async function runFullAiPipeline(rawVerbatim) {
+      const hint = document.getElementById('geoStatusHint');
+      isAnalyzing = true;
+      captureResultIcon = null;
+      hint.innerText = 'מנתח שיקול דעת בענן...';
+
+      const prompt = `
+אתה מנוע הניתוח האפיסטמי של Echo (הד) - זיכרון שיקול הדעת האנושי.
+תפקידך לחלץ מתוך הטקסט הגולמי את מבנה שיקול הדעת המדויק לפני שנודעת התוצאה.
+
+הטקסט הגולמי שהוקפא בלכידה:
+"""${rawVerbatim}"""
+
+חלץ פלט JSON קפדני לפי הסכמה:
+- title: כותרת קצרה ומדויקת של הדילמה הממשית של המשתמש
+- goal: המטרה המזוקקת שהמשתמש מנסה להשיג או לשמר
+- observations: מערך של מחרוזות, כל אחת עובדה מוצקה ומאומתת שנמסרה
+- assumptions: מערך של מחרוזות, כל אחת הנחת ציר מרכזית שטעונה בדיקה
+- affectBadge: סמן סומטי המאפיין את המצב (למשל: סמן סומטי: חרדה / לחץ זמן / שקול)
+- riskBadge: מחלקת סיכון (למשל: מחלקת סיכון: Mediocristan / Extremistan)
+- locusBadge: מיקוד שליטה (למשל: מיקוד שליטה: פנימי / חיצוני / מעורב)
+- question: שאלת הארה סוקרטית חדה ויחידה המצטטת במדויק מילים מהטקסט של המשתמש ומאתגרת את הנחת היסוד שלו ללא שיפוטיות
+- contractCriterion: קריטריון הצלחה מוביל לבדיקה במועד המעקב
+- proposedCriteria: מערך של בדיוק 3 קריטריוני הצלחה חדים ומדידים לבדיקה במועד המעקב מזוויות שונות (קריטריון תוצאתי/עסקי, קריטריון תהליכי/מבצעי, וקריטריון הפחתת סיכון/איכות)
+`;
+
+      try {
+        const cognitiveUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`;
+        const cogRes = await fetch(cognitiveUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: 'OBJECT',
+                properties: {
+                  title: { type: 'STRING' },
+                  goal: { type: 'STRING' },
+                  observations: { type: 'ARRAY', items: { type: 'STRING' } },
+                  assumptions: { type: 'ARRAY', items: { type: 'STRING' } },
+                  affectBadge: { type: 'STRING' },
+                  riskBadge: { type: 'STRING' },
+                  locusBadge: { type: 'STRING' },
+                  question: { type: 'STRING' },
+                  contractCriterion: { type: 'STRING' },
+                  proposedCriteria: { type: 'ARRAY', items: { type: 'STRING' } }
+                },
+                required: ['title', 'goal', 'observations', 'assumptions', 'affectBadge', 'riskBadge', 'locusBadge', 'question', 'contractCriterion', 'proposedCriteria']
+              },
+              temperature: 0.2
+            }
+          })
+        });
+
+        const cogData = await cogRes.json();
+        if (cogData.error) {
+          throw new Error(`שגיאת ניתוח קוגניטיבי: ${cogData.error.message || JSON.stringify(cogData.error)}`);
+        }
+        
+        const parts = cogData.candidates?.[0]?.content?.parts || [];
+        let rawJson = '';
+        for (const p of parts) {
+          if (p.text) rawJson += p.text;
+        }
+
+        // Sanitize JSON
+        rawJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(rawJson);
+
+        const criteria = (parsed.proposedCriteria && Array.isArray(parsed.proposedCriteria) && parsed.proposedCriteria.length >= 3)
+          ? parsed.proposedCriteria.slice(0, 3)
+          : [
+              parsed.contractCriterion || 'אימות הנחת היסוד המרכזית בתוך תקופת המעקב',
+              'בדיקת יחס עלות-תועלת מול חלופות נוספות',
+              'עמידה בלוחות זמנים ומניעת צווארי בקבוק'
+            ];
+
+        const decisionRecord = {
+          id: 'dc-' + Date.now(),
+          userId: currentUsername,
+          frozenAt: Date.now(),
+          rawVerbatim: rawVerbatim,
+          title: parsed.title || 'דילמת שיקול דעת',
+          goal: parsed.goal || 'השגת בהירות החלטתית',
+          observations: formatBullets(parsed.observations),
+          assumptions: formatBullets(parsed.assumptions),
+          affectBadge: parsed.affectBadge || 'סמן סומטי: מעורב',
+          riskBadge: parsed.riskBadge || 'מחלקת סיכון: Mediocristan',
+          locusBadge: parsed.locusBadge || 'מיקוד שליטה: פנימי',
+          question: parsed.question ? `"${parsed.question.replace(/^"|"$/g, '').trim()}"` : '"מהי הנחת הציר המרכזית שלך?"',
+          contractCriterion: criteria[0],
+          proposedCriteria: criteria,
+          selectedCriterionType: 0,
+          selectedDays: 14,
+          analogy: null
+        };
+
+        // Populate Stage 2 & unlock scroll
+        applyDecisionToUI(decisionRecord);
+        saveDecisionForCurrentUser(decisionRecord);
+
+        isAnalyzing = false;
+        captureResultIcon = 'success';
+        hint.innerText = '';
+
+      } catch (err) {
+        console.error('Pipeline error:', err);
+        isAnalyzing = false;
+        captureResultIcon = 'error';
+        hint.innerText = 'הלכידה לא נותחה (גע לניסיון חוזר)';
+        setScrollLock(true);
+      }
+    }
+
+    let isAnalysisComplete = false;
+    let isAnalyzing = false;
+
+    function attemptScrollToNext(targetId) {
+      if (!isAnalysisComplete) {
+        return;
+      }
+      scrollToNext(targetId);
+    }
+
+    function setScrollLock(locked) {
+      const stream = document.getElementById('scrollStream');
+      const btn = document.getElementById('scrollNextBtn');
+      const label = document.getElementById('scrollNextLabel');
+
+      if (locked) {
+        isAnalysisComplete = false;
+        stream.style.overflowY = 'hidden';
+        if (btn) {
+          btn.classList.remove('opacity-80', 'cursor-pointer', 'pointer-events-auto');
+          btn.classList.add('opacity-0', 'pointer-events-none');
+        }
+        if (label) {
+          label.innerText = '';
+        }
+      } else {
+        isAnalysisComplete = true;
+        stream.style.overflowY = 'auto';
+        if (btn) {
+          btn.classList.remove('opacity-0', 'pointer-events-none');
+          btn.classList.add('opacity-80', 'cursor-pointer', 'pointer-events-auto');
+        }
+        if (label) {
+          label.innerText = 'לגלול להמשך ↓';
+        }
+      }
+    }
+
+    // Intercept manual touch and wheel scrolling when analysis is not complete
+    const streamContainer = document.getElementById('scrollStream');
+    streamContainer.addEventListener('wheel', (e) => {
+      if (!isAnalysisComplete && streamContainer.scrollTop <= 10 && e.deltaY > 0) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    let touchStartY = 0;
+    streamContainer.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches[0]) {
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    streamContainer.addEventListener('touchmove', (e) => {
+      if (!isAnalysisComplete && streamContainer.scrollTop <= 10 && e.touches && e.touches[0]) {
+        const currentY = e.touches[0].clientY;
+        if (touchStartY - currentY > 5) { // Trying to scroll down
+          e.preventDefault();
+        }
+      }
+    }, { passive: false });
+
+    // ================= REFINEMENT (ILLUMINATION ANSWER & AI SYNTHESIS) =================
+    let isRefinementRecording = false;
+    let refinementMediaRecorder = null;
+    let refinementAudioStream = null;
+    let refinementAudioChunks = [];
+    let refinementStartTime = 0;
+
+    async function toggleRefinementVoiceCapture() {
+      const btn = document.getElementById('btnVoiceAnswer');
+      const icon = document.getElementById('voiceAnswerIcon');
+      const label = document.getElementById('voiceAnswerLabel');
+      const hint = document.getElementById('refineStatusHint');
+
+      if (!isRefinementRecording) {
+        // Start recording refinement answer
+        try {
+          refinementAudioStream = await navigator.mediaDevices.getUserMedia({
+            audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true }
+          });
+
+          refinementAudioChunks = [];
+          refinementStartTime = Date.now();
+          isRefinementRecording = true;
+
+          let selectedMimeType = '';
+          if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            selectedMimeType = 'audio/webm;codecs=opus';
+          } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+            selectedMimeType = 'audio/webm';
+          } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+            selectedMimeType = 'audio/mp4';
+          }
+
+          refinementMediaRecorder = selectedMimeType
+            ? new MediaRecorder(refinementAudioStream, { mimeType: selectedMimeType })
+            : new MediaRecorder(refinementAudioStream);
+
+          refinementMediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) refinementAudioChunks.push(e.data);
+          };
+
+          refinementMediaRecorder.start(100);
+
+          btn.classList.add('border-[#D4AF37]', 'bg-[rgba(212,175,55,0.15)]');
+          icon.innerText = '🔴';
+          label.innerText = 'מקליט מענה... (גע לסיום)';
+          hint.innerText = 'דבר בבירור: כיצד תשובתך מעצבת את הפעולה...';
+        } catch (err) {
+          console.warn('Refinement mic error:', err);
+          hint.innerText = 'גישה למיקרופון נדחתה או שאינה זמינה';
+          isRefinementRecording = false;
+        }
+      } else {
+        // Stop recording refinement answer
+        isRefinementRecording = false;
+        btn.classList.remove('border-[#D4AF37]', 'bg-[rgba(212,175,55,0.15)]');
+        icon.innerText = '⏳';
+        label.innerText = 'מתמלל דיבור...';
+        hint.innerText = 'מתמלל את המענה הקולי ב-Gemini...';
+
+        const durationSec = (Date.now() - refinementStartTime) / 1000;
+        if (durationSec < 1.0) {
+          hint.innerText = 'ההקלטה קצרה מדי (פחות משנייה)';
+          icon.innerText = '🎙️';
+          label.innerText = 'הקלט מענה';
+          if (refinementAudioStream) {
+            refinementAudioStream.getTracks().forEach(t => t.stop());
+            refinementAudioStream = null;
+          }
+          if (refinementMediaRecorder && refinementMediaRecorder.state !== 'inactive') {
+            refinementMediaRecorder.stop();
+          }
+          return;
+        }
+
+        if (refinementMediaRecorder && refinementMediaRecorder.state !== 'inactive') {
+          refinementMediaRecorder.onstop = async () => {
+            const actualMime = refinementMediaRecorder.mimeType || 'audio/webm';
+            const audioBlob = new Blob(refinementAudioChunks, { type: actualMime });
+            if (refinementAudioStream) {
+              refinementAudioStream.getTracks().forEach(t => t.stop());
+              refinementAudioStream = null;
+            }
+
+            try {
+              const text = await transcribeAudioBlob(audioBlob);
+
+              const ansInput = document.getElementById('inputUserAnswer');
+              if (ansInput.value.trim()) {
+                ansInput.value += ' ' + text;
+              } else {
+                ansInput.value = text;
+              }
+
+              icon.innerText = '✓';
+              label.innerText = 'המענה נלכד!';
+              hint.innerText = 'המענה הקולי תומלל והוזן! לחץ על "✨ חדד וזקק שיקול דעת" לניתוח.';
+              setTimeout(() => {
+                icon.innerText = '🎙️';
+                label.innerText = 'הקלט מענה נוסף';
+              }, 3000);
+
+            } catch (e) {
+              console.error('Refinement transcription error:', e);
+              icon.innerText = '✕';
+              label.innerText = 'שגיאה בתמלול';
+              hint.innerText = 'שגיאה בתמלול המענה: ' + (e.message || 'נסה שוב');
+              setTimeout(() => {
+                icon.innerText = '🎙️';
+                label.innerText = 'הקלט מענה';
+              }, 3000);
+            }
+          };
+          refinementMediaRecorder.stop();
+        }
+      }
+    }
+
+    // Shared Audio Transcription Helper via Gemini 3.6 Flash
+    async function transcribeAudioBlob(audioBlob) {
+      const base64Audio = await blobToBase64(audioBlob);
+      const mimeType = audioBlob.type.split(';')[0] || 'audio/webm';
+      
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { inlineData: { mimeType: mimeType, data: base64Audio } },
+              { text: 'תמלל במדויק מילה-במילה (Verbatim) את מה שנאמר בעברית בקובץ הקול. אם אין דיבור, השב: ריק.' }
+            ]
+          }],
+          generationConfig: { temperature: 0.1 }
+        })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      let text = '';
+      for (const p of parts) { if (p.text) text += p.text + ' '; }
+      text = text.trim();
+
+      const clean = text.replace(/[\s.,!?:;]+/g, '').trim();
+      if (!text || clean === '' || clean === 'ריק' || clean.toLowerCase() === 'empty') {
+        throw new Error('לא זוהה דיבור ברור בהקלטה');
+      }
+      return text;
+    }
+
+    // ================= SECTION 4: PROCESS SUMMARY CONTROLS & VOICE =================
+    function selectCriterion(type) {
+      selectedCriterionType = type;
+      updateCriteriaUI();
+      updateFollowUpQuery();
+    }
+
+    function onCustomCriterionInput() {
+      selectedCriterionType = 'custom';
+      updateCriteriaUI();
+      updateFollowUpQuery();
+    }
+
+    function selectDays(days) {
+      selectedDays = parseInt(days, 10) || 14;
+      const customInput = document.getElementById('inputCustomDays');
+      if (customInput) customInput.value = '';
+      updateDaysUI(false);
+      updateFollowUpQuery();
+    }
+
+    function onCustomDaysInput(val) {
+      const parsed = parseInt(val, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        selectedDays = parsed;
+        updateDaysUI(true);
+        updateFollowUpQuery();
+      }
+    }
+
+    function getActiveCriterionText() {
+      if (selectedCriterionType === 'custom') {
+        const custom = document.getElementById('inputCustomCriterion') ? document.getElementById('inputCustomCriterion').value.trim() : '';
+        return custom || 'קריטריון מותאם אישית (טרם הוגדר)';
+      }
+      const idx = typeof selectedCriterionType === 'number' ? selectedCriterionType : 0;
+      return proposedCriteriaList[idx] || proposedCriteriaList[0] || 'אימות הנחת היסוד במועד המעקב';
+    }
+
+    function updateFollowUpQuery() {
+      const crit = getActiveCriterionText();
+      const queryBox = document.getElementById('dispFollowUpQuery');
+      const daysLabel = document.getElementById('dispQueryDaysLabel');
+      const dateLabel = document.getElementById('dispScheduledDate');
+      
+      const targetDate = new Date(Date.now() + selectedDays * 86400000);
+      const formattedDate = targetDate.toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: 'numeric' });
+
+      if (daysLabel) daysLabel.innerText = `בעוד ${selectedDays} ימים`;
+      if (dateLabel) dateLabel.innerText = formattedDate;
+
+      if (queryBox) {
+        queryBox.innerText = `במועד המעקב (בתאריך ${formattedDate}): האם התקיים קריטריון ההצלחה: "${crit}"? מה היו התוצאות בפועל ומה השתנה בהנחות המוצא?`;
+      }
+    }
+
+    function updateCriteriaUI() {
+      for (let i = 0; i < 3; i++) {
+        const card = document.getElementById(`critCard${i}`);
+        const dot = document.getElementById(`critDot${i}`);
+        const textEl = document.getElementById(`critText${i}`);
+        if (textEl && proposedCriteriaList[i]) {
+          textEl.innerText = proposedCriteriaList[i];
+        }
+        if (card && dot) {
+          if (selectedCriterionType === i) {
+            card.style.borderColor = 'var(--c-accent)';
+            card.style.backgroundColor = 'rgba(212, 175, 55, 0.08)';
+            card.style.opacity = '1';
+            dot.className = 'mt-0.5 w-3.5 h-3.5 rounded-full border border-amber-400 flex items-center justify-center flex-shrink-0';
+            dot.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>';
+          } else {
+            card.style.borderColor = 'var(--c-border)';
+            card.style.backgroundColor = 'var(--c-glass)';
+            card.style.opacity = '0.7';
+            dot.className = 'mt-0.5 w-3.5 h-3.5 rounded-full border border-stone-600 flex items-center justify-center flex-shrink-0';
+            dot.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-transparent"></span>';
+          }
+        }
       }
 
-      scrollToNext('stageDeliberation');
+      const customCard = document.getElementById('critCardCustom');
+      const customDot = document.getElementById('critDotCustom');
+      if (customCard && customDot) {
+        if (selectedCriterionType === 'custom') {
+          customCard.style.borderColor = 'var(--c-accent)';
+          customCard.style.backgroundColor = 'rgba(212, 175, 55, 0.08)';
+          customCard.style.opacity = '1';
+          customDot.className = 'w-3.5 h-3.5 rounded-full border border-amber-400 flex items-center justify-center flex-shrink-0';
+          customDot.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>';
+        } else {
+          customCard.style.borderColor = 'var(--c-border)';
+          customCard.style.backgroundColor = 'var(--c-glass)';
+          customCard.style.opacity = '0.7';
+          customDot.className = 'w-3.5 h-3.5 rounded-full border border-stone-600 flex items-center justify-center flex-shrink-0';
+          customDot.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-transparent"></span>';
+        }
+      }
+    }
+
+    function updateDaysUI(isCustom = false) {
+      const presets = [3, 7, 14, 30, 60];
+      presets.forEach(p => {
+        const btn = document.getElementById(`btnDay${p}`);
+        if (btn) {
+          if (!isCustom && selectedDays === p) {
+            btn.style.borderColor = 'var(--c-accent)';
+            btn.style.backgroundColor = 'rgba(212, 175, 55, 0.15)';
+            btn.style.opacity = '1';
+            btn.classList.add('font-medium');
+          } else {
+            btn.style.borderColor = 'var(--c-border)';
+            btn.style.backgroundColor = 'transparent';
+            btn.style.opacity = '0.5';
+            btn.classList.remove('font-medium');
+          }
+        }
+      });
+      const customInput = document.getElementById('inputCustomDays');
+      if (customInput && isCustom) {
+        customInput.style.borderColor = 'var(--c-accent)';
+      } else if (customInput) {
+        customInput.style.borderColor = 'var(--c-border)';
+      }
+    }
+
+    // Voice Capture for Custom Criterion
+    let criterionAudioStream = null;
+    let criterionMediaRecorder = null;
+    let criterionAudioChunks = [];
+    let isRecordingCriterion = false;
+
+    async function toggleCriterionVoiceCapture() {
+      const icon = document.getElementById('btnVoiceCriterionIcon');
+      const label = document.getElementById('btnVoiceCriterionLabel');
+      const hint = document.getElementById('criterionVoiceHint');
+      const customInput = document.getElementById('inputCustomCriterion');
+
+      if (!isRecordingCriterion) {
+        try {
+          criterionAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          criterionMediaRecorder = new MediaRecorder(criterionAudioStream);
+          criterionAudioChunks = [];
+
+          criterionMediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) criterionAudioChunks.push(e.data);
+          };
+
+          criterionMediaRecorder.start();
+          isRecordingCriterion = true;
+          icon.innerText = '⏹️';
+          label.innerText = 'סיים הקלטה';
+          hint.innerText = '🎙️ מקליט קריטריון... דבר באופן חופשי';
+        } catch (err) {
+          console.error('Criterion mic error:', err);
+          hint.innerText = 'שגיאת מיקרופון: ' + (err.message || 'ודא הרשאה בדפדפן');
+        }
+      } else {
+        if (criterionMediaRecorder && criterionMediaRecorder.state !== 'inactive') {
+          icon.innerText = '⏳';
+          label.innerText = 'מתמלל...';
+          hint.innerText = 'מעבד ומתמלל את הקריטריון ב-Gemini...';
+
+          criterionMediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(criterionAudioChunks, { type: criterionMediaRecorder.mimeType || 'audio/webm' });
+            if (criterionAudioStream) {
+              criterionAudioStream.getTracks().forEach(t => t.stop());
+              criterionAudioStream = null;
+            }
+
+            try {
+              const text = await transcribeAudioBlob(audioBlob);
+              if (customInput.value.trim()) {
+                customInput.value += ' ' + text;
+              } else {
+                customInput.value = text;
+              }
+              selectCriterion('custom');
+              icon.innerText = '✓';
+              label.innerText = 'נלכד!';
+              hint.innerText = 'הקריטריון המותאם אישית תומלל ונבחר!';
+              setTimeout(() => {
+                icon.innerText = '🎙️';
+                label.innerText = 'הקלט קריטריון';
+              }, 3000);
+            } catch (e) {
+              console.error('Criterion transcription error:', e);
+              icon.innerText = '✕';
+              label.innerText = 'שגיאה';
+              hint.innerText = 'שגיאה בתמלול: ' + (e.message || 'נסה שוב');
+              setTimeout(() => {
+                icon.innerText = '🎙️';
+                label.innerText = 'הקלט קריטריון';
+              }, 3000);
+            } finally {
+              isRecordingCriterion = false;
+            }
+          };
+          criterionMediaRecorder.stop();
+        }
+      }
+    }
+
+    // ================= REALITY EVALUATION (FOLLOW-UP) LOGIC & MODAL =================
+    let activeFuDecisionId = null;
+    let currentFuVerdict = 'met'; // 'met' | 'partial' | 'unmet'
+    let fuAudioStream = null;
+    let fuMediaRecorder = null;
+    let fuAudioChunks = [];
+    let isRecordingFu = false;
+
+    function openFollowUpModalForDecision(decisionId) {
+      const key = getUserStorageKey();
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      const dec = existing.find(d => d.id === decisionId);
+      if (!dec) {
+        alert('החלטה לא נמצאה');
+        return;
+      }
+
+      activeFuDecisionId = decisionId;
+      setFuVerdict('met');
+
+      const titleEl = document.getElementById('fuModalDecisionTitle');
+      const metaEl = document.getElementById('fuModalMeta');
+      const critEl = document.getElementById('fuModalCriterionText');
+      const queryEl = document.getElementById('fuModalQueryText');
+      const resultsInput = document.getElementById('inputFuResults');
+      const hint = document.getElementById('fuVoiceHint');
+
+      const createdStr = new Date(dec.frozenAt || Date.now()).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: 'numeric' });
+      const dueStr = new Date(dec.dueDate || Date.now()).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: 'numeric' });
+
+      if (titleEl) titleEl.innerText = dec.title || 'דילמת שיקול דעת';
+      if (metaEl) metaEl.innerText = `הוקפאה: ${createdStr} | יעד מעקב: ${dueStr}`;
+      if (critEl) critEl.innerText = dec.selectedCriterion || dec.contractCriterion || 'אימות הנחת היסוד';
+      if (queryEl) queryEl.innerText = dec.followUpQuery || `האם התקיים קריטריון ההצלחה: "${dec.selectedCriterion || ''}"?`;
+      if (resultsInput) resultsInput.value = '';
+      if (hint) hint.innerText = '';
+
+      const modal = document.getElementById('modalFollowUpEvaluation');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeFollowUpModal() {
+      const modal = document.getElementById('modalFollowUpEvaluation');
+      if (modal) modal.classList.add('hidden');
+      if (fuAudioStream) {
+        fuAudioStream.getTracks().forEach(t => t.stop());
+        fuAudioStream = null;
+      }
+      isRecordingFu = false;
+    }
+
+    function setFuVerdict(verdict) {
+      currentFuVerdict = verdict;
+      const btnMet = document.getElementById('btnFuVerdictMet');
+      const btnPartial = document.getElementById('btnFuVerdictPartial');
+      const btnUnmet = document.getElementById('btnFuVerdictUnmet');
+
+      if (btnMet) {
+        if (verdict === 'met') {
+          btnMet.style.borderColor = 'var(--c-accent)';
+          btnMet.style.backgroundColor = 'rgba(212, 175, 55, 0.15)';
+          btnMet.style.opacity = '1';
+          btnMet.classList.add('font-medium');
+        } else {
+          btnMet.style.borderColor = 'rgba(255,255,255,0.1)';
+          btnMet.style.backgroundColor = 'transparent';
+          btnMet.style.opacity = '0.5';
+          btnMet.classList.remove('font-medium');
+        }
+      }
+
+      if (btnPartial) {
+        if (verdict === 'partial') {
+          btnPartial.style.borderColor = 'var(--c-accent)';
+          btnPartial.style.backgroundColor = 'rgba(212, 175, 55, 0.15)';
+          btnPartial.style.opacity = '1';
+          btnPartial.classList.add('font-medium');
+        } else {
+          btnPartial.style.borderColor = 'rgba(255,255,255,0.1)';
+          btnPartial.style.backgroundColor = 'transparent';
+          btnPartial.style.opacity = '0.5';
+          btnPartial.classList.remove('font-medium');
+        }
+      }
+
+      if (btnUnmet) {
+        if (verdict === 'unmet') {
+          btnUnmet.style.borderColor = 'var(--c-accent)';
+          btnUnmet.style.backgroundColor = 'rgba(212, 175, 55, 0.15)';
+          btnUnmet.style.opacity = '1';
+          btnUnmet.classList.add('font-medium');
+        } else {
+          btnUnmet.style.borderColor = 'rgba(255,255,255,0.1)';
+          btnUnmet.style.backgroundColor = 'transparent';
+          btnUnmet.style.opacity = '0.5';
+          btnUnmet.classList.remove('font-medium');
+        }
+      }
+    }
+
+    async function toggleFuVoiceCapture() {
+      const icon = document.getElementById('btnVoiceFuResultIcon');
+      const label = document.getElementById('btnVoiceFuResultLabel');
+      const hint = document.getElementById('fuVoiceHint');
+      const resultsInput = document.getElementById('inputFuResults');
+
+      if (!isRecordingFu) {
+        try {
+          fuAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          fuMediaRecorder = new MediaRecorder(fuAudioStream);
+          fuAudioChunks = [];
+
+          fuMediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) fuAudioChunks.push(e.data);
+          };
+
+          fuMediaRecorder.start();
+          isRecordingFu = true;
+          icon.innerText = '⏹️';
+          label.innerText = 'סיים הקלטה';
+          hint.innerText = '🎙️ מקליט תוצאות וממצאים... דבר באופן חופשי';
+        } catch (err) {
+          console.error('Follow-up mic error:', err);
+          hint.innerText = 'שגיאת מיקרופון: ' + (err.message || 'ודא הרשאה בדפדפן');
+        }
+      } else {
+        if (fuMediaRecorder && fuMediaRecorder.state !== 'inactive') {
+          icon.innerText = '⏳';
+          label.innerText = 'מתמלל...';
+          hint.innerText = 'מעבד ומתמלל את תוצאות הקריטריון ב-Gemini...';
+
+          fuMediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(fuAudioChunks, { type: fuMediaRecorder.mimeType || 'audio/webm' });
+            if (fuAudioStream) {
+              fuAudioStream.getTracks().forEach(t => t.stop());
+              fuAudioStream = null;
+            }
+
+            try {
+              const text = await transcribeAudioBlob(audioBlob);
+              if (resultsInput.value.trim()) {
+                resultsInput.value += ' ' + text;
+              } else {
+                resultsInput.value = text;
+              }
+              icon.innerText = '✓';
+              label.innerText = 'נלכד!';
+              hint.innerText = 'תוצאות הקריטריון תומללו ונשמרו בהצלחה!';
+              setTimeout(() => {
+                icon.innerText = '🎙️';
+                label.innerText = 'הקלט תוצאות';
+              }, 3000);
+            } catch (e) {
+              console.error('Follow-up transcription error:', e);
+              icon.innerText = '✕';
+              label.innerText = 'שגיאה';
+              hint.innerText = 'שגיאה בתמלול: ' + (e.message || 'נסה שוב');
+              setTimeout(() => {
+                icon.innerText = '🎙️';
+                label.innerText = 'הקלט תוצאות';
+              }, 3000);
+            } finally {
+              isRecordingFu = false;
+            }
+          };
+          fuMediaRecorder.stop();
+        }
+      }
+    }
+
+    function saveFollowUpResults() {
+      if (!activeFuDecisionId) return;
+      const resultsInput = document.getElementById('inputFuResults');
+      const resultsText = resultsInput ? resultsInput.value.trim() : '';
+
+      if (!resultsText) {
+        alert('אנא הזן או הקלט את תוצאות הקריטריון והממצאים לפני שמירה');
+        if (resultsInput) resultsInput.focus();
+        return;
+      }
+
+      const key = getUserStorageKey();
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      const decIndex = existing.findIndex(d => d.id === activeFuDecisionId);
+      if (decIndex === -1) {
+        alert('החלטה לא נמצאה');
+        return;
+      }
+
+      const dec = existing[decIndex];
+      if (!dec.followUps) dec.followUps = [];
+
+      const fuRecord = {
+        id: 'fu-' + Date.now(),
+        timestamp: Date.now(),
+        verdict: currentFuVerdict,
+        resultsText: resultsText,
+        queryAnswered: dec.followUpQuery || ''
+      };
+
+      dec.followUps.push(fuRecord);
+      dec.reviewStatus = 'completed';
+      dec.lastReviewedAt = Date.now();
+
+      existing[decIndex] = dec;
+      localStorage.setItem(key, JSON.stringify(existing));
+      syncDecisionToCloud(dec);
+
+      closeFollowUpModal();
+      checkAndPromptDueFollowUps();
+
+      // If Decisions Journal is open, refresh it
+      const journalModal = document.getElementById('modalDecisionsJournal');
+      if (journalModal && !journalModal.classList.contains('hidden')) {
+        renderDecisionsJournal();
+      }
+
+      const verdictLabels = { met: 'הקריטריון התקיים ✓', partial: 'התקיים חלקית ⚠️', unmet: 'הקריטריון לא התקיים ✕' };
+      alert(`אות המעקב ותוצאות המציאות נשמרו בהצלחה וקושרו ישירות להחלטה:\n"${dec.title}"\n\nהערכה: ${verdictLabels[currentFuVerdict] || currentFuVerdict}\nמעגל הלמידה הושלם.`);
+    }
+
+    // ================= DECISION JOURNAL MODAL & NOTIFICATIONS =================
+    function openDecisionsJournal() {
+      renderDecisionsJournal();
+      const modal = document.getElementById('modalDecisionsJournal');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeDecisionsJournal() {
+      const modal = document.getElementById('modalDecisionsJournal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function toggleDecisionDetails(decisionId) {
+      const el = document.getElementById(`details-${decisionId}`);
+      const icon = document.getElementById(`detailsToggleIcon-${decisionId}`);
+      const text = document.getElementById(`detailsToggleText-${decisionId}`);
+      if (!el) return;
+      if (el.classList.contains('hidden')) {
+        el.classList.remove('hidden');
+        if (icon) icon.innerText = '▲';
+        if (text) text.innerText = 'הסתר פירוט מעגל';
+      } else {
+        el.classList.add('hidden');
+        if (icon) icon.innerText = '▼';
+        if (text) text.innerText = 'הצג את כל מעגל ההחלטה (עובדות, הנחות, חידוד)';
+      }
+    }
+
+    function deleteDecision(decisionId, event) {
+      if (event) {
+        event.stopPropagation();
+      }
+      
+      if (!confirm('האם אתה בטוח שברצונך למחוק החלטה זו מזיכרון שיקול הדעת?\n\nפעולה זו תמחק את כל שלבי מעגל ההחלטה והמעקבים המקושרים לצמיתות.')) {
+        return;
+      }
+
+      try {
+        const key = getUserStorageKey();
+        const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        const filtered = existing.filter(d => d.id !== decisionId);
+        localStorage.setItem(key, JSON.stringify(filtered));
+        deleteDecisionFromCloud(decisionId);
+        
+        checkAndPromptDueFollowUps();
+        renderDecisionsJournal();
+      } catch (err) {
+        console.error('Error deleting decision:', err);
+        alert('שגיאה במחיקת ההחלטה: ' + (err.message || 'נסה שוב'));
+      }
+    }
+
+    function renderDecisionsJournal() {
+      const container = document.getElementById('journalDecisionsList');
+      if (!container) return;
+
+      const key = getUserStorageKey();
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      const valid = existing.filter(c => !isMockOrLegacy(c));
+
+      if (valid.length === 0) {
+        container.innerHTML = `
+          <div class="p-6 text-center rounded-2xl border border-stone-800 opacity-60">
+            <p class="text-xs">אין עדיין החלטות שמורות בזיכרון.</p>
+            <p class="text-[10px] mt-1 opacity-50">הקלט דילמה במסך הראשי כדי להתחיל.</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Sort newest first
+      const sorted = [...valid].reverse();
+
+      container.innerHTML = sorted.map((d) => {
+        const createdDate = new Date(d.frozenAt || Date.now()).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: 'numeric' });
+        const dueDate = d.dueDate ? new Date(d.dueDate) : new Date((d.frozenAt || Date.now()) + (d.selectedDays || 14) * 86400000);
+        const dueFormatted = dueDate.toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: 'numeric' });
+        const isDue = Date.now() >= dueDate.getTime();
+        const daysLeft = Math.ceil((dueDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        const hasFollowUps = d.followUps && d.followUps.length > 0;
+
+        let statusBadge = '';
+        if (hasFollowUps) {
+          const lastFu = d.followUps[d.followUps.length - 1];
+          const verdictColor = lastFu.verdict === 'met' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (lastFu.verdict === 'partial' ? 'text-amber-300 border-amber-500/30 bg-amber-500/10' : 'text-rose-400 border-rose-500/30 bg-rose-500/10');
+          const verdictText = lastFu.verdict === 'met' ? '✓ הושלם (התקיים)' : (lastFu.verdict === 'partial' ? '⚠️ הושלם (חלקי)' : '✕ הושלם (לא התקיים)');
+          statusBadge = `<span class="px-2 py-0.5 rounded-full text-[9px] border ${verdictColor}">${verdictText}</span>`;
+        } else if (isDue) {
+          statusBadge = `<span class="px-2 py-0.5 rounded-full text-[9px] border border-amber-400 bg-amber-400/20 text-amber-300 font-bold animate-pulse">⏰ הגיע מועד המעקב!</span>`;
+        } else {
+          statusBadge = `<span class="px-2 py-0.5 rounded-full text-[9px] border border-stone-700 bg-white/[0.02] opacity-60">⏳ בעוד ${daysLeft} ימים (${dueFormatted})</span>`;
+        }
+
+        const followUpsHtml = (d.followUps && d.followUps.length > 0) ? `
+          <div class="mt-2.5 pt-2 border-t border-stone-800 space-y-1.5">
+            <span class="text-[10px] block opacity-60 font-medium">לכידות מעקב ותוצאות מציאות (${d.followUps.length}):</span>
+            ${d.followUps.map(fu => `
+              <div class="p-2.5 rounded-lg bg-black/40 border border-stone-800 text-[11px] leading-relaxed space-y-1">
+                <div class="flex items-center justify-between text-[9px] opacity-60">
+                  <span>${new Date(fu.timestamp).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                  <span class="${fu.verdict === 'met' ? 'text-emerald-400' : (fu.verdict === 'partial' ? 'text-amber-300' : 'text-rose-400')} font-medium">${fu.verdict === 'met' ? '✓ התקיים' : (fu.verdict === 'partial' ? '⚠️ חלקי' : '✕ לא התקיים')}</span>
+                </div>
+                <p class="text-stone-300 font-light">${escapeHtml(fu.resultsText)}</p>
+              </div>
+            `).join('')}
+          </div>
+        ` : '';
+
+        const userAns = d.userAnswer || d.actionAnswer;
+        const refinedAction = d.refinedAction;
+        const insightSummary = d.insightSummary;
+        const queryText = d.followUpQuery || `במועד המעקב (${dueFormatted}): האם התקיים קריטריון ההצלחה: "${d.selectedCriterion || d.contractCriterion || ''}"?`;
+
+        return `
+          <div class="p-4 rounded-2xl border text-right space-y-3 backdrop-blur-sm transition-all" style="background-color: var(--c-glass); border-color: ${isDue && !hasFollowUps ? 'var(--c-accent)' : 'var(--c-border)'};">
+            
+            <!-- Header Row: Date, Badge, and Delete Button -->
+            <div class="flex items-center justify-between gap-2 border-b border-stone-800/80 pb-2">
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="deleteDecision('${d.id}', event)" class="p-1 px-2 rounded-lg text-stone-500 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/30 transition-all text-xs flex items-center gap-1" title="מחק החלטה זו">
+                  <span>🗑️</span>
+                  <span class="text-[10px]">מחק</span>
+                </button>
+              </div>
+              <div class="flex items-center gap-2">
+                ${statusBadge}
+                <span class="text-[10px] opacity-40 font-mono">${createdDate}</span>
+              </div>
+            </div>
+
+            <!-- Title & Goal -->
+            <div>
+              <h4 class="text-xs font-bold text-stone-100">${escapeHtml(d.title || 'דילמת שיקול דעת')}</h4>
+              <p class="text-[11px] font-light opacity-80 text-stone-300 mt-0.5"><span class="text-amber-300/80 font-medium">מטרה:</span> ${escapeHtml(d.goal || '—')}</p>
+            </div>
+
+            <!-- Epistemic Badges -->
+            <div class="flex flex-wrap gap-1.5">
+              <span class="px-2 py-0.5 rounded-full text-[9px] border border-amber-500/30 bg-amber-500/10 text-amber-300 font-mono">${escapeHtml(d.affectBadge || 'סמן סומטי')}</span>
+              <span class="px-2 py-0.5 rounded-full text-[9px] border border-stone-700 bg-white/[0.03] text-stone-300 font-mono">${escapeHtml(d.riskBadge || 'מחלקת סיכון')}</span>
+              <span class="px-2 py-0.5 rounded-full text-[9px] border border-stone-700 bg-white/[0.03] text-stone-300 font-mono">${escapeHtml(d.locusBadge || 'מיקוד שליטה')}</span>
+            </div>
+
+            <!-- Success Criterion Summary -->
+            <div class="p-2.5 rounded-xl bg-amber-400/[0.04] border border-amber-400/20 text-xs text-stone-200 space-y-1">
+              <span class="text-[10px] block opacity-60">קריטריון אימות נבחר:</span>
+              <span class="text-amber-300 font-medium">${escapeHtml(d.selectedCriterion || d.contractCriterion || '—')}</span>
+              <div class="text-[10px] opacity-50 flex items-center justify-between pt-0.5">
+                <span>מועד אות מעקב: ${dueFormatted} (בעוד ${d.selectedDays || 14} ימים)</span>
+              </div>
+            </div>
+
+            <!-- Full Decision Details Toggle -->
+            <button type="button" onclick="toggleDecisionDetails('${d.id}')" class="w-full py-1.5 px-3 rounded-lg text-[11px] border border-stone-800 bg-white/[0.02] text-stone-400 hover:text-amber-300 hover:border-amber-400/30 flex items-center justify-center gap-1.5 transition-all">
+              <span id="detailsToggleIcon-${d.id}">▼</span>
+              <span id="detailsToggleText-${d.id}">הצג את כל מעגל ההחלטה (עובדות, הנחות, חידוד)</span>
+            </button>
+
+            <!-- Expandable Full Decision Record -->
+            <div id="details-${d.id}" class="hidden space-y-2.5 pt-2 border-t border-stone-800 text-xs">
+              
+              <!-- Raw Verbatim -->
+              <div class="p-2.5 rounded-lg bg-black/50 border border-stone-800 text-[11px] text-stone-300 leading-relaxed">
+                <span class="text-[9px] block opacity-50 mb-1 font-mono">📜 מלל גולמי שהוקפא בלכידה:</span>
+                <p class="font-serif italic text-stone-300">"${escapeHtml(d.rawVerbatim || '—')}"</p>
+              </div>
+
+              <!-- Solid Observations -->
+              <div class="p-2.5 rounded-lg bg-white/[0.02] border border-stone-800 text-[11px] text-stone-300 space-y-1">
+                <span class="text-[9px] block text-amber-300/80 font-medium">📌 עובדות מוצקות שנלכדו:</span>
+                <div class="space-y-1 font-light opacity-90">${d.observations || '—'}</div>
+              </div>
+
+              <!-- Core Assumptions -->
+              <div class="p-2.5 rounded-lg bg-white/[0.02] border border-stone-800 text-[11px] text-stone-300 space-y-1">
+                <span class="text-[9px] block text-amber-300/80 font-medium">💭 הנחות ציר מרכזיות:</span>
+                <div class="space-y-1 font-light opacity-90">${d.assumptions || '—'}</div>
+              </div>
+
+              <!-- Socratic Question -->
+              <div class="p-2.5 rounded-lg bg-amber-400/[0.03] border border-amber-400/20 text-[11px] text-stone-200">
+                <span class="text-[9px] block text-amber-400/90 font-medium">💡 שאלת הארה סוקרטית:</span>
+                <p class="font-serif italic mt-0.5">${escapeHtml(d.question || '—')}</p>
+              </div>
+
+              <!-- User's Refinement Answer (if any) -->
+              ${userAns ? `
+                <div class="p-2.5 rounded-lg bg-white/[0.02] border border-stone-800 text-[11px] text-stone-300">
+                  <span class="text-[9px] block text-emerald-400/90 font-medium">✍️ מענה המשתמש לשאלת החידוד:</span>
+                  <p class="font-light mt-0.5">${escapeHtml(userAns)}</p>
+                </div>
+              ` : ''}
+
+              <!-- Refined Action & Insight (if any) -->
+              ${(refinedAction || insightSummary) ? `
+                <div class="p-2.5 rounded-lg bg-amber-500/[0.06] border border-amber-400/30 text-[11px] text-stone-200 space-y-1">
+                  <span class="text-[9px] block text-amber-300 font-medium">✨ פעולה ותובנה שהתחדדו:</span>
+                  ${refinedAction ? `<p class="font-medium text-stone-100">${escapeHtml(refinedAction)}</p>` : ''}
+                  ${insightSummary ? `<p class="text-[10px] text-stone-400 font-light">${escapeHtml(insightSummary)}</p>` : ''}
+                </div>
+              ` : ''}
+
+              <!-- Scheduled Follow-up Query -->
+              <div class="p-2.5 rounded-lg bg-black/40 border border-stone-800 text-[11px] text-stone-300">
+                <span class="text-[9px] block text-amber-300/70 font-medium">🔔 שאילתת מעקב מתוזמנת (${dueFormatted}):</span>
+                <p class="font-serif text-[10px] opacity-80 mt-0.5">${escapeHtml(queryText)}</p>
+              </div>
+
+            </div>
+
+            ${followUpsHtml}
+
+            <!-- Bottom Action: Follow-Up Reality Log Button -->
+            <div class="pt-1 flex items-center justify-between gap-2">
+              <button onclick="openFollowUpModalForDecision('${d.id}')" class="w-full py-2 rounded-xl text-[11px] border font-medium transition-all ${isDue && !hasFollowUps ? 'bg-amber-500/20 border-amber-400 text-amber-200' : 'bg-white/[0.03] border-stone-700 text-stone-300 hover:border-amber-400/50'}">
+                ${hasFollowUps ? '🔍 עדכן / הוסף מעקב' : (isDue ? '🔔 פתח שאילתת מעקב כעת' : '📝 שאילתת מעקב / תיעוד')}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function checkAndPromptDueFollowUps() {
+      const key = getUserStorageKey();
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      const valid = existing.filter(c => !isMockOrLegacy(c));
+
+      const duePending = valid.filter(d => {
+        const dueDate = d.dueDate || ((d.frozenAt || Date.now()) + (d.selectedDays || 14) * 86400000);
+        return Date.now() >= dueDate && (!d.followUps || d.followUps.length === 0);
+      });
+
+      const badge = document.getElementById('badgeDueFollowUps');
+      if (badge) {
+        if (duePending.length > 0) {
+          badge.innerText = duePending.length;
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+      }
+    }
+
+    let isRefiningAnswer = false;
+
+    async function submitRefinementAnswer() {
+      if (isRefiningAnswer) return;
+
+      const ansInput = document.getElementById('inputUserAnswer');
+      const answerText = ansInput.value.trim();
+      const hint = document.getElementById('refineStatusHint');
+      const btn = document.getElementById('btnSubmitRefinement');
+
+      if (!answerText) {
+        alert('אנא הזן תשובה בטקסט או הקלט בקול לפני הפעלת הניתוח');
+        ansInput.focus();
+        return;
+      }
+
+      const qText = document.getElementById('dispQuestion').innerText.trim();
+      const titleText = document.getElementById('dispTitle').innerText.trim();
+      const goalText = document.getElementById('dispGoal').innerText.trim();
+
+      isRefiningAnswer = true;
+      btn.disabled = true;
+      btn.classList.add('opacity-50', 'cursor-not-allowed');
+      hint.innerText = '⏳ מנתח את תשובתך ומעדכן את מבנה שיקול הדעת בענן...';
+
+      const prompt = `
+אתה מנוע הזיכוך האפיסטמי של Echo (הד) - זיכרון שיקול הדעת האנושי.
+המשתמש מתלבט לגבי דילמה וענה זה עתה על שאלת ההארה הסוקרטית שנשאלה עליה.
+תפקידך לעדכן ולחדד את מבנה שיקול הדעת האפיסטמי לאור המענה של המשתמש:
+
+כותרת הדילמה:
+"""${titleText}"""
+
+מטרת המשתמש:
+"""${goalText}"""
+
+שאלת ההארה שהוצגה לו:
+"""${qText}"""
+
+תשובת המשתמש שנלכדה:
+"""${answerText}"""
+
+עליך לחלץ פלט JSON קפדני לפי הסכמה:
+1. refinedAction: הפעולה המזוקקת, הברורה והקונקרטית ביותר שעל המשתמש לבצע לאור המענה (למשל: ביצוע פיילוט מתוחם, איסוף נתון חסר, קביעת פגישת בדיקה).
+2. updatedAssumptions: מערך מחרוזות של הנחות היסוד המעודכנות לאחר שהתשובה אתגרה או חידדה אותן.
+3. updatedObservations: מערך מחרוזות של עובדות מוצקות מעודכנות כולל העובדות החדשות שנמסרו בתשובה.
+4. updatedContractCriterion: קריטריון הצלחה חד-משמעי מעודכן לבדיקה במועד המעקב.
+5. updatedContractCriteria: מערך של בדיוק 3 קריטריוני הצלחה חדים ומדידים לבדיקה במועד המעקב לאור המענה (קריטריון תוצאתי/עסקי, קריטריון תהליכי/מבצעי, וקריטריון הפחתת סיכון/איכות).
+6. insightSummary: משפט תובנה קצר ומאיר (1-2 משפטים) המסכם מה התחדד בשיקול הדעת בעקבות המענה לשאלה.
+`;
+
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: 'OBJECT',
+                properties: {
+                  refinedAction: { type: 'STRING' },
+                  updatedAssumptions: { type: 'ARRAY', items: { type: 'STRING' } },
+                  updatedObservations: { type: 'ARRAY', items: { type: 'STRING' } },
+                  updatedContractCriterion: { type: 'STRING' },
+                  updatedContractCriteria: { type: 'ARRAY', items: { type: 'STRING' } },
+                  insightSummary: { type: 'STRING' }
+                },
+                required: ['refinedAction', 'updatedAssumptions', 'updatedObservations', 'updatedContractCriterion', 'updatedContractCriteria', 'insightSummary']
+              },
+              temperature: 0.2
+            }
+          })
+        });
+
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        let rawJson = '';
+        for (const p of parts) { if (p.text) rawJson += p.text; }
+        rawJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(rawJson);
+
+        // Update Section 2 in real time!
+        if (parsed.updatedAssumptions) {
+          document.getElementById('dispAssumptions').innerHTML = formatBullets(parsed.updatedAssumptions);
+        }
+        if (parsed.updatedObservations) {
+          document.getElementById('dispObservations').innerHTML = formatBullets(parsed.updatedObservations);
+        }
+
+        // Update Section 4 criteria in real time!
+        if (parsed.updatedContractCriteria && Array.isArray(parsed.updatedContractCriteria) && parsed.updatedContractCriteria.length >= 3) {
+          proposedCriteriaList = parsed.updatedContractCriteria.slice(0, 3);
+        } else if (parsed.updatedContractCriterion) {
+          proposedCriteriaList[0] = parsed.updatedContractCriterion;
+        }
+        updateCriteriaUI();
+        updateFollowUpQuery();
+
+        // Populate Refined Insight Card in Section 3
+        const actionEl = document.getElementById('dispRefinedAction');
+        const insightEl = document.getElementById('dispInsightSummary');
+        const cardEl = document.getElementById('dispRefinedCard');
+
+        if (actionEl) actionEl.innerText = parsed.refinedAction;
+        if (insightEl) insightEl.innerText = parsed.insightSummary;
+        if (cardEl) cardEl.classList.remove('hidden');
+
+        // Update active decision record in localStorage & Cloud
+        try {
+          const key = getUserStorageKey();
+          const existing = JSON.parse(localStorage.getItem(key) || '[]');
+          if (existing.length > 0) {
+            const cur = existing[existing.length - 1];
+            cur.userAnswer = answerText;
+            cur.refinedAction = parsed.refinedAction;
+            cur.insightSummary = parsed.insightSummary;
+            cur.assumptions = formatBullets(parsed.updatedAssumptions);
+            cur.observations = formatBullets(parsed.updatedObservations);
+            cur.contractCriterion = parsed.updatedContractCriterion;
+            cur.proposedCriteria = proposedCriteriaList;
+            cur.selectedCriterion = getActiveCriterionText();
+            localStorage.setItem(key, JSON.stringify(existing));
+            syncDecisionToCloud(cur);
+          }
+        } catch (e) {
+          console.warn('Storage update error:', e);
+        }
+
+        hint.innerText = '✨ שיקול הדעת חודד! העובדות, ההנחות וקריטריוני סיכום התהליך עודכנו במערכת ✓';
+
+      } catch (err) {
+        console.error('Refinement error:', err);
+        hint.innerText = 'שגיאה בחידוד שיקול הדעת: ' + (err.message || 'נסה שוב');
+      } finally {
+        isRefiningAnswer = false;
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+    }
+
+    function applyDecisionToUI(dec) {
+      document.getElementById('dispTitle').innerText = dec.title;
+      document.getElementById('dispGoal').innerText = dec.goal;
+      document.getElementById('dispObservations').innerHTML = dec.observations;
+      document.getElementById('dispAssumptions').innerHTML = dec.assumptions;
+      document.getElementById('dispQuestion').innerText = dec.question;
+      document.getElementById('dispAffectBadge').innerText = dec.affectBadge;
+      document.getElementById('dispRiskBadge').innerText = dec.riskBadge;
+      document.getElementById('dispLocusBadge').innerText = dec.locusBadge;
+      
+      // Update Section 4: Process Summary Criteria & Days
+      if (dec.proposedCriteria && Array.isArray(dec.proposedCriteria) && dec.proposedCriteria.length >= 3) {
+        proposedCriteriaList = dec.proposedCriteria;
+      } else if (dec.contractCriterion) {
+        proposedCriteriaList = [
+          dec.contractCriterion,
+          'בדיקת יחס עלות-תועלת מול חלופות נוספות',
+          'עמידה בלוחות זמנים ומניעת צווארי בקבוק'
+        ];
+      }
+      
+      selectedCriterionType = dec.selectedCriterionType !== undefined ? dec.selectedCriterionType : 0;
+      selectedDays = dec.selectedDays || 14;
+
+      const customInput = document.getElementById('inputCustomCriterion');
+      if (customInput) customInput.value = dec.customCriterion || '';
+
+      updateCriteriaUI();
+      updateDaysUI(false);
+      updateFollowUpQuery();
+
+      const card = document.getElementById('dispAnalogyCard');
+      if (dec.analogy) {
+        card.classList.remove('hidden');
+        document.getElementById('dispAnalogyReason').innerText = dec.analogy;
+      } else {
+        card.classList.add('hidden');
+      }
+
+      // Populate Refined Card if previously refined
+      const refinedCard = document.getElementById('dispRefinedCard');
+      const actionEl = document.getElementById('dispRefinedAction');
+      const insightEl = document.getElementById('dispInsightSummary');
+      const ansInput = document.getElementById('inputUserAnswer');
+
+      if (dec.userAnswer && ansInput) {
+        ansInput.value = dec.userAnswer;
+      }
+      if (dec.refinedAction && refinedCard && actionEl) {
+        refinedCard.classList.remove('hidden');
+        actionEl.innerText = dec.refinedAction;
+        if (insightEl) insightEl.innerText = dec.insightSummary || '';
+      } else if (refinedCard) {
+        refinedCard.classList.add('hidden');
+      }
+
+      // Unlock scroll and next stage
+      setScrollLock(false);
+    }
+
+    function saveDecisionForCurrentUser(dec) {
+      const key = getUserStorageKey();
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      existing.push(dec);
+      localStorage.setItem(key, JSON.stringify(existing));
+      checkAndPromptDueFollowUps();
+      syncDecisionToCloud(dec);
     }
 
     function scrollToNext(targetId) {
@@ -531,10 +2609,83 @@
       }
     }
 
-    function triggerSealSuccess() {
-      alert('ההחלטה הוקפאה וננעלה בזיכרון הקנוני של שיקול הדעת!');
-      document.getElementById('scrollStream').scrollTo({ top: 0, behavior: 'smooth' });
+    function resetSystemForNewCapture() {
+      // 1. Reset all deliberation fields & mirror
+      resetToEmptyState();
+
+      // 2. Reset capture UI
+      captureResultIcon = null;
+      isRecording = false;
+      isAnalyzing = false;
+      
+      const hint = document.getElementById('geoStatusHint');
+      if (hint) hint.innerText = 'גע בלכידה';
+
+      const rawInput = document.getElementById('rawTextInput');
+      if (rawInput) rawInput.value = '';
+      const textContainer = document.getElementById('rawTextInputContainer');
+      if (textContainer) textContainer.classList.add('hidden');
+
+      const ansInput = document.getElementById('inputUserAnswer');
+      if (ansInput) ansInput.value = '';
+
+      // 3. Strictly lock scrolling until next capture completes
+      setScrollLock(true);
+
+      // 4. Smoothly scroll back to Section 1 (top)
+      const stream = document.getElementById('scrollStream');
+      if (stream) {
+        stream.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      checkAndPromptDueFollowUps();
     }
+
+    function triggerSealSuccess() {
+      const ans = document.getElementById('inputUserAnswer') ? document.getElementById('inputUserAnswer').value.trim() : '';
+      const activeCriterion = getActiveCriterionText();
+      const customCrit = document.getElementById('inputCustomCriterion') ? document.getElementById('inputCustomCriterion').value.trim() : '';
+      const queryText = document.getElementById('dispFollowUpQuery') ? document.getElementById('dispFollowUpQuery').innerText.trim() : '';
+
+      const targetDueDate = Date.now() + selectedDays * 86400000;
+      const formattedDueDate = new Date(targetDueDate).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: 'numeric' });
+
+      // Mark the latest decision as sealed in localStorage & Cloud
+      try {
+        const key = getUserStorageKey();
+        const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        if (existing.length > 0) {
+          const cur = existing[existing.length - 1];
+          cur.sealed = true;
+          cur.actionAnswer = ans;
+          cur.selectedCriterion = activeCriterion;
+          cur.selectedCriterionType = selectedCriterionType;
+          cur.customCriterion = customCrit;
+          cur.proposedCriteria = proposedCriteriaList;
+          cur.selectedDays = selectedDays;
+          cur.dueDate = targetDueDate;
+          cur.followUpQuery = queryText;
+          cur.reviewStatus = 'pending';
+          if (!cur.followUps) cur.followUps = [];
+          cur.sealedAt = Date.now();
+          localStorage.setItem(key, JSON.stringify(existing));
+          syncDecisionToCloud(cur);
+        }
+      } catch (e) {
+        console.warn('Error sealing decision:', e);
+      }
+
+      checkAndPromptDueFollowUps();
+
+      alert(`התהליך סוכם ונשמר בנפרד בזיכרון שיקול הדעת!\n\n• קריטריון שנבחר:\n  ${activeCriterion}\n• מועד אות מעקב:\n  ${formattedDueDate} (בעוד ${selectedDays} ימים)\n• שאילתת המעקב תקושר ישירות להחלטה זו במועד שנקבע.\n\nהמערכת מאופסת ומוכנה ללכידה חדשה.`);
+      
+      resetSystemForNewCapture();
+    }
+
+    // Initialize lock, Firebase cloud connection & sync history
+    setScrollLock(true);
+    initFirebaseCloud();
+    loadUserDecisionHistory();
   </script>
 </body>
 </html>
