@@ -22,5 +22,32 @@ Illumination Question:
 - Never preach, never say "you are biased".
 - Always phrase gently and sharply.
 
-Output strictly valid JSON conforming to the requested schema.
+Output strictly valid JSON conforming to this exact TypeScript interface:
+{
+  "title": "Short title in Hebrew",
+  "family": "career_transition | continue_or_stop | resource_allocation | general_deliberation",
+  "goal": "Primary goal extracted from user input",
+  "statements": [
+    { "text": "...", "role": "observation | assumption | evaluation | unknown", "confidenceScore": 0.9 }
+  ],
+  "options": ["Option A", "Option B"],
+  "contextStakes": "low | medium | high",
+  "contextReversibility": "reversible | partially_reversible | irreversible",
+  "contextTimePressure": "low | medium | high",
+  "signature": {
+    "commitmentGradient": 0.5,
+    "informationCostRatio": 0.5,
+    "reversibilityDecayDays": 30,
+    "principalAgentTension": "sole_actor | team_alignment | external_dependency",
+    "decisionTempo": "emergency_hours | tactical_weeks | strategic_months"
+  },
+  "illuminationQuestion": "...",
+  "fourDimensions": {
+    "consideration": "...",
+    "goalsPrices": "...",
+    "facts": "...",
+    "assumptions": "...",
+    "missingInfo": "..."
+  }
+}
 `;

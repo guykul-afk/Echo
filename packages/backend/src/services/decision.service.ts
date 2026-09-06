@@ -138,31 +138,33 @@ export class DecisionService {
     };
 
     // 4. Construct Atomic Statements
+    const extractedStatements = Array.isArray(extracted.statements) ? extracted.statements : [];
     const statements: Statement[] = [
       {
         id: `stmt-${now}-goal`,
         caseId,
         userId: dto.userId,
-        text: extracted.goal,
+        text: extracted.goal || 'קבלת החלטה מדויקת',
         role: 'goal',
         provenanceSource: 'inferred_by_ai',
         confidenceScore: 0.95,
         createdAt: now
       },
-      ...extracted.statements.map((s, idx) => ({
+      ...extractedStatements.map((s, idx) => ({
         id: `stmt-${now}-${idx}`,
         caseId,
         userId: dto.userId,
         text: s.text,
         role: s.role,
         provenanceSource: 'inferred_by_ai' as const,
-        confidenceScore: s.confidenceScore,
+        confidenceScore: s.confidenceScore || 0.9,
         createdAt: now
       }))
     ];
 
     // 5. Construct Options
-    const options: Option[] = extracted.options.map((optTitle, idx) => ({
+    const extractedOptions = Array.isArray(extracted.options) ? extracted.options : [];
+    const options: Option[] = extractedOptions.map((optTitle, idx) => ({
       id: `opt-${now}-${idx}`,
       caseId,
       userId: dto.userId,
@@ -177,11 +179,11 @@ export class DecisionService {
       id: `sig-${caseId}`,
       caseId,
       userId: dto.userId,
-      commitmentGradient: extracted.signature.commitmentGradient,
-      informationCostRatio: extracted.signature.informationCostRatio,
-      reversibilityDecayDays: extracted.signature.reversibilityDecayDays,
-      principalAgentTension: extracted.signature.principalAgentTension,
-      decisionTempo: extracted.signature.decisionTempo
+      commitmentGradient: extracted.signature?.commitmentGradient ?? 0.5,
+      informationCostRatio: extracted.signature?.informationCostRatio ?? 0.5,
+      reversibilityDecayDays: extracted.signature?.reversibilityDecayDays ?? 30,
+      principalAgentTension: extracted.signature?.principalAgentTension ?? 'sole_actor',
+      decisionTempo: extracted.signature?.decisionTempo ?? 'tactical_weeks'
     };
 
     const sessionState: CaseSessionState = {

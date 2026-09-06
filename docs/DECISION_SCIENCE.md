@@ -1,6 +1,6 @@
 # מסמך ידע: תהליך קבלת החלטות — תשתית אקדמית, הטיות ושיפור בחיכוך נמוך
 **מדעי ההחלטה (Decision Science), כלכלה התנהגותית, פסיכולוגיה קוגניטיבית ומתודולוגיות Low-Friction**
-גרסה: 3.0.0 | תאריך: ספטמבר 2026 | סיווג: מסמך תשתית מדעית וידע (עומק אקדמי ואתגור מערכתי)
+גרסה: 3.1.0 | תאריך: ספטמבר 2026 | סיווג: מסמך תשתית מדעית וידע (עומק אקדמי ואתגור מערכתי)
 
 ---
 
@@ -8,7 +8,7 @@
 
 הנחת היסוד של הכלכלה הקלאסית גרסה כי האדם הוא "הומו אקונומיקוס" — מקבל החלטות רציונלי הממקסם תועלת צפויה. אולם, עשרות שנות מחקר במדעי הקוגניציה הוכיחו כי **החשיבה האנושית פועלת תחת מגבלות רציונליות מובנות (Bounded Rationality)**. 
 
-הפרדוקס המרכזי של עולם הניהול וההשקעות הוא שדווקא מנהלים מוכשרים ובעלי אינטלקט גבוה נופלים קורבן להטיות חריפות. הסיבה אינה חוסר ידע, אלא **היעדר מנגנון חיצוני המגן על החשיבה מפני עצמה**. 
+הפרדוקס המרכזי של עולם הניהול וההשקעות הוא שדווקא מנהלים מוכשרים ובעלי אינטלקט גבוה נופלים קורבן להטיות חריפות. הסיבה אינה חוסר ידע, אלא **היעדר מנגנון חיצוני המגן על החשיבה מפני עצמה**. נקודות עיוורון (Blind spots), הטיות קוגניטיביות (Cognitive Biases) ורעש מערכתי (Noise) הם בגדר "באגים" מובנים בחומרה האנושית.
 
 מסמך זה מרכז ניתוח עומק של הספרות האקדמית המובילה, מפרק את החוזקות והחולשות של המוח האנושי, מציג את הפתרונות המובנים במערכת **"הד" (Echo)**, ובפרק 3 **מאתגר את המערכת בעצמה** דרך הוגים המצביעים על עיוורונות אפשריים במודל הנוכחי.
 
@@ -20,25 +20,45 @@
 
 ### 2.1 דניאל כהנמן ועמוס טברסקי (Daniel Kahneman & Amos Tversky)
 - **מאמרי יסוד:** *Judgment under Uncertainty: Heuristics and Biases* (1974).
-- **צדדים חלשים:** WYSIATI ("מה שאתה רואה זה כל מה שיש"). בניית נרטיב שלם ממידע חלקי תוך התעלמות ממה שאינו ידוע. עיוורון סטטיסטי.
-- **התובנה המערכתית ל-"הד":** מנוע ה-AI לוקח פריקה קולית של "מערכת 1" ומפריד באכזריות בין **עובדות** לבין **הנחות**. בכך הוא שובר את אשליית ה-WYSIATI ומציף פערי מידע (`Unknowns`). שילוב פונקציית ה-Outside View באמצעות משיכת מקרי עבר.
+- **צדדים חלשים/נקודות עיוורון:** WYSIATI ("מה שאתה רואה זה כל מה שיש"). בניית נרטיב שלם ממידע חלקי תוך התעלמות ממה שאינו ידוע. עיוורון סטטיסטי והתעלמות משיעור הבסיס (Base Rate Neglect).
+- **התובנה המערכתית ל-"הד":** מנוע ה-AI לוקח פריקה קולית של "מערכת 1" (אינטואיטיבית) ומפריד באכזריות בין **עובדות** לבין **הנחות**. בכך הוא שובר את אשליית ה-WYSIATI ומציף פערי מידע (`Unknowns`). שילוב פונקציית ה-Outside View באמצעות משיכת מקרי עבר.
 
-### 2.2 גרד גיגרנזר (Gerd Gigerenzer)
+### 2.2 הרברט סיימון (Herbert A. Simon)
+- **מאמרי יסוד:** *A Behavioral Model of Rational Choice* (1955).
+- **צדדים חלשים/נקודות עיוורון:** רציונליות מוגבלת (Bounded Rationality) והסתפקות (Satisficing). לאדם אין את כוח העיבוד הקוגניטיבי או את הזמן לשקול את כל החלופות האפשריות. לכן הוא מפסיק לחפש מיד כשהוא מוצא אופציה שעוברת סף מסוים (מספקת), גם אם היא רחוקה מלהיות אופטימלית.
+- **התובנה המערכתית ל-"הד":** הפחתת העומס הקוגניטיבי. "הד" אינה מציפה את המשתמש בעשרות פרמטרים. היא מסנתזת את הסיטואציה כדי לעזור למנהל לבצע אופטימיזציה אמיתית רק לנקודת המנוף הקריטית, מבלי להתעייף.
+
+### 2.3 ריצ'רד תיילר (Richard Thaler) ודן אריאלי (Dan Ariely)
+- **מאמרי/ספרי יסוד:** *Mental Accounting Matters* (Thaler, 1999) | *Predictably Irrational* (Ariely, 2008).
+- **צדדים חלשים/נקודות עיוורון:** אפקט הבעלות (Endowment Effect) ושנאת הפסד. בני אדם מתמחרים פריט או רעיון שכבר שייך להם בהרבה יותר ממה שהוא שווה באמת. זה מתחבר גם להיאחזות בסטטוס קוו. אנו פועלים בצורה "לא רציונלית באופן צפוי".
+- **התובנה המערכתית ל-"הד":** אלגוריתם השאלות (Illumination) של המערכת סורק רמזים של "היאחזות בעבר". אם המנהל מתלבט אם לסגור פרויקט, "הד" תייצר שאלת **היפוך בעלות**: "אם היית נכנס היום לתפקיד, האם היית מתחיל את הפרויקט הזה מחדש?" ובכך תעקוף את המחסום הפסיכולוגי.
+
+### 2.4 ליאון פסטינגר (Leon Festinger) ובארי סטו (Barry Staw)
+- **מאמרי יסוד:** *A Theory of Cognitive Dissonance* (Festinger, 1957) | *Knee-deep in the Big Muddy* (Staw, 1976).
+- **צדדים חלשים/נקודות עיוורון:** דיסוננס קוגניטיבי והסלמת מחויבות (Escalation of Commitment). כשהחלטה מתחילה להשתבש, במקום להודות בטעות, הנטייה האנושית היא לזרוק "כסף טוב אחרי כסף רע" (Sunk Cost Fallacy) כדי להצדיק את ההשקעה הראשונית ולהקל על המועקה הנפשית (הדיסוננס).
+- **התובנה המערכתית ל-"הד":** המערכת כופתה למעשה *הקפאה של ההנחות המקוריות*. ברגע שהתוצאות מתחילות להידרדר, "הד" תציג את הניגוד באובייקטיביות קרה כדי למנוע את עיוות המציאות שעושה המוח כדי להרגיע את הדיסוננס, ותעצור הסלמת מחויבות.
+
+### 2.5 דניאל כהנמן, אוליביה סיבוני וקאס סאנסטיין
+- **מאמרי/ספרי יסוד:** *Noise: A Flaw in Human Judgment* (2021).
+- **צדדים חלשים/נקודות עיוורון:** רעש קוגניטיבי (Noise). בניגוד להטיה קוגניטיבית שהיא סטייה לכיוון מסוים, "רעש" הוא פיזור אקראי בהחלטות הנובע ממצבי רוח, עייפות (Decision Fatigue), או שעת היום. שני מנהלים - או אותו מנהל בשעות שונות - עשויים לקבל החלטות סותרות על סמך נתונים זהים.
+- **התובנה המערכתית ל-"הד":** איתור "רעש" פנימי. "הד" משמשת כ"סביבת חדר נקי" המנטרלת לחצים חיצוניים ומספקת אקלים נייטרלי, ובמקביל יכולה להצליב החלטות דומות של אותו משתמש מהעבר כדי להתריע על אי-עקביות (Noise Detection).
+
+### 2.6 גרד גיגרנזר (Gerd Gigerenzer)
 - **מאמרי יסוד:** *Fast and Frugal Heuristics: The Adaptive Toolbox* (1999).
 - **צדדים חזקים:** האינטואיציה האנושית היא **רציונלית אקולוגית** — מותאמת בצורה מושלמת לאי-ודאות אמיתית (Uncertainty) שבה מודלים מתמטיים קורסים.
 - **התובנה המערכתית ל-"הד":** "הד" לא מכריחה למלא טבלאות של 50 פרמטרים. היא מכבדת את האינטואיציה ("Fast and Frugal") ומיישמת קבלת החלטות מבוססת סיבה-יחידה דרך **שאלת ההארה האחת** — נקודת המנוף הקריטית ביותר.
 
-### 2.3 גארי קליין (Gary Klein)
+### 2.7 גארי קליין (Gary Klein)
 - **מאמרי יסוד:** *Sources of Power: How People Make Decisions* (1998) | *Performing a Project Premortem* (2007).
 - **סיכום הגישה:** קבלת החלטות נטורליסטית (NDM). מומחים משתמשים ב-RPD (Recognition-Primed Decision) — זיהוי תבניות.
 - **התובנה המערכתית ל-"הד":** יישום אוטומטי של טכניקת ה**פרה-מורטם**. להחלטות בלתי-הפיכות, שאלת ההארה היחידה תהיה להניח כישלון מוחלט ולאתר את הסיבה מראש. בנוסף, יצירת `DecisionSignature` לבניית מאגר זיהוי תבניות עבור המנהל.
 
-### 2.4 ברוך פישהוף (Baruch Fischhoff)
+### 2.8 ברוך פישהוף (Baruch Fischhoff)
 - **מאמרי יסוד:** *Hindsight ≠ Foresight* (1975).
 - **סיכום הגישה:** הטיית הבדיעבד (Hindsight Bias). שכתוב הזיכרון כדי לגרום לתוצאה להיראות בלתי נמנעת ("ידעתי את זה כל הזמן"), מה שמונע למידה מטעויות.
 - **התובנה המערכתית ל-"הד":** **הקפאה קנונית (Canonical Hermetic Freeze):** יצירת חותמת זמן `frozenAt` שנועלת הרמטית את המחשבה המקורית ל-Read-Only, ומונעת פיזית את הטיית הבדיעבד.
 
-### 2.5 אנני דיוק (Annie Duke) ופיליפ טטלוק (Philip Tetlock)
+### 2.9 אנני דיוק (Annie Duke) ופיליפ טטלוק (Philip Tetlock)
 - **מושגים מרכזיים:** Resulting (הטיית התוצאה), Brier Score, ענווה אפיסטמית.
 - **התובנה המערכתית ל-"הד":** הפרדה מוחלטת ב-DB בין `EvaluationContract` (ההחלטה) לבין `Outcome` (התוצאה בפועל), תוך ניהול ציון **CalibrationTracker** פסיבי המכייל את רמת הביטחון של המנהל לאורך שנים.
 
@@ -52,7 +72,7 @@
 - **מאמרי/ספרי יסוד:** *The Black Swan* (2007) | *Antifragile* (2012).
 - **האתגר למערכת "הד":** "הד" משתמשת בתחזיות סטטיסטיות, ציוני כיול (Brier), ומשיכת "מקרים דומים מהעבר" (Reference Class Forecasting). טאלב טוען שבסביבות מורכבות ("Extremistan" - כגון שווקים פיננסיים, מגפות או סטארטאפים), סטטיסטיקה מהעבר אינה מנבאת אירועי קיצון חסרי תקדים (ברבורים שחורים). הסתמכות על "כיול מדויק" בסביבה חסרת ארגודיות (Non-Ergodic) עלולה להעניק למנהל תחושת ביטחון מזויפת שתוביל לאובדן מוחלט (Ruin).
 - **וקטור השיפור למערכת (System Upgrade):**
-  - **פרוטוקול שרידות (Survival-First Protocol):** על המערכת לזהות (באמצעות ה-AI) האם ההחלטה שייכת ל"מדיוקריסטן" (סיכון מתוחם) או ל"אקסטרמיסטן" (סיכון זנב / חשיפה להתמוטטות). אם מדוהה פוטנציאל לסיכון בלתי-הפיך (Ruin), מנוע ה-AI *יבטל* את חישובי ההסתברות ויחליף את שאלת ההארה לטקטיקת גידור: "אם ההחלטה תשתבש לחלוטין, האם החברה תשרוד כדי לשחק מחר? איך מקצצים את זנב הסיכון השמאלי?"
+  - **פרוטוקול שרידות (Survival-First Protocol):** על המערכת לזהות (באמצעות ה-AI) האם ההחלטה שייכת ל"מדיוקריסטן" (סיכון מתוחם) או ל"אקסטרמיסטן" (סיכון זנב / חשיפה להתמוטטות). אם מזוהה פוטנציאל לסיכון בלתי-הפיך (Ruin), מנוע ה-AI *יבטל* את חישובי ההסתברות ויחליף את שאלת ההארה לטקטיקת גידור: "אם ההחלטה תשתבש לחלוטין, האם החברה תשרוד כדי לשחק מחר? איך מקצצים את זנב הסיכון השמאלי?"
 
 ### 3.2 אנטוניו דמסיו (Antonio Damasio) ופול סלוביק (Paul Slovic) — היוריסטיקת הרגש
 - **מאמרי/ספרי יסוד:** *Descartes' Error* (Damasio, 1994) | *The Affect Heuristic* (Slovic, 2002).
@@ -94,16 +114,22 @@ graph TD
 
 ## 5. רשימת מקורות קריאה (Academic Bibliography)
 
-1. **Damasio, A. R. (1994).** *Descartes' Error: Emotion, Reason, and the Human Brain.* Putnam.
-2. **Duke, A. (2018).** *Thinking in Bets: Making Smarter Decisions When You Don't Have All the Facts.* Portfolio.
-3. **Fischhoff, B. (1975).** *Hindsight ≠ foresight: The effect of outcome knowledge on judgment under uncertainty.* JEP: HPP, 1(3), 288-299.
-4. **Gigerenzer, G., & Todd, P. M. (1999).** *Simple Heuristics That Make Us Smart.* Oxford UP.
-5. **Janis, I. L. (1972).** *Victims of Groupthink.* Houghton Mifflin.
-6. **Kahneman, D. (2011).** *Thinking, Fast and Slow.* FSG.
-7. **Klein, G. (1998).** *Sources of Power: How People Make Decisions.* MIT Press.
-8. **Slovic, P., et al. (2002).** *The Affect Heuristic.* In Heuristics and Biases, Cambridge UP.
-9. **Sunstein, C. R., & Hastie, R. (2014).** *Wiser: Getting Beyond Groupthink to Make Groups Smarter.* HBR Press.
-10. **Taleb, N. N. (2007).** *The Black Swan: The Impact of the Highly Improbable.* Random House.
-11. **Tetlock, P. E. (2005).** *Expert Political Judgment.* Princeton UP.
-12. **Tversky, A., & Kahneman, D. (1974).** *Judgment under Uncertainty: Heuristics and Biases.* Science.
-13. **Weick, K. E. (1995).** *Sensemaking in Organizations.* Sage Publications.
+1. **Ariely, D. (2008).** *Predictably Irrational: The Hidden Forces That Shape Our Decisions.* HarperCollins.
+2. **Damasio, A. R. (1994).** *Descartes' Error: Emotion, Reason, and the Human Brain.* Putnam.
+3. **Duke, A. (2018).** *Thinking in Bets: Making Smarter Decisions When You Don't Have All the Facts.* Portfolio.
+4. **Festinger, L. (1957).** *A Theory of Cognitive Dissonance.* Stanford UP.
+5. **Fischhoff, B. (1975).** *Hindsight ≠ foresight: The effect of outcome knowledge on judgment under uncertainty.* JEP: HPP, 1(3), 288-299.
+6. **Gigerenzer, G., & Todd, P. M. (1999).** *Simple Heuristics That Make Us Smart.* Oxford UP.
+7. **Janis, I. L. (1972).** *Victims of Groupthink.* Houghton Mifflin.
+8. **Kahneman, D. (2011).** *Thinking, Fast and Slow.* FSG.
+9. **Kahneman, D., Sibony, O., & Sunstein, C. R. (2021).** *Noise: A Flaw in Human Judgment.* Little, Brown Spark.
+10. **Klein, G. (1998).** *Sources of Power: How People Make Decisions.* MIT Press.
+11. **Simon, H. A. (1955).** *A Behavioral Model of Rational Choice.* The Quarterly Journal of Economics, 69(1), 99-118.
+12. **Slovic, P., et al. (2002).** *The Affect Heuristic.* In Heuristics and Biases, Cambridge UP.
+13. **Staw, B. M. (1976).** *Knee-deep in the big muddy: A study of escalating commitment to a chosen course of action.* OBHP, 16(1), 27-44.
+14. **Sunstein, C. R., & Hastie, R. (2014).** *Wiser: Getting Beyond Groupthink to Make Groups Smarter.* HBR Press.
+15. **Taleb, N. N. (2007).** *The Black Swan: The Impact of the Highly Improbable.* Random House.
+16. **Tetlock, P. E. (2005).** *Expert Political Judgment.* Princeton UP.
+17. **Thaler, R. H. (1999).** *Mental Accounting Matters.* Journal of Behavioral Decision Making, 12(3), 183-206.
+18. **Tversky, A., & Kahneman, D. (1974).** *Judgment under Uncertainty: Heuristics and Biases.* Science.
+19. **Weick, K. E. (1995).** *Sensemaking in Organizations.* Sage Publications.
