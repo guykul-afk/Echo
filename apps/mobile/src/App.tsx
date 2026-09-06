@@ -4,7 +4,7 @@ import { LuxuryTheme } from './theme/colors.js';
 import { QuickCaptureScreen } from './screens/QuickCaptureScreen.js';
 import { DecisionRoomScreen } from './screens/DecisionRoomScreen.js';
 import { OutcomeModal } from './screens/OutcomeModal.js';
-import { DecisionCase, Option, DecisionSignature, RefinedInsight, QuickLoopStatus, FiveHumanDimensions } from '@echo/shared';
+import { DecisionCase, Option, DecisionSignature, RefinedInsight, QuickLoopStatus, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
 
 type AppStep = 'capture' | 'decision_room' | 'outcome';
 
@@ -17,11 +17,12 @@ export const App: React.FC = () => {
   const [options, setOptions] = useState<Option[]>([]);
   const [signature, setSignature] = useState<DecisionSignature | null>(null);
   const [illuminationQuestion, setIlluminationQuestion] = useState<string>('');
+  const [bespokeQuestion, setBespokeQuestion] = useState<IlluminationQuestion | undefined>(undefined);
   const [refinedInsight, setRefinedInsight] = useState<RefinedInsight | undefined>(undefined);
   const [chosenNextStep, setChosenNextStep] = useState<string>('');
 
   // 1. Handle Quick Capture
-  const handleCaptureSubmit = (rawText: string) => {
+  const handleCaptureSubmit = (rawText: string, frictionLevel: 'quick' | 'focused' | 'deep' = 'focused') => {
     if (!rawText || !rawText.trim()) {
       setIsLoading(false);
       return;
@@ -42,16 +43,35 @@ export const App: React.FC = () => {
         contextTimePressure: 'medium',
         rawCaptureText: rawText.trim(),
         frozenAt: now,
-        frictionLevel: 'focused',
+        frictionLevel,
         dimConsideration: rawText.trim(),
         dimGoalsPrices: 'השגת המטרה תוך שמירה על משאבים',
         dimReliance: 'הנחות המוצא שהוזנו',
         dimUnknowns: 'מידע חסר שטרם אומת',
+        centralTension: 'הכנסה והתקדמות מקצועית מול נוכחות בבית וזמן עם הילדים',
+        keyHinge: 'בירור שעות העבודה והזמינות בערבים מול המנהל',
         createdAt: now,
         updatedAt: now
       };
 
       const mockQuestion = 'אם אי אפשר לקבל את שניהם במלואם, על מה פחות תרצה לוותר?';
+
+      const mockBespoke: IlluminationQuestion = {
+        id: 'illum-mock',
+        caseId: 'dc-001',
+        strategy: frictionLevel === 'quick' ? ('no_intervention' as any) : ('clarification' as any),
+        questionText: frictionLevel === 'quick' ? '' : mockQuestion,
+        triggerReason: frictionLevel === 'quick' ? 'Quick flow selected' : 'Single high ERV intervention',
+        shouldIntervene: frictionLevel !== 'quick',
+        expectedReflectionValue: 0.85,
+        smartSilenceMessage: frictionLevel === 'quick' ? 'נבחר מסלול מהיר. השיקולים והמתח המרכזי נוסחו במראה ללא התערבות נוספת.' : undefined,
+        responseWidget: frictionLevel === 'deep' ? 'classification' : 'priority',
+        responseOptions: frictionLevel === 'deep' 
+          ? ['נתונים מוצקים בשטח', 'ניסיון עבר אישי', 'תחושת בטן']
+          : ['פשטות ומהירות', 'עמידות לטווח ארוך'],
+        isSecondary: false,
+        createdAt: now
+      };
 
       const mockInsight: RefinedInsight = {
         before: 'חשש שהתפקיד יפגע בזמן עם הילדים או פחד משינוי',
@@ -79,6 +99,7 @@ export const App: React.FC = () => {
       setOptions(mockOptions);
       setSignature(mockSignature);
       setIlluminationQuestion(mockQuestion);
+      setBespokeQuestion(mockBespoke);
       setRefinedInsight(mockInsight);
 
       setIsLoading(false);
@@ -139,6 +160,7 @@ export const App: React.FC = () => {
             options={options}
             signature={signature || undefined}
             illuminationQuestion={illuminationQuestion}
+            bespokeQuestion={bespokeQuestion}
             initialRefinedInsight={refinedInsight}
             similarCaseAnalogy={{
               title: 'החלטה קודמת על תפקיד (2024)',

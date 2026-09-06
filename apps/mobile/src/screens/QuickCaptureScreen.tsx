@@ -4,7 +4,7 @@ import { LuxuryTheme } from '../theme/colors.js';
 import { EchoOrb } from '../graphics/EchoOrb.js';
 
 interface QuickCaptureScreenProps {
-  onCaptureSubmit: (text: string) => void;
+  onCaptureSubmit: (text: string, frictionLevel?: 'quick' | 'focused' | 'deep') => void;
   isLoading?: boolean;
 }
 
@@ -14,6 +14,7 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
 }) => {
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+  const [frictionLevel, setFrictionLevel] = useState<'quick' | 'focused' | 'deep'>('focused');
 
   const [recordHint, setRecordHint] = useState('לחץ להקלטה קולית חופשית');
 
@@ -35,7 +36,7 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
 
   const handleProceed = () => {
     if (inputText.trim()) {
-      onCaptureSubmit(inputText);
+      onCaptureSubmit(inputText, frictionLevel);
     }
   };
 
@@ -59,6 +60,36 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
 
       {/* Input Text Box */}
       <View style={styles.inputContainer}>
+        {/* Adaptive Friction Selector (Quick / Focused / Deep) */}
+        <View style={styles.frictionSelectorRow}>
+          <TouchableOpacity
+            style={[styles.frictionChip, frictionLevel === 'quick' && styles.frictionChipActive]}
+            onPress={() => setFrictionLevel('quick')}
+          >
+            <Text style={[styles.frictionChipText, frictionLevel === 'quick' && styles.frictionChipTextActive]}>
+              ⚡ מהיר
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.frictionChip, frictionLevel === 'focused' && styles.frictionChipActive]}
+            onPress={() => setFrictionLevel('focused')}
+          >
+            <Text style={[styles.frictionChipText, frictionLevel === 'focused' && styles.frictionChipTextActive]}>
+              🎯 ממוקד
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.frictionChip, frictionLevel === 'deep' && styles.frictionChipActive]}
+            onPress={() => setFrictionLevel('deep')}
+          >
+            <Text style={[styles.frictionChipText, frictionLevel === 'deep' && styles.frictionChipTextActive]}>
+              🔍 עמוק
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <TextInput
           style={styles.textInput}
           multiline
@@ -146,5 +177,33 @@ const styles = StyleSheet.create({
     color: LuxuryTheme.text.primary,
     fontSize: 15,
     fontWeight: '600'
+  },
+  frictionSelectorRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 10
+  },
+  frictionChip: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    alignItems: 'center'
+  },
+  frictionChipActive: {
+    borderColor: LuxuryTheme.accent.auraGlow,
+    backgroundColor: 'rgba(99, 102, 241, 0.2)'
+  },
+  frictionChipText: {
+    color: LuxuryTheme.text.secondary,
+    fontSize: 12,
+    fontWeight: '500'
+  },
+  frictionChipTextActive: {
+    color: LuxuryTheme.text.primary,
+    fontWeight: '700'
   }
 });

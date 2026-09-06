@@ -134,6 +134,15 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         </Text>
       </TouchableOpacity>
 
+      {/* Friction Flow Mode Badge (Adaptive Friction) */}
+      <View style={styles.frictionHeaderBadge}>
+        <Text style={styles.frictionHeaderBadgeText}>
+          {decisionCase.frictionLevel === 'quick' && '⚡ מסלול מהיר (Quick Flow) • מראה בלבד'}
+          {decisionCase.frictionLevel === 'deep' && '🔍 מסלול עמוק (Deep Flow) • Pre-mortem ופערי מידע'}
+          {(!decisionCase.frictionLevel || decisionCase.frictionLevel === 'focused') && '🎯 מסלול ממוקד (Focused Flow) • שאלת הארה אחת'}
+        </Text>
+      </View>
+
       {showRawText && (
         <View style={styles.rawCard}>
           <Text style={styles.rawTitle}>הניסוח המקורי המדויק (ללא שינוי):</Text>
@@ -928,5 +937,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: 'center',
     marginTop: 10
+  },
+  frictionHeaderBadge: {
+    alignSelf: 'center',
+    backgroundColor: 'rgba(212, 175, 55, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.25)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginBottom: 12
+  },
+  frictionHeaderBadgeText: {
+    color: '#FDE68A',
+    fontSize: 11,
+    fontWeight: '600'
   }
 });
