@@ -1408,6 +1408,9 @@
 
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
           try {
+            if (mediaRecorder.state === 'recording') {
+              try { mediaRecorder.requestData(); } catch (e) {}
+            }
             mediaRecorder.stop();
           } catch (e) {
             console.warn('[ECHO Mic] Error stopping recorder:', e);
@@ -1439,7 +1442,7 @@
           }
 
           // Timeout wrapper for getUserMedia to prevent silent hangs on iOS Safari
-          const getUserMediaWithTimeout = (constraints, timeoutMs = 5000) => {
+          const getUserMediaWithTimeout = (constraints, timeoutMs = 6000) => {
             return new Promise((resolve, reject) => {
               const timer = setTimeout(() => reject(new Error('Timeout: גישה למיקרופון נתקעה')), timeoutMs);
               navigator.mediaDevices.getUserMedia(constraints)
@@ -1448,7 +1451,22 @@
             });
           };
 
-          const stream = await getUserMediaWithTimeout({ audio: true });
+          // Optimized speech constraints: Mono, Noise Suppression, Echo Cancellation, Auto Gain
+          let stream;
+          try {
+            stream = await getUserMediaWithTimeout({
+              audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                channelCount: 1,
+                sampleRate: { ideal: 16000 }
+              }
+            }, 6000);
+          } catch (constraintErr) {
+            console.warn('[ECHO Mic] Advanced audio constraints unsupported, falling back to basic audio:', constraintErr);
+            stream = await getUserMediaWithTimeout({ audio: true }, 6000);
+          }
           audioStream = stream;
 
           // Wire Web Audio API analyser for real-time 3D Contour Orb reactivity
@@ -1490,6 +1508,8 @@
               mimeType = 'audio/webm';
             } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
               mimeType = 'audio/mp4';
+            } else if (MediaRecorder.isTypeSupported('audio/aac')) {
+              mimeType = 'audio/aac';
             }
           }
 
@@ -1571,6 +1591,45 @@
       });
     }
 
+    // Robust Universal Transcript Extractor
+    // Handles plain text, JSON strings, JSON objects with various keys, and markdown blocks
+    function cleanExtractedTranscript(rawText) {
+      if (!rawText || typeof rawText !== 'string') return '';
+      let text = rawText.trim();
+
+      // 1. Strip markdown code fences if model returned ```json ... ``` or ```text ... ```
+      text = text.replace(/^```(?:json|text)?\s*/i, '').replace(/\s*```$/, '').trim();
+
+      // 2. Attempt JSON parse
+      try {
+        const parsed = JSON.parse(text);
+        if (typeof parsed === 'string') {
+          return parsed.trim();
+        }
+        if (parsed && typeof parsed === 'object') {
+          const candidate = parsed.transcript || parsed.transcription || parsed.text || parsed.result || parsed.content || parsed.speech || parsed.message;
+          if (typeof candidate === 'string') {
+            return candidate.trim();
+          }
+        }
+      } catch (e) {
+        // Not valid JSON, continue with regex or plain text
+      }
+
+      // 3. If JSON was incomplete or wrapped in quotes
+      const match = text.match(/"(?:transcript|transcription|text)":\s*"([^"]+)"/i);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+
+      // 4. If surrounded by quotation marks, unwrap
+      if (text.startsWith('"') && text.endsWith('"') && text.length > 2) {
+        text = text.slice(1, -1).trim();
+      }
+
+      return text;
+    }
+
     async function transcribeAndExtractAudio(audioBlob) {
       const hint = document.getElementById('geoStatusHint');
       const subHint = document.getElementById('geoStatusSubHint');
@@ -1586,25 +1645,21 @@
         hint.innerText = 'ההקלטה בתהליך ניתוח: מתמלל דיבור...';
         subHint.innerText = 'מתמלל באמצעות מנוע קולי (Gemini 2.5)...';
 
-        // Fetch with timeout without hanging Safari fetch
-        const fetchWithTimeout = (url, options, timeoutMs = 12000) => {
+        // Fetch with timeout
+        const fetchWithTimeout = (url, options, timeoutMs = 14000) => {
           return Promise.race([
             fetch(url, options),
             new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout: שרת התמלול לא הגיב בזמן')), timeoutMs))
           ]);
         };
 
-        const prompt = `אתה מערכת תמלול קולית מדויקת ביותר בעברית עבור שיקול דעת והחלטות.
-עליך לתמלל את קובץ השמע מילה-במילה בעברית (Verbatim).
-אם ההקלטה שקטה לחלוטין, מכילה רק רעשי רקע, נשימות עמומות, או שלא ניתן להבין דיבור ברור - החזר "transcript": "NO_SPEECH_DETECTED".
-אל תוסיף שום מילים, ברכות, הערות או תוספות שלא נאמרו.
+        const prompt = `תמלל במדויק מילה-במילה (Verbatim) את כל מה שנאמר בעברית בקובץ השמע.
+כללים:
+1. שמר על סדר המילים המדויק, כולל מונחים טכניים/לועזיים, מספרים ושמות כפי שנאמרו.
+2. אל תוסיף שום הקדמה, הסבר, מרכאות או תוספת שלא נאמרה בהקלטה.
+3. רק אם הקובץ שקט לחלוטין ללא כל דיבור אנושי, החזר: ריק.`;
 
-החזר אך ורק JSON תקין במבנה הבא:
-{
-  "transcript": "הטקסט המדויק שנאמר בהקלטה"
-}`;
-
-        async function callGeminiTranscribe(modelName, timeoutMs = 10000) {
+        async function callGeminiTranscribe(modelName, timeoutMs = 12000) {
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
           const res = await fetchWithTimeout(url, {
             method: 'POST',
@@ -1617,10 +1672,6 @@
                 ]
               }],
               generationConfig: {
-                responseMimeType: 'application/json',
-                thinkingConfig: {
-                  thinkingBudget: 0
-                },
                 temperature: 0.0
               }
             })
@@ -1630,28 +1681,21 @@
           if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
 
           const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          let parsed;
-          try {
-            parsed = JSON.parse(rawText);
-          } catch (e) {
-            const match = rawText.match(/\{[\s\S]*\}/);
-            if (match) parsed = JSON.parse(match[0]);
-            else parsed = { transcript: rawText.trim() };
-          }
-          return (parsed.transcript || '').trim();
+          return cleanExtractedTranscript(rawText);
         }
 
         let rawVerbatim = '';
         try {
-          rawVerbatim = await callGeminiTranscribe('gemini-2.5-flash', 10000);
+          rawVerbatim = await callGeminiTranscribe('gemini-2.5-flash', 12000);
         } catch (eFlash) {
-          console.warn('[ECHO Transcribe] gemini-2.5-flash failed, trying 2.5-flash-lite:', eFlash.message);
-          subHint.innerText = 'מנסה מנוע גיבוי...';
+          console.warn('[ECHO Transcribe] gemini-2.5-flash failed, trying 3.5-flash:', eFlash.message);
+          subHint.innerText = 'מנסה מנוע גיבוי מתקדם (3.5)...';
           try {
-            rawVerbatim = await callGeminiTranscribe('gemini-2.5-flash-lite', 9000);
-          } catch (eLite) {
-            console.warn('[ECHO Transcribe] gemini-2.5-flash-lite failed, trying 3.6-flash:', eLite.message);
-            rawVerbatim = await callGeminiTranscribe('gemini-3.6-flash', 12000);
+            rawVerbatim = await callGeminiTranscribe('gemini-3.5-flash', 14000);
+          } catch (e35) {
+            console.warn('[ECHO Transcribe] gemini-3.5-flash failed, trying 2.5-flash-lite:', e35.message);
+            subHint.innerText = 'מנסה מנוע גיבוי מהיר...';
+            rawVerbatim = await callGeminiTranscribe('gemini-2.5-flash-lite', 10000);
           }
         }
 
@@ -1665,10 +1709,11 @@
           clean.toLowerCase() === 'empty' ||
           clean === 'לאברור' ||
           clean === 'לא_ברור' ||
+          clean.toLowerCase() === 'unclear' ||
           clean.length < 2;
 
         if (isUnclearOrSilent) {
-          console.warn('[ECHO Anti-Hallucination] Audio unclear or no speech detected.');
+          console.warn('[ECHO Anti-Hallucination] Audio unclear or no speech detected. Raw:', rawVerbatim);
           isAnalyzing = false;
           captureResultIcon = 'error';
           hint.innerText = 'לא זוהה דיבור ברור בהקלטה';
@@ -2119,7 +2164,7 @@
         mimeType = isIOSDevice() ? 'audio/mp4' : 'audio/webm';
       }
       
-      async function tryModelTranscribe(model, timeoutMs = 9000) {
+      async function tryModelTranscribe(model, timeoutMs = 12000) {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -2133,14 +2178,11 @@
               contents: [{
                 parts: [
                   { inlineData: { mimeType: mimeType, data: base64Audio } },
-                  { text: 'תמלל במדויק מילה-במילה (Verbatim) את מה שנאמר בעברית בקובץ הקול. אם אין דיבור, השב: ריק.' }
+                  { text: 'תמלל במדויק מילה-במילה (Verbatim) את כל מה שנאמר בעברית בקובץ הקול. אם אין דיבור כלל, השב: ריק.' }
                 ]
               }],
               generationConfig: { 
-                thinkingConfig: {
-                  thinkingBudget: 0
-                },
-                temperature: 0.1 
+                temperature: 0.0 
               }
             })
           });
@@ -2148,9 +2190,9 @@
           const data = await res.json();
           if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
           const parts = data.candidates?.[0]?.content?.parts || [];
-          let text = '';
-          for (const p of parts) { if (p.text) text += p.text + ' '; }
-          return text.trim();
+          let rawText = '';
+          for (const p of parts) { if (p.text) rawText += p.text + ' '; }
+          return cleanExtractedTranscript(rawText);
         } catch (err) {
           clearTimeout(timer);
           if (err.name === 'AbortError') throw new Error(`Timeout (${timeoutMs/1000}s) on ${model}`);
@@ -2160,18 +2202,18 @@
 
       let text = '';
       try {
-        text = await tryModelTranscribe('gemini-2.5-flash', 8000);
+        text = await tryModelTranscribe('gemini-2.5-flash', 12000);
       } catch (e1) {
         console.warn('gemini-2.5-flash failed in transcribeAudioBlob:', e1.message);
         try {
-          text = await tryModelTranscribe('gemini-2.5-flash-lite', 8000);
+          text = await tryModelTranscribe('gemini-3.5-flash', 14000);
         } catch (e2) {
-          console.warn('gemini-2.5-flash-lite failed, using gemini-3.6-flash:', e2.message);
-          text = await tryModelTranscribe('gemini-3.6-flash', 10000);
+          console.warn('gemini-3.5-flash failed, using gemini-2.5-flash-lite:', e2.message);
+          text = await tryModelTranscribe('gemini-2.5-flash-lite', 10000);
         }
       }
-      const clean = text.replace(/[\s.,!?:;]+/g, '').trim();
-      if (!text || clean === '' || clean === 'ריק' || clean.toLowerCase() === 'empty') {
+      const clean = text.replace(/[\s.,!?:;'"־\-`~()\[\]{}]+/g, '').trim();
+      if (!text || clean === '' || clean === 'ריק' || clean.toLowerCase() === 'empty' || clean === 'לאברור' || clean.toLowerCase() === 'unclear') {
         throw new Error('לא זוהה דיבור ברור בהקלטה');
       }
       return text;

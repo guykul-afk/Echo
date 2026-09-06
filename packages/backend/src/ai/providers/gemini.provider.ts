@@ -12,7 +12,7 @@ export class GeminiAiProvider implements IAiProvider {
   constructor(
     apiKey?: string,
     cognitiveModel: string = process.env.COGNITIVE_MODEL || 'gemini-3.6',
-    transcribeModel: string = process.env.TRANSCRIBE_MODEL || 'gemini-3.5-transcribe'
+    transcribeModel: string = process.env.TRANSCRIBE_MODEL || 'gemini-2.5-flash'
   ) {
     this.apiKey = apiKey || process.env.GEMINI_API_KEY || '';
     this.cognitiveModel = cognitiveModel;
@@ -30,11 +30,10 @@ export class GeminiAiProvider implements IAiProvider {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.transcribeModel}:generateContent?key=${this.apiKey}`;
     const base64Audio = audioBuffer.toString('base64');
 
-    const antiHallucinationPrompt = `תמלל אך ורק ובמדויק מילה-במילה (Verbatim) את המילים שנאמרו במפורש בעברית בקובץ הקול.
-כללי ברזל מוחלטים למניעת הזיות (Strict Anti-Hallucination):
-1. אסור בהחלט להמציא, לנחש, לשער, להשלים או להוסיף מילים או משפטים שלא נשמעו בבירור מוחלט.
-2. אם ההקלטה שקטה, מכילה רעשי רקע, נשימות, מלמול בלתי מובן, או שלא ניתן להבין בוודאות מלאה דיבור ברור — השב אך ורק במילה אחת בדיוק: ריק
-3. אל תוסיף שום הקדמה, ברכה, הערה או סיכום.`;
+    const antiHallucinationPrompt = `תמלל אך ורק ובמדויק מילה-במילה (Verbatim) את כל מה שנאמר בעברית בקובץ הקול.
+1. שמור על סדר המילים המדויק, כולל מונחים טכניים/לועזיים, שמות ומספרים כפי שנאמרו.
+2. רק אם ההקלטה שקטה לחלוטין ללא כל דיבור אנושי, השב: ריק.
+3. אל תוסיף שום הקדמה, מרכאות או סיכום.`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -56,8 +55,7 @@ export class GeminiAiProvider implements IAiProvider {
           }
         ],
         generationConfig: {
-          temperature: 0.0,
-          topP: 0.1
+          temperature: 0.0
         }
       })
     });
@@ -67,7 +65,14 @@ export class GeminiAiProvider implements IAiProvider {
     }
 
     const data = await response.json();
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    
+    // Unwrap any quotes or markdown
+    rawText = rawText.replace(/^```(?:json|text)?\s*/i, '').replace(/\s*```$/, '').trim();
+    if (rawText.startsWith('"') && rawText.endsWith('"') && rawText.length > 2) {
+      rawText = rawText.slice(1, -1).trim();
+    }
+
     const clean = rawText.replace(/[\s.,!?:;'"־\-`~()\[\]{}]+/g, '').trim();
 
     if (
@@ -78,7 +83,7 @@ export class GeminiAiProvider implements IAiProvider {
       clean === 'לאברור' ||
       clean === 'לא_ברור' ||
       clean.toLowerCase() === 'unclear' ||
-      clean.length < 3
+      clean.length < 2
     ) {
       return '';
     }
