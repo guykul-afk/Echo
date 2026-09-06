@@ -2775,6 +2775,11 @@
           localStorage.setItem(key, JSON.stringify(existing));
           syncDecisionToCloud(cur);
         }
+      } catch (e) {
+        console.warn('Auto-save dimension edit error:', e);
+      }
+    }
+
     let currentFrictionLevel = 'focused';
 
     function setFrictionLevel(mode) {
