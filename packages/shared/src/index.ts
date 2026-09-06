@@ -9,3 +9,4 @@ export * from './types/pattern.js';
 export * from './types/registry.js';
 export * from './types/calibration.js';
 export * from './types/cognitive.js';
+export * from './types/knowledge.js';

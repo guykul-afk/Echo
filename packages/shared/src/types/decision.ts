@@ -68,6 +68,9 @@ export interface DecisionCase {
   dimMissingInfo?: string;   // מידע חסר להחלטה
   dimReliance?: string;      // deprecated: על מה אתה נשען
   dimUnknowns?: string;      // deprecated: עדיין לא ברור
+  centralTension?: string;   // המתח המרכזי (First 20 Seconds)
+  keyHinge?: string;         // נראה שההכרעה תלויה בעיקר ב... (First 20 Seconds)
+  mirrorFeedback?: 'accurate' | 'inaccurate'; // משוב המשתמש למראה: מדויק / לא בדיוק
   aiInterventionUsed?: string;
   nextStep?: string;
   refinedInsight?: RefinedInsight;

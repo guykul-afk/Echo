@@ -34,13 +34,47 @@ async function runSimulation() {
     eraId: era1.id
   });
 
+  if (case1.decisionCase.refinedInsight !== undefined) {
+    throw new Error('VIOLATION: Refined Insight was generated at capture time!');
+  }
+  if (case1.decisionCase.nextStep !== undefined) {
+    throw new Error('VIOLATION: Next Step was generated at capture time!');
+  }
+  console.log('[אימות] וודא כי Refined Insight ו-nextStep אינם קיימים בשלב ה-Capture הראשוני.');
+
   console.log(`[הקפאה] מצב מקורי ננעל ב-timestamp: ${case1.decisionCase.frozenAt}`);
+  
+  // Phase 1: First 20 Seconds Focus validation
+  if (!case1.decisionCase.centralTension || !case1.decisionCase.keyHinge) {
+    throw new Error('VIOLATION: First 20 Seconds fields (centralTension, keyHinge) were not populated!');
+  }
+  console.log(`[20 שניות ראשונות לבהירות]:`);
+  console.log(`  • החלטה: "${case1.decisionCase.dimConsideration}"`);
+  console.log(`  • מתח מרכזי: "${case1.decisionCase.centralTension}"`);
+  console.log(`  • ציר ההכרעה: "${case1.decisionCase.keyHinge}"`);
+
+  // Record Mirror Feedback (מדויק / לא בדיוק)
+  const feedbackCase = await decisionService.recordMirrorFeedback(case1.decisionCase.id, 'accurate');
+  if (feedbackCase.mirrorFeedback !== 'accurate') {
+    throw new Error('Expected mirrorFeedback to be accurate');
+  }
+  console.log(`  • משוב מראה נרשם בהצלחה: "${feedbackCase.mirrorFeedback}" (מדויק ✓)`);
+
   console.log(`[4 ממדי המראה האנושית]:`);
   console.log(`  1. אתה שוקל: "${case1.decisionCase.dimConsideration}"`);
   console.log(`  2. חשוב לך להשיג/לשמור: "${case1.decisionCase.dimGoalsPrices}"`);
   console.log(`  3. אתה נשען על: "${case1.decisionCase.dimReliance}"`);
   console.log(`  4. עדיין לא ברור: "${case1.decisionCase.dimUnknowns}"`);
   console.log(`[התערבות אדפטיבית אחת]: "${case1.illuminationQuestion}"`);
+  
+  // Phase 2: Verify Adaptive Friction & Response Widget
+  if (!case1.bespokeQuestion || case1.bespokeQuestion.shouldIntervene !== true) {
+    throw new Error('Case 1 should have shouldIntervene === true');
+  }
+  if (case1.bespokeQuestion.responseWidget !== 'priority') {
+    throw new Error(`Expected responseWidget to be 'priority', got ${case1.bespokeQuestion.responseWidget}`);
+  }
+  console.log(`[Phase 2 Adaptive UI]: ווידג'ט מענה מזוהה: "${case1.bespokeQuestion.responseWidget}", ערך השהייה מחושב (ERV): ${case1.bespokeQuestion.expectedReflectionValue}`);
   
   // Test updating the mirror directly (עריכה ישירה של המראה)
   console.log(`\n[עריכה ישירה של המראה]: המשתמש מדייק את החשש...`);
@@ -73,9 +107,19 @@ async function runSimulation() {
   });
 
   console.log(`[מראה מהירה נוצרה]: "${case2.decisionCase.dimConsideration}"`);
+  if (case2.bespokeQuestion?.shouldIntervene !== false) {
+    throw new Error('Case 2 with quick friction should activate Smart Silence (shouldIntervene === false)');
+  }
+  if (case2.decisionCase.aiInterventionUsed !== undefined) {
+    throw new Error('Case 2 should have undefined aiInterventionUsed when smart silence is active');
+  }
+  console.log(`  • שקט חכם הופעל בהצלחה: "${case2.bespokeQuestion.smartSilenceMessage}"`);
   console.log(`[המשתמש לוחץ "מספיק לי לעכשיו"]...`);
   const quickExit = await decisionService.submitDeliberationAnswer(case2.decisionCase.id, '', true);
-  console.log(`  • סטטוס יציאה: ${quickExit.success}, צעד נשמר: "${quickExit.nextStep}"\n`);
+  if (quickExit.nextStep !== 'שמירה והמשך מעקב') {
+    throw new Error(`Expected skip nextStep to be 'שמירה והמשך מעקב', got '${quickExit.nextStep}'`);
+  }
+  console.log(`  • סטטוס יציאה: ${quickExit.success}, צעד נשמר: "${quickExit.nextStep}" (אומת: אין ניחוש של צעד מראש!)\n`);
 
   // -------------------------------------------------------------
   // Decision 3: Longitudinal 3-Axis Outcome Learning Loop
@@ -96,6 +140,45 @@ async function runSimulation() {
   console.log(`[ציר 2 - מה התברר על ההנחה]: "${outcome1.assumptionClarification}"`);
   console.log(`[ציר 3 - מה היית משנה בתהליך]: "${outcome1.processReflection}"`);
   console.log(`[סטטוס מהיר]: "${outcome1.quickStatus}"`);
+
+  // -------------------------------------------------------------
+  // Phase 3 & 4: Personal Memory, Frozen Snapshot & Retrieval Before Ask
+  // -------------------------------------------------------------
+  console.log('\n--- [שלב 3 ו-4: זיכרון אישי, הקפאת מצב ומנגנון Retrieval Before Ask] ---');
+  const kgService = decisionService.getKnowledgeGraphService();
+
+  // 1. Verify Frozen Snapshot of Case 1
+  const snapshot1 = await kgService.getFrozenSnapshot(case1.decisionCase.id);
+  if (!snapshot1) {
+    throw new Error(`Expected FrozenDecisionSnapshot to exist for case ${case1.decisionCase.id}`);
+  }
+  if (snapshot1.chosenStep !== 'לשאול את המנהל על ציפיות הזמינות בערבים לפני מתן תשובה') {
+    throw new Error(`Unexpected chosenStep in snapshot: ${snapshot1.chosenStep}`);
+  }
+  console.log(`✓ Frozen Decision Snapshot ננעל ואומת ללא Hindsight Bias [צעד: "${snapshot1.chosenStep}"]`);
+
+  // 2. Verify Retrieval Before Ask on new decision mentioning previous topic
+  console.log('[הרצת מקרה החלטה חוזר עם נושא שנמצא בזיכרון האישי]...');
+  const followUpCase = await decisionService.createCase({
+    userId,
+    rawText: 'המנהל מבקש שוב לברר לגבי זמינות בערבים בתפקיד, ואני צריך לתת תשובה סופית.',
+    frictionLevel: 'focused'
+  });
+
+  if (followUpCase.bespokeQuestion?.responseWidget !== 'confirmation') {
+    throw new Error(`Expected bespokeQuestion to be converted to 'confirmation' by RetrievalBeforeAsk, got '${followUpCase.bespokeQuestion?.responseWidget}'`);
+  }
+  console.log(`✓ Retrieval Before Ask המיר בהצלחה שאלת איסוף לשאלת אישור מהירה:`);
+  console.log(`  • שאלה מוצעת: "${followUpCase.bespokeQuestion.questionText}"`);
+  console.log(`  • ווידג'ט תגובה: "${followUpCase.bespokeQuestion.responseWidget}"`);
+  console.log(`  • אופציות אישור מהיר: [${followUpCase.bespokeQuestion.responseOptions?.join(' | ')}]`);
+
+  // 3. Verify Multi-Tenant Knowledge Isolation
+  const strangerAssertions = await kgService.getActiveAssertionsByUser('stranger_user_999');
+  if (strangerAssertions.length !== 0) {
+    throw new Error('Multi-tenancy memory leak: stranger user could view assertions of another user!');
+  }
+  console.log('✓ בידוד זיכרון אישי (Zero-Trust Multi-Tenancy Memory) נבדק בהצלחה: 0 זליגות מידע.');
 
   // -------------------------------------------------------------
   // Decision 4: Anti-Hallucination & Unclear Audio Protection

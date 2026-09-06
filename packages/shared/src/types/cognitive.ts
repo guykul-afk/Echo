@@ -16,15 +16,25 @@ export type ConvictionLevel = 'low' | 'moderate' | 'high' | 'absolute';
  * 5 Human-Facing Mirror Dimensions
  */
 export interface FiveHumanDimensions {
-  consideration: string; // אתה שוקל: הדילמה המרכזית
+  consideration: string; // אתה שוקל: הדילמה המרכזית (One-line decision)
   goalsPrices: string;   // הבנתי שחשוב לך להשיג/לשמור: מטרות, ערכים ומחירים שלא תרצה לשלם
   facts: string;         // עובדות קשיחות: נתונים, אירועים שהתרחשו בפועל
   assumptions: string;   // ההנחות שלך: השערות, פרשנות וציפיות
   missingInfo: string;   // מידע חסר להחלטה: פערי מידע, שאלות פתוחות
 
+  // The First 20 Seconds Focus
+  centralTension?: string; // המתח המרכזי (למשל: פשטות ורציפות מול תלות גבוהה)
+  keyHinge?: string;       // נראה שההכרעה תלויה בעיקר ב... (ציר ההכרעה)
+
   // Backward compatibility fields (optional)
   reliance?: string;
   unknowns?: string;
+}
+
+export interface First20SecondsSummary {
+  oneLineDecision: string;
+  centralTension: string;
+  keyHinge: string;
 }
 
 // Backward compatibility alias
@@ -76,6 +86,8 @@ export type IlluminationStrategy =
   | 'social_groupthink_check'
   | 'outcome_contract_anchor';
 
+export type ResponseWidgetType = 'text' | 'confirmation' | 'priority' | 'classification';
+
 export interface IlluminationQuestion {
   id: string;
   caseId: string;
@@ -84,7 +96,16 @@ export interface IlluminationQuestion {
   triggerReason: string;        // Why this strategy was selected by priority
   isSecondary: boolean;
   canSkip?: boolean;            // User can skip with "מספיק לי לעכשיו"
+  
+  // Phase 2: Adaptive Friction & Smart Silence
+  shouldIntervene?: boolean;
+  expectedReflectionValue?: number; // 0.0 to 1.0 (Expected Reflection Value)
+  smartSilenceMessage?: string;     // e.g. "נראה שכבר הפרדת היטב בין מה שאתה יודע לבין מה שאתה מניח..."
+  responseWidget?: ResponseWidgetType;
+  responseOptions?: string[];       // Options for confirmation / priority / classification
+
   userResponseText?: string;
   respondedAt?: number;
   createdAt: number;
 }
+

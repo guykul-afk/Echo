@@ -98,17 +98,18 @@
           <h1 class="font-editorial text-4xl sm:text-5xl font-bold tracking-[0.25em] pl-1 select-none" style="color: var(--c-accent);">ECHO</h1>
         </div>
 
-        <!-- Dynamic Sacred Geometry Canvas Button (Enlarged with In-Shape Status V / X) -->
+        <!-- Dynamic ECHO 3D Contour Orb (Mathematical Pure Geometry) -->
         <div class="relative flex flex-col items-center justify-center my-auto">
           <div 
             id="morphButton" 
-            class="relative w-[280px] h-[280px] flex items-center justify-center cursor-pointer select-none active:scale-[0.98] transition-transform"
+            class="relative w-[300px] h-[300px] flex items-center justify-center cursor-pointer select-none active:scale-[0.98] transition-transform"
+            title="לחץ להאזנה ולכידת מחשבה"
           >
             <!-- Ambient Soft Halo -->
-            <div id="morphAuraRing" class="absolute w-[280px] h-[280px] rounded-full opacity-25 blur-2xl pointer-events-none transition-opacity duration-700" style="background: radial-gradient(circle, var(--c-accent) 0%, transparent 70%);"></div>
+            <div id="morphAuraRing" class="absolute w-[300px] h-[300px] rounded-full opacity-30 blur-2xl pointer-events-none transition-opacity duration-700" style="background: radial-gradient(circle, rgba(212, 175, 55, 0.12) 0%, transparent 70%);"></div>
 
-            <!-- Canvas Drawing Pure Morphing Geometry, Dynamic Fill & Inner V/X Indicator -->
-            <canvas id="geoCanvas" width="280" height="280" class="relative z-10 pointer-events-none"></canvas>
+            <!-- Canvas Drawing 3D Contour Orb -->
+            <canvas id="geoCanvas" width="300" height="300" class="relative z-10 pointer-events-none"></canvas>
           </div>
 
           <!-- Minimal Status Below Button -->
@@ -1040,21 +1041,34 @@
       syncWithCloud(currentUsername);
     }
 
-    // ================= SACRED GEOMETRY CANVAS ANIMATION =================
+    // ================= ECHO 3D CONTOUR ORB (SPEC SECTION 4) =================
     const canvas = document.getElementById('geoCanvas');
     const ctx = canvas.getContext('2d');
+    
+    // Mathematical constants from Specification
+    const N_SLICES = 32;          // 32 latitude slices: y_i = R * ((2i)/(N-1) - 1)
+    const M_POINTS = 160;         // resolution points per ring
+    const BASE_R = 102;           // virtual sphere radius R (fits inside 300px canvas with acoustic wave headroom)
+    const TILT_ANGLE = 0.38;      // ~22 degrees perspective tilt (Pitch around X axis)
+    const ROT_SPEED_IDLE = 0.018; // ~0.018 rad/frame (as specified in 4.3)
+    const LERP_ALPHA = 0.12;      // Smoothing factor alpha = 0.12 (as specified in 4.3)
+    const STROKE_WIDTH = 1.2;     // Constant 1.2px stroke width (as specified in 4.1 #4)
+    const GOLD_RGB = '212, 175, 55'; // Pure monochrome #D4AF37 (as specified in 4.1 #1)
+
     let animTime = 0;
-    let rotationAngle = 0;
-    let speechEnergy = 0; // Smooth speech level interpolation
-    let isRecording = false; // Visual animation sync (pulsing orb)
-    let recordState = 'idle'; // State machine: 'idle' | 'starting' | 'recording' | 'stopping'
+    let yawRotation = 0;
+    let smoothedAudioLevel = 0;
+    let isRecording = false;      // Visual animation sync
+    let recordState = 'idle';     // 'idle' | 'starting' | 'recording' | 'stopping'
     let abortStartRequested = false;
     let lastToggleTime = 0;
-    let captureResultIcon = null; // null | 'success' | 'error'
     let mediaRecorder = null;
     let audioStream = null;
+    let audioContext = null;
+    let analyserNode = null;
+    let audioDataArray = null;
 
-    function drawSacredGeometry() {
+    function drawContourOrb3D() {
       const w = canvas.width;
       const h = canvas.height;
       const cx = w / 2;
@@ -1062,139 +1076,112 @@
 
       ctx.clearRect(0, 0, w, h);
 
-      // Slow harmonic breathing
-      const speed = isRecording ? 0.009 : 0.003;
-      animTime += speed;
+      // Advance clock and rotation
+      animTime += 0.024;
+      yawRotation += ROT_SPEED_IDLE;
 
-      // Slow rotation
-      const rotSpeed = isRecording ? 0.003 : 0.001;
-      rotationAngle += rotSpeed;
-
-      // Organic breathing aura pulse when recording
-      let liveVolume = 0;
-      if (isRecording) {
-        liveVolume = 0.35 + 0.25 * Math.sin(animTime * 7);
+      // Web Audio API real-time acoustic level
+      let rawAudioLevel = 0;
+      if (isRecording && analyserNode && audioDataArray) {
+        analyserNode.getByteFrequencyData(audioDataArray);
+        let sum = 0;
+        const count = Math.min(audioDataArray.length, 128);
+        for (let i = 0; i < count; i++) {
+          const val = audioDataArray[i] / 255;
+          sum += val * val;
+        }
+        const rms = Math.sqrt(sum / count);
+        rawAudioLevel = Math.min(1.0, rms * 2.8);
+      } else if (isRecording) {
+        // Fallback simulated acoustic wave if mic stream analyser is pending
+        rawAudioLevel = 0.35 + 0.25 * Math.sin(animTime * 6.5);
       }
 
-      // Smooth speech envelope interpolation with live audio energy boost
-      const targetEnergy = isRecording ? (0.6 + liveVolume * 0.7) : 0.0;
-      speechEnergy += (targetEnergy - speechEnergy) * 0.08;
+      // Exact Lerp smoothing with factor alpha = 0.12 (Specification 4.3)
+      smoothedAudioLevel += (rawAudioLevel - smoothedAudioLevel) * LERP_ALPHA;
 
-      const numVertices = 12;
-      const baseRadius = 92 + Math.sin(animTime * 1.2) * (3.5 + speechEnergy * 8);
-      const points = [];
+      const cosTilt = Math.cos(TILT_ANGLE);
+      const sinTilt = Math.sin(TILT_ANGLE);
 
-      for (let i = 0; i < numVertices; i++) {
-        const theta = (i / numVertices) * Math.PI * 2 + rotationAngle;
-        const wave = Math.sin(theta * 3 + animTime) * (5 + speechEnergy * 9) +
-                     Math.cos(theta * 2 - animTime * 0.7) * (3 + speechEnergy * 6);
-        const r = baseRadius + wave;
-        const x = cx + Math.cos(theta) * r;
-        const y = cy + Math.sin(theta) * r;
-        points.push({ x, y });
+      // Iterate through N = 32 latitude slices
+      for (let i = 0; i < N_SLICES; i++) {
+        // y_i = R * ((2i / (N - 1)) - 1)
+        const yi = BASE_R * ((2 * i) / (N_SLICES - 1) - 1);
+        
+        // Base radius at height: r(y_i) = sqrt(max(0, R^2 - y_i^2))
+        const rBase = Math.sqrt(Math.max(0, BASE_R * BASE_R - yi * yi));
+        if (rBase < 0.8) continue; // Skip poles
+
+        // Break ring into segments to render depth perspective alpha gradient
+        const NUM_SEGMENTS = 16;
+        const ptsPerSeg = Math.floor(M_POINTS / NUM_SEGMENTS);
+
+        for (let s = 0; s < NUM_SEGMENTS; s++) {
+          const segPoints = [];
+          let sumZ = 0;
+
+          for (let p = 0; p <= ptsPerSeg; p++) {
+            const ptIdx = (s * ptsPerSeg + p) % M_POINTS;
+            const theta = (ptIdx / M_POINTS) * Math.PI * 2;
+
+            // Idle state: D_idle = 0.04 * sin(3*theta + 0.8*t) * cos(2*y/R + 0.5*t)
+            const D_idle = 0.04 * Math.sin(3 * theta + 0.8 * animTime) * Math.cos((2 * yi) / BASE_R + 0.5 * animTime);
+
+            // Voice-reactive state: D_voice = (AudioLevel * 0.38) * sum(k=1..3) [1/k * sin(k*m*theta + phi_k(t)) * cos(k*pi*y/R)]
+            let D_voice = 0;
+            if (smoothedAudioLevel > 0.002) {
+              const m = 4; // wave harmonic
+              let harmonicSum = 0;
+              for (let k = 1; k <= 3; k++) {
+                const phi_k = k * 1.35 * animTime;
+                harmonicSum += (1.0 / k) * Math.sin(k * m * theta + phi_k) * Math.cos((k * Math.PI * yi) / BASE_R);
+              }
+              D_voice = (smoothedAudioLevel * 0.38) * harmonicSum;
+            }
+
+            // Effective radius: R_eff(y, theta, t) = r(y) * (1 + D_idle + D_voice)
+            const rEff = rBase * (1 + D_idle + D_voice);
+
+            // 3D coordinates with yaw rotation around Y axis
+            const thetaRot = theta + yawRotation;
+            const x1 = rEff * Math.cos(thetaRot);
+            const y1 = yi;
+            const z1 = rEff * Math.sin(thetaRot);
+
+            // 3D perspective pitch tilt around X axis
+            const x2 = x1;
+            const y2 = y1 * cosTilt - z1 * sinTilt;
+            const z2 = y1 * sinTilt + z1 * cosTilt;
+
+            // Screen projection
+            const sx = cx + x2;
+            const sy = cy + y2;
+
+            segPoints.push({ x: sx, y: sy, z: z2 });
+            sumZ += z2;
+          }
+
+          // Perspective transparency: back is 0.25 - 0.35, front is 1.0 (Specification 4.1 #4)
+          const avgZ = sumZ / segPoints.length;
+          const normZ = Math.max(0, Math.min(1, (avgZ + BASE_R) / (2 * BASE_R)));
+          const alpha = 0.28 + 0.72 * normZ;
+
+          ctx.beginPath();
+          ctx.moveTo(segPoints[0].x, segPoints[0].y);
+          for (let k = 1; k < segPoints.length; k++) {
+            ctx.lineTo(segPoints[k].x, segPoints[k].y);
+          }
+          ctx.strokeStyle = `rgba(${GOLD_RGB}, ${alpha.toFixed(3)})`;
+          ctx.lineWidth = STROKE_WIDTH;
+          ctx.stroke();
+        }
       }
 
-      // --- 1. DYNAMIC INTERNAL FILL (Strictly 3 Palette Colors) ---
-      const gradShiftX = cx + Math.sin(animTime * 0.8) * (15 + speechEnergy * 28);
-      const gradShiftY = cy + Math.cos(animTime * 0.6) * (15 + speechEnergy * 28);
-      const gradR = baseRadius * (1.1 + speechEnergy * 0.25);
-
-      const radGrad = ctx.createRadialGradient(gradShiftX, gradShiftY, 4, cx, cy, gradR);
-
-      // Color 3: Warm Amber Accent with dynamic breathing alpha
-      const accentAlpha = 0.22 + 0.18 * Math.sin(animTime * 1.5) + speechEnergy * 0.45;
-      radGrad.addColorStop(0, `rgba(${palette.accentRgb[0]}, ${palette.accentRgb[1]}, ${palette.accentRgb[2]}, ${Math.min(accentAlpha, 0.9)})`);
-
-      // Color 2: Typography Pearl blend
-      const textAlpha = 0.08 + 0.06 * Math.cos(animTime * 1.1) + speechEnergy * 0.15;
-      radGrad.addColorStop(0.55, `rgba(${palette.textRgb[0]}, ${palette.textRgb[1]}, ${palette.textRgb[2]}, ${textAlpha})`);
-
-      // Color 1: Obsidian Void Background
-      radGrad.addColorStop(1, `rgba(${palette.voidRgb[0]}, ${palette.voidRgb[1]}, ${palette.voidRgb[2]}, 0.88)`);
-
-      // Fill the organic morphed shape
-      ctx.beginPath();
-      ctx.moveTo((points[0].x + points[numVertices - 1].x) / 2, (points[0].y + points[numVertices - 1].y) / 2);
-      for (let i = 0; i < numVertices; i++) {
-        const next = points[(i + 1) % numVertices];
-        const midX = (points[i].x + next.x) / 2;
-        const midY = (points[i].y + next.y) / 2;
-        ctx.quadraticCurveTo(points[i].x, points[i].y, midX, midY);
-      }
-      ctx.closePath();
-
-      ctx.fillStyle = radGrad;
-      ctx.fill();
-
-      // Outer hairline border
-      ctx.strokeStyle = `rgba(${palette.accentRgb[0]}, ${palette.accentRgb[1]}, ${palette.accentRgb[2]}, ${0.45 + speechEnergy * 0.45})`;
-      ctx.lineWidth = 1.3;
-      ctx.stroke();
-
-      // --- 2. SACRED GEOMETRY WIREFRAME CHORDS ---
-      ctx.beginPath();
-      ctx.strokeStyle = `rgba(${palette.accentRgb[0]}, ${palette.accentRgb[1]}, ${palette.accentRgb[2]}, ${0.12 + speechEnergy * 0.25})`;
-      ctx.lineWidth = 0.8;
-      for (let i = 0; i < numVertices; i++) {
-        const targetA = points[(i + 4) % numVertices];
-        ctx.moveTo(points[i].x, points[i].y);
-        ctx.lineTo(targetA.x, targetA.y);
-      }
-      ctx.stroke();
-
-      // Delicate concentric inner ring
-      ctx.beginPath();
-      const innerR = 32 + Math.cos(animTime * 1.4) * (2.5 + speechEnergy * 5);
-      ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(${palette.textRgb[0]}, ${palette.textRgb[1]}, ${palette.textRgb[2]}, ${0.15 + speechEnergy * 0.2})`;
-      ctx.lineWidth = 0.8;
-      ctx.stroke();
-
-      // --- 3. IN-SHAPE STATUS INDICATOR (Amber V on Success, Amber X on Error) ---
-      if (captureResultIcon === 'success') {
-        // Draw elegant glowing amber checkmark V inside the shape
-        ctx.save();
-        ctx.beginPath();
-        ctx.strokeStyle = `rgba(${palette.accentRgb[0]}, ${palette.accentRgb[1]}, ${palette.accentRgb[2]}, 0.95)`;
-        ctx.lineWidth = 3.5;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.shadowColor = `rgba(${palette.accentRgb[0]}, ${palette.accentRgb[1]}, ${palette.accentRgb[2]}, 0.8)`;
-        ctx.shadowBlur = 12;
-        ctx.moveTo(cx - 13, cy - 1);
-        ctx.lineTo(cx - 4, cy + 9);
-        ctx.lineTo(cx + 15, cy - 10);
-        ctx.stroke();
-        ctx.restore();
-      } else if (captureResultIcon === 'error') {
-        // Draw elegant glowing amber cross X inside the shape
-        ctx.save();
-        ctx.beginPath();
-        ctx.strokeStyle = `rgba(${palette.accentRgb[0]}, ${palette.accentRgb[1]}, ${palette.accentRgb[2]}, 0.95)`;
-        ctx.lineWidth = 3.5;
-        ctx.lineCap = 'round';
-        ctx.shadowColor = `rgba(${palette.accentRgb[0]}, ${palette.accentRgb[1]}, ${palette.accentRgb[2]}, 0.8)`;
-        ctx.shadowBlur = 12;
-        const s = 10;
-        ctx.moveTo(cx - s, cy - s);
-        ctx.lineTo(cx + s, cy + s);
-        ctx.moveTo(cx + s, cy - s);
-        ctx.lineTo(cx - s, cy + s);
-        ctx.stroke();
-        ctx.restore();
-      } else {
-        // Small central spark of living light
-        ctx.beginPath();
-        ctx.arc(cx, cy, 2.5 + speechEnergy * 2.5, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${palette.accentRgb[0]}, ${palette.accentRgb[1]}, ${palette.accentRgb[2]}, ${0.7 + speechEnergy * 0.3})`;
-        ctx.fill();
-      }
-
-      requestAnimationFrame(drawSacredGeometry);
+      requestAnimationFrame(drawContourOrb3D);
     }
 
     // Start drawing loop
-    drawSacredGeometry();
+    drawContourOrb3D();
 
     // Helper to detect iOS device
     function isIOSDevice() {
@@ -1211,8 +1198,9 @@
         try { audioContext.close(); } catch (e) {}
         audioContext = null;
       }
-      analyser = null;
-      dataArray = null;
+      analyserNode = null;
+      audioDataArray = null;
+      smoothedAudioLevel = 0;
     }
 
     // ================= RECORDING TOGGLE: Clean Single Debounced Listener =================
@@ -1250,7 +1238,6 @@
       } catch (e) {}
     }
     let mediaChunks = [];
-    let audioContext = null;
     let analyser = null;
     let dataArray = null;
     let recordingStartTime = 0;
@@ -1368,6 +1355,25 @@
 
           const stream = await getUserMediaWithTimeout({ audio: true });
           audioStream = stream;
+
+          // Wire Web Audio API analyser for real-time 3D Contour Orb reactivity
+          try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!audioContext || audioContext.state === 'closed') {
+              audioContext = new AudioContextClass();
+            }
+            if (audioContext.state === 'suspended') {
+              await audioContext.resume();
+            }
+            const source = audioContext.createMediaStreamSource(audioStream);
+            analyserNode = audioContext.createAnalyser();
+            analyserNode.fftSize = 512;
+            analyserNode.smoothingTimeConstant = 0.8;
+            source.connect(analyserNode);
+            audioDataArray = new Uint8Array(analyserNode.frequencyBinCount);
+          } catch (audioErr) {
+            console.warn('[ECHO WebAudio] Live analyser setup note:', audioErr);
+          }
 
           // Check if user tapped to cancel while waiting for mic prompt
           if (abortStartRequested) {

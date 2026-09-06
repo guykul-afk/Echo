@@ -6,10 +6,10 @@ import {
   PrincipalAgentTension,
   DecisionTempo,
   FiveHumanDimensions,
-  FourHumanDimensions,
-  RefinedInsight
+  FourHumanDimensions
 } from '@echo/shared';
 import { CognitiveAnalysisResult } from '../prompts/cognitive-engine.prompt.js';
+import { DeltaAnalysisResult } from '../prompts/delta-engine.prompt.js';
 
 export interface ExtractedStatementDTO {
   text: string;
@@ -38,7 +38,6 @@ export interface EpistemicExtractionResult {
   illuminationQuestion: string;
   fourDimensions?: FourHumanDimensions;
   fiveDimensions?: FiveHumanDimensions;
-  refinedInsight?: RefinedInsight;
 }
 
 export interface IAiProvider {
@@ -55,5 +54,12 @@ export interface IAiProvider {
   extractEpistemicSchema(rawText: string, activeEraContext?: string): Promise<EpistemicExtractionResult>;
 
   extractCognitiveEngine?(rawText: string): Promise<CognitiveAnalysisResult>;
+  extractDelta?(
+    rawCapture: string,
+    humanDimensions: FiveHumanDimensions,
+    illuminationQuestion: string,
+    userAnswer: string,
+    isSkip: boolean
+  ): Promise<DeltaAnalysisResult>;
   generateStructuralEmbedding(signature: ExtractedSignatureDTO, context: Record<string, any>): Promise<number[]>;
 }

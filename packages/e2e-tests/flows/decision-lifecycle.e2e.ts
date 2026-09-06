@@ -3,6 +3,7 @@ import {
   submitDeliberationAnswerHandler,
   finalizeEvaluationContractHandler,
   recordOutcomeHandler,
+  recordMirrorFeedbackHandler,
   EpistemicConsolidationService
 } from '@echo/backend';
 import { MockIsolatedDatabase } from '../helpers/test-context.js';
@@ -42,6 +43,31 @@ export async function testFullDecisionLifecycle(): Promise<boolean> {
   console.log(`✓ Status: ${captureResponse.decisionCase.status}`);
   console.log(`✓ Adaptive Intervention Question: "${captureResponse.illuminationQuestion}"`);
 
+  if (captureResponse.decisionCase.refinedInsight !== undefined) {
+    throw new Error('VIOLATION: Refined Insight was pre-generated at Capture step!');
+  }
+  if (captureResponse.decisionCase.nextStep !== undefined) {
+    throw new Error('VIOLATION: Next Step was pre-generated at Capture step!');
+  }
+  console.log('✓ Verified: Refined Insight and Next Step are strictly undefined at Capture time.');
+
+  // Step 1.5: The First 20 Seconds Validation & Feedback
+  console.log(`✓ First 20 Seconds Focus:`);
+  console.log(`   - מתח מרכזי: "${captureResponse.decisionCase.centralTension}"`);
+  console.log(`   - ציר ההכרעה: "${captureResponse.decisionCase.keyHinge}"`);
+  const feedbackRes = await recordMirrorFeedbackHandler(
+    { caseId, feedback: 'accurate' },
+    { auth: { uid: userId } }
+  );
+  if (!captureResponse.bespokeQuestion || captureResponse.bespokeQuestion.shouldIntervene !== true) {
+    throw new Error('E2E VIOLATION: Case should have active intervention question with shouldIntervene === true');
+  }
+  if (captureResponse.bespokeQuestion.responseWidget !== 'priority') {
+    throw new Error(`E2E VIOLATION: Expected responseWidget priority, got ${captureResponse.bespokeQuestion.responseWidget}`);
+  }
+  console.log(`✓ Phase 2 Adaptive UI: Widget "${captureResponse.bespokeQuestion.responseWidget}" ready for 1-tap response (ERV: ${captureResponse.bespokeQuestion.expectedReflectionValue})`);
+  console.log(`✓ Mirror feedback recorded: "מדויק ✓"`);
+
   // 2. ANSWER ADAPTIVE INTERVENTION & RECEIVE BEFORE/AFTER FLASH
   console.log('\nStep 2: Submitting Answer to Adaptive Intervention (Generating Refined Insight)...');
   const answerResponse = await submitDeliberationAnswerHandler(
@@ -70,7 +96,9 @@ export async function testFullDecisionLifecycle(): Promise<boolean> {
       selectedOptionId: captureResponse.options[1]?.id || 'opt-pilot',
       targetCriteria: 'הסכמה של המנהל ליום אחד בשבוע ללא עבודה בערב',
       checkHorizonDays: 14,
-      falsificationSignal: 'דרישת זמינות מוחלטת בכל יום'
+      falsificationSignal: 'דרישת זמינות מוחלטת בכל יום',
+      subjectiveConfidence: 80,
+      predictedOutcome: 'הסכמה עקרונית ליום גמיש אחד בשבוע'
     },
     { auth: { uid: userId } }
   );
@@ -78,11 +106,15 @@ export async function testFullDecisionLifecycle(): Promise<boolean> {
   if (!contractResponse.success || contractResponse.status !== 'contract_locked') {
     throw new Error('Contract finalization failed');
   }
+  if (contractResponse.contract.subjectiveConfidence !== 80) {
+    throw new Error('Prediction capture subjectiveConfidence was not persisted');
+  }
   userStore.contracts.set(caseId, contractResponse.contract);
   const currentCase = userStore.cases.get(caseId)!;
   currentCase.status = 'contract_locked';
 
   console.log(`✓ Contract recorded: Criterion = "${contractResponse.contract.targetCriteria}"`);
+  console.log(`✓ Phase 5 Prediction Capture: ודאות סובייקטיבית = ${contractResponse.contract.subjectiveConfidence}%, תחזית = "${contractResponse.contract.predictedOutcome}"`);
 
   // 4. RECORD 3-AXIS CONTINUOUS LEARNING OUTCOME
   console.log('\nStep 4: Recording 3-Axis Continuous Learning Outcome...');
@@ -92,7 +124,10 @@ export async function testFullDecisionLifecycle(): Promise<boolean> {
       whatHappened: 'התפקיד תובעני, אך שיחת הבירור מראש אפשרה לקבוע ערב אחד קבוע בלי עבודה.',
       assumptionClarification: 'החשש המקורי נפתר חלקית בעקבות שיחה מוקדמת.',
       processReflection: 'היה נכון לברר זאת בשלב מוקדם עוד יותר.',
-      quickStatus: 'clarified',
+      quickStatus: 'succeeded_as_expected',
+      decisionQualityRating: 'high_rationality',
+      outcomeQualityRating: 'favorable',
+      luckAttribution: 'skill_process',
       wasCriteriaMet: true
     },
     { auth: { uid: userId } }
@@ -101,12 +136,16 @@ export async function testFullDecisionLifecycle(): Promise<boolean> {
   if (!outcomeResponse.success) {
     throw new Error('Outcome recording failed');
   }
+  if (outcomeResponse.outcome.decisionQualityRating !== 'high_rationality') {
+    throw new Error('Decision Quality Rating was not persisted on Outcome');
+  }
   userStore.outcomes.set(caseId, outcomeResponse.outcome);
   console.log(`✓ 3-Axis Outcome recorded:`);
   console.log(`   - מה קרה בפועל: "${outcomeResponse.outcome.whatHappened}"`);
   console.log(`   - מה התברר על ההנחה: "${outcomeResponse.outcome.assumptionClarification}"`);
   console.log(`   - מה היית משנה: "${outcomeResponse.outcome.processReflection}"`);
-  console.log(`   - סטטוס מהיר: "${outcomeResponse.outcome.quickStatus}"`);
+  console.log(`   - סטטוס מהיר (4 כפתורים): "${outcomeResponse.outcome.quickStatus}"`);
+  console.log(`   - איכות תהליך ההחלטה (Decision Quality): "${outcomeResponse.outcome.decisionQualityRating}" (הפרדה ממזל: ${outcomeResponse.outcome.luckAttribution})`);
 
   // 5. EPISTEMIC CONSOLIDATION
   console.log('\nStep 5: Epistemic Consolidation Background Job...');

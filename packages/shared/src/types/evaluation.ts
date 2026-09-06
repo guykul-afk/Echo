@@ -12,5 +12,10 @@ export interface EvaluationContract {
   reviewDate: number; // epoch ms
   triggerType: TriggerType;
   isTriggered: boolean;
+
+  // Phase 5: Prediction Capture
+  subjectiveConfidence?: number; // 0-100% subjective probability of success
+  predictedOutcome?: string;    // specific verifiable prediction at decision time
+
   createdAt: number;
 }

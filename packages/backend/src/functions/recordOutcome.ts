@@ -8,6 +8,11 @@ export interface RecordOutcomeRequest {
   processReflection?: string;
   quickStatus?: QuickLoopStatus;
 
+  // Phase 5: Decision Quality vs Outcome Quality
+  decisionQualityRating?: 'high_rationality' | 'acceptable_process' | 'rushed_blindspots';
+  outcomeQualityRating?: 'favorable' | 'unfavorable' | 'mixed';
+  luckAttribution?: 'skill_process' | 'external_luck' | 'bad_luck_good_decision';
+
   // Backward compatibility
   actualResultSummary?: string;
   wasCriteriaMet?: boolean;
@@ -44,6 +49,9 @@ export async function recordOutcomeHandler(
     assumptionClarification,
     processReflection,
     quickStatus: data.quickStatus,
+    decisionQualityRating: data.decisionQualityRating || (processReflection ? 'high_rationality' : 'acceptable_process'),
+    outcomeQualityRating: data.outcomeQualityRating || (data.wasCriteriaMet ? 'favorable' : 'mixed'),
+    luckAttribution: data.luckAttribution || 'skill_process',
     observedFacts: whatHappened,
     criteriaEvaluation: data.wasCriteriaMet ? 'succeeded' : 'partially_succeeded',
     reflectionNotes: assumptionClarification,

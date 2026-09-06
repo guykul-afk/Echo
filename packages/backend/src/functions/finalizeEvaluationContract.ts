@@ -7,6 +7,8 @@ export interface FinalizeContractRequest {
   targetCriteria: string;
   checkHorizonDays: number;
   falsificationSignal?: string;
+  subjectiveConfidence?: number;
+  predictedOutcome?: string;
 }
 
 /**
@@ -38,6 +40,8 @@ export async function finalizeEvaluationContractHandler(
     reviewDate,
     triggerType: 'scheduled_date',
     isTriggered: false,
+    subjectiveConfidence: data.subjectiveConfidence,
+    predictedOutcome: data.predictedOutcome,
     createdAt: now
   };
 

@@ -177,38 +177,19 @@
         <span class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer">more_vert</span>
       </header>
 
-      <!-- Sacred Geometry Central Orb -->
+      <!-- ECHO 3D Contour Orb (Spec Section 4: Pure Mathematical Geometry) -->
       <div class="flex flex-col items-center justify-center my-6 relative">
         <div class="absolute inset-0 bg-primary/5 blur-[90px] rounded-full w-[260px] h-[260px] mx-auto top-1/2 -translate-y-1/2 -z-10"></div>
         
-        <div class="relative w-44 h-44 flex items-center justify-center mb-6 cursor-pointer group">
-          <!-- Outer Rotating Ring -->
-          <div class="absolute inset-0 border border-primary/25 rounded-full sacred-ring"></div>
-          <div class="absolute inset-2 border border-secondary/20 rounded-full sacred-ring-reverse rotate-45"></div>
-          <div class="absolute inset-6 border border-primary/30 rounded-lg sacred-ring rotate-12"></div>
-          
-          <!-- Core Orb Button -->
-          <div class="w-24 h-24 bg-surface-container rounded-full border border-primary/60 sacred-orb flex items-center justify-center relative overflow-hidden">
-            <span class="material-symbols-outlined text-primary text-4xl opacity-90" style="font-variation-settings: 'FILL' 1;">mic</span>
-          </div>
+        <div class="relative w-64 h-64 flex items-center justify-center mb-4 cursor-pointer" onclick="toggleStitchVoice()" title="לחץ להאזנה">
+          <!-- Ambient Aura -->
+          <div class="absolute w-64 h-64 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(212, 175, 55, 0.08) 0%, transparent 70%);"></div>
+          <canvas id="stitchOrbCanvas" width="260" height="260" class="relative z-10 pointer-events-none"></canvas>
         </div>
 
-        <!-- Timer & Listening Prompt -->
-        <div class="flex flex-col items-center gap-1.5 mb-6 text-center">
-          <span class="font-mono text-2xl text-on-surface font-semibold tracking-wider">00:42</span>
-          <span class="text-sm text-on-surface-variant">מקשיב למחשבה הגולמית שלך...</span>
-        </div>
-
-        <!-- Bouncing Audio Waveform -->
-        <div class="flex items-end justify-center h-[28px] gap-1.5 mb-8">
-          <div class="wave-bar h-[8px]"></div>
-          <div class="wave-bar h-[14px]"></div>
-          <div class="wave-bar h-[22px]"></div>
-          <div class="wave-bar h-[28px]"></div>
-          <div class="wave-bar h-[18px]"></div>
-          <div class="wave-bar h-[12px]"></div>
-          <div class="wave-bar h-[6px]"></div>
-        </div>
+        <p id="stitchOrbHint" class="text-xs text-on-surface-variant font-light mb-6">
+          גע בכדור להקשבה ולכידת מחשבה
+        </p>
       </div>
 
       <!-- Raw Capture Input Box -->
@@ -467,6 +448,105 @@
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+
+    // ================= 3D CONTOUR ORB ANIMATION =================
+    const orbCanvas = document.getElementById('stitchOrbCanvas');
+    const orbCtx = orbCanvas ? orbCanvas.getContext('2d') : null;
+    let stitchIsRecording = false;
+    let stitchAnimTime = 0;
+    let stitchYaw = 0;
+    let stitchAudioLevel = 0;
+
+    function toggleStitchVoice() {
+      stitchIsRecording = !stitchIsRecording;
+      const hint = document.getElementById('stitchOrbHint');
+      if (hint) {
+        hint.innerText = stitchIsRecording ? 'מקשיב לך... (גע שוב לעצירה)' : 'גע בכדור להקשבה ולכידת מחשבה';
+        hint.style.color = stitchIsRecording ? '#D4AF37' : '';
+      }
+    }
+
+    function renderStitchOrb() {
+      if (!orbCtx || !orbCanvas) return;
+      const w = orbCanvas.width;
+      const h = orbCanvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+
+      orbCtx.clearRect(0, 0, w, h);
+
+      stitchAnimTime += 0.024;
+      stitchYaw += 0.018;
+
+      const targetAudio = stitchIsRecording ? (0.45 + 0.3 * Math.sin(stitchAnimTime * 7)) : 0;
+      stitchAudioLevel += (targetAudio - stitchAudioLevel) * 0.12;
+
+      const N = 32;
+      const M = 140;
+      const R = 88;
+      const cosTilt = Math.cos(0.38);
+      const sinTilt = Math.sin(0.38);
+
+      for (let i = 0; i < N; i++) {
+        const yi = R * ((2 * i) / (N - 1) - 1);
+        const rBase = Math.sqrt(Math.max(0, R * R - yi * yi));
+        if (rBase < 0.8) continue;
+
+        const SEGMENTS = 14;
+        const ptsPerSeg = Math.floor(M / SEGMENTS);
+
+        for (let s = 0; s < SEGMENTS; s++) {
+          const segPoints = [];
+          let sumZ = 0;
+
+          for (let p = 0; p <= ptsPerSeg; p++) {
+            const ptIdx = (s * ptsPerSeg + p) % M;
+            const theta = (ptIdx / M) * Math.PI * 2;
+
+            const D_idle = 0.04 * Math.sin(3 * theta + 0.8 * stitchAnimTime) * Math.cos((2 * yi) / R + 0.5 * stitchAnimTime);
+            let D_voice = 0;
+            if (stitchAudioLevel > 0.002) {
+              const m = 4;
+              let harmonicSum = 0;
+              for (let k = 1; k <= 3; k++) {
+                harmonicSum += (1.0 / k) * Math.sin(k * m * theta + k * 1.35 * stitchAnimTime) * Math.cos((k * Math.PI * yi) / R);
+              }
+              D_voice = (stitchAudioLevel * 0.38) * harmonicSum;
+            }
+
+            const rEff = rBase * (1 + D_idle + D_voice);
+            const thetaRot = theta + stitchYaw;
+            const x1 = rEff * Math.cos(thetaRot);
+            const y1 = yi;
+            const z1 = rEff * Math.sin(thetaRot);
+
+            const x2 = x1;
+            const y2 = y1 * cosTilt - z1 * sinTilt;
+            const z2 = y1 * sinTilt + z1 * cosTilt;
+
+            segPoints.push({ x: cx + x2, y: cy + y2, z: z2 });
+            sumZ += z2;
+          }
+
+          const avgZ = sumZ / segPoints.length;
+          const normZ = Math.max(0, Math.min(1, (avgZ + R) / (2 * R)));
+          const alpha = 0.28 + 0.72 * normZ;
+
+          orbCtx.beginPath();
+          orbCtx.moveTo(segPoints[0].x, segPoints[0].y);
+          for (let k = 1; k < segPoints.length; k++) {
+            orbCtx.lineTo(segPoints[k].x, segPoints[k].y);
+          }
+          orbCtx.strokeStyle = `rgba(212, 175, 55, ${alpha.toFixed(3)})`;
+          orbCtx.lineWidth = 1.2;
+          orbCtx.stroke();
+        }
+      }
+
+      requestAnimationFrame(renderStitchOrb);
+    }
+
+    renderStitchOrb();
   </script>
 </body>
 </html>

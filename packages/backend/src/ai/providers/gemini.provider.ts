@@ -1,6 +1,8 @@
+import { FiveHumanDimensions } from '@echo/shared';
 import { IAiProvider, EpistemicExtractionResult, ExtractedSignatureDTO } from '../provider.interface.js';
 import { EPISTEMIC_EXTRACTION_SYSTEM_PROMPT } from '../../prompts/epistemic-extraction.prompt.js';
 import { COGNITIVE_ENGINE_PROMPT, CognitiveAnalysisResult } from '../../prompts/cognitive-engine.prompt.js';
+import { DELTA_ENGINE_PROMPT, DeltaAnalysisResult } from '../../prompts/delta-engine.prompt.js';
 
 export class GeminiAiProvider implements IAiProvider {
   private apiKey: string;
@@ -162,6 +164,88 @@ Extract the epistemic breakdown, decision signature, four human dimensions, and 
     }
 
     return JSON.parse(candidateText) as CognitiveAnalysisResult;
+  }
+
+  async extractDelta(
+    rawCapture: string,
+    humanDimensions: FiveHumanDimensions,
+    illuminationQuestion: string,
+    userAnswer: string,
+    isSkip: boolean
+  ): Promise<DeltaAnalysisResult> {
+    if (isSkip || !userAnswer || userAnswer.trim().length === 0) {
+      return {
+        refinedInsight: {
+          before: humanDimensions.consideration || rawCapture.slice(0, 80),
+          now: 'נשמר המצב המקורי ללא הרחבה נוספת',
+          chosenStep: 'שמירה והמשך מעקב'
+        },
+        userOwnershipVerified: true,
+        changedAssumptions: [],
+        newFacts: [],
+        resolvedUnknowns: []
+      };
+    }
+
+    if (!this.apiKey) {
+      throw new Error('GEMINI_API_KEY is not configured.');
+    }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.cognitiveModel}:generateContent?key=${this.apiKey}`;
+    const userPrompt = `
+Original Raw Capture:
+"""${rawCapture}"""
+
+Initial Mirror Dimensions:
+- Consideration: ${humanDimensions.consideration}
+- Goals & Prices: ${humanDimensions.goalsPrices}
+- Facts: ${humanDimensions.facts}
+- Assumptions: ${humanDimensions.assumptions}
+- Missing Info: ${humanDimensions.missingInfo}
+
+Illumination Question:
+"${illuminationQuestion}"
+
+User's Response:
+"""${userAnswer}"""
+`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: DELTA_ENGINE_PROMPT }] },
+        contents: [{ parts: [{ text: userPrompt }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.2
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini Delta API error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!candidateText) {
+      throw new Error('No content returned from Gemini Delta Engine.');
+    }
+
+    const parsed = JSON.parse(candidateText);
+    return {
+      refinedInsight: {
+        before: parsed.before || humanDimensions.consideration || rawCapture.slice(0, 80),
+        now: parsed.now || userAnswer.slice(0, 80),
+        chosenStep: parsed.chosenStep || userAnswer.slice(0, 100)
+      },
+      userOwnershipVerified: Boolean(parsed.userOwnershipVerified ?? true),
+      changedAssumptions: Array.isArray(parsed.changedAssumptions) ? parsed.changedAssumptions : [],
+      newFacts: Array.isArray(parsed.newFacts) ? parsed.newFacts : [],
+      resolvedUnknowns: Array.isArray(parsed.resolvedUnknowns) ? parsed.resolvedUnknowns : []
+    };
   }
 
   async generateStructuralEmbedding(signature: ExtractedSignatureDTO, _context: Record<string, any>): Promise<number[]> {

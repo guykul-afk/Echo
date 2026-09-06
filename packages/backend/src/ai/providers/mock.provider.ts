@@ -1,5 +1,7 @@
+import { FiveHumanDimensions } from '@echo/shared';
 import { IAiProvider, EpistemicExtractionResult, ExtractedSignatureDTO } from '../provider.interface.js';
 import { CognitiveAnalysisResult } from '../../prompts/cognitive-engine.prompt.js';
+import { DeltaAnalysisResult } from '../../prompts/delta-engine.prompt.js';
 
 export class MockAiProvider implements IAiProvider {
   /**
@@ -24,6 +26,8 @@ export class MockAiProvider implements IAiProvider {
         goal: 'התקדמות מקצועית והכנסה גבוהה יותר לצד שימור נוכחות בבית',
         fourDimensions: {
           consideration: 'מעבר לתפקיד חדש',
+          centralTension: 'הכנסה והתקדמות מקצועית מול נוכחות בבית וזמן עם הילדים',
+          keyHinge: 'האם התפקיד החדש באמת מחייב זמינות שוטפת בערבים או שניתן לתאם גמישות מראש',
           goalsPrices: 'התקדמות והכנסה גבוהה יותר, תוך שמירה על זמן ונוכחות בבית',
           facts: 'הוצעה הצעה קונקרטית עם שכר משופר',
           assumptions: 'התפקיד ידרוש שעות מרובות ללא גמישות בערבים',
@@ -52,12 +56,7 @@ export class MockAiProvider implements IAiProvider {
           principalAgentTension: 'sole_actor',
           decisionTempo: 'tactical_weeks'
         },
-        illuminationQuestion: 'אם אי אפשר לקבל גם שכר מלא וגם גמישות מלאה, איזה בירור קטן לפני מתן תשובה יוכל לעזור לך להחליט?',
-        refinedInsight: {
-          before: 'חשש כללי שהתפקיד יפגע בזמן עם הילדים או שזה סתם פחד משינוי',
-          now: 'החשש ממוקד בזמינות בשעות הערב שעדיין לא בוררה ישירות',
-          chosenStep: 'לשאול את המנהל על ציפיות הזמינות בערבים לפני מתן תשובה'
-        }
+        illuminationQuestion: 'אם אי אפשר לקבל גם שכר מלא וגם גמישות מלאה, איזה בירור קטן לפני מתן תשובה יוכל לעזור לך להחליט?'
       };
     }
 
@@ -69,6 +68,8 @@ export class MockAiProvider implements IAiProvider {
         goal: 'אימות היתכנות מסחרית מבלי לבזבז קיבולת צוות מוגבלת',
         fourDimensions: {
           consideration: 'המשך השקעה בפרויקט אטלס לעוד 3 חודשים',
+          centralTension: 'מחויבות להמשך פיתוח של 3 חודשים מול סכנת שריפת משאבים ללא לקוח משלם',
+          keyHinge: 'האם נכונות לשלם מחייבת פיתוח מלא או שניתנת לבדיקה זולה תוך שבועיים',
           goalsPrices: 'אימות נכונות לשלם מבלי להקריב את כל משאבי הפיתוח',
           facts: 'שני לקוחות פוטנציאליים רוצים לבדוק את המוצר, כבר הושקעו 200K ואין עדיין לקוח משלם',
           assumptions: 'הלקוחות המתעניינים יסכימו להמיר לשימוש בתשלום, והפיתוח יסתיים במועד',
@@ -97,12 +98,7 @@ export class MockAiProvider implements IAiProvider {
           principalAgentTension: 'team_alignment',
           decisionTempo: 'tactical_weeks'
         },
-        illuminationQuestion: 'האם קיימת בדיקה קטנה או פיילוט קצר שיכולים לאמת נכונות לשלם לפני התחייבות ל-3 חודשים?',
-        refinedInsight: {
-          before: 'התלבטות בין השקעת 3 חודשים לבין נטישת הפרויקט',
-          now: 'התחדד שניתן לבצע בדיקת נכונות לשלם זולה תוך שבועיים',
-          chosenStep: 'להציע לשני הלקוחות פיילוט ממוקד בתשלום'
-        }
+        illuminationQuestion: 'האם קיימת בדיקה קטנה או פיילוט קצר שיכולים לאמת נכונות לשלם לפני התחייבות ל-3 חודשים?'
       };
     }
 
@@ -113,6 +109,8 @@ export class MockAiProvider implements IAiProvider {
       goal: 'קבלת החלטה מושכלת ומדויקת',
       fourDimensions: {
         consideration: rawText.slice(0, 100),
+        centralTension: 'בחירה בין החלופה המובילה לבין השארת המצב הקיים',
+        keyHinge: 'בדיקת ההנחה המרכזית שמובילה את ההכרעה',
         goalsPrices: 'השגת המטרה במינימום מחיר וסיכון',
         facts: rawText.slice(0, 80),
         assumptions: 'קיימת חלופה מרכזית שנבחנת ועשויה להביא תוצאה טובה יותר',
@@ -135,12 +133,7 @@ export class MockAiProvider implements IAiProvider {
         principalAgentTension: 'sole_actor',
         decisionTempo: 'tactical_weeks'
       },
-      illuminationQuestion: 'אם יתברר שהפרט המרכזי שונה, האם תשקול אחרת?',
-      refinedInsight: {
-        before: rawText.slice(0, 80),
-        now: 'הדילמה נוסחה והוגדרו כיווני פעולה',
-        chosenStep: 'אימות ההנחה המרכזית'
-      }
+      illuminationQuestion: 'אם יתברר שהפרט המרכזי שונה, האם תשקול אחרת?'
     };
   }
 
@@ -151,6 +144,8 @@ export class MockAiProvider implements IAiProvider {
       return {
         humanDimensions: {
           consideration: 'מעבר לתפקיד חדש',
+          centralTension: 'הכנסה והתקדמות מקצועית מול נוכחות בבית וזמן עם הילדים',
+          keyHinge: 'האם התפקיד החדש באמת מחייב זמינות שוטפת בערבים או שניתן לתאם גמישות מראש',
           goalsPrices: 'התקדמות והכנסה גבוהה יותר, תוך שמירה על זמן ונוכחות בבית',
           facts: 'הוצעה הצעת עבודה ממשית עם שכר משופר',
           assumptions: 'התפקיד החדש יפגע בזמן עם הילדים וידרוש זמינות בערבים',
@@ -173,12 +168,11 @@ export class MockAiProvider implements IAiProvider {
           strategy: 'competing_goals',
           questionText: 'אם אי אפשר לקבל את שניהם במלואם, על מה פחות תרצה לוותר?',
           triggerReason: 'שתי מטרות מתחרות: הכנסה מול נוכחות בבית',
+          shouldIntervene: true,
+          expectedReflectionValue: 0.85,
+          responseWidget: 'priority',
+          responseOptions: ['הכנסה גבוהה יותר', 'זמן ונוכחות בבית'],
           canSkip: true
-        },
-        refinedInsight: {
-          before: 'חשש שהתפקיד יפגע בזמן עם הילדים',
-          now: 'החשש מתמקד בזמינות בערבים שעדיין לא בוררה',
-          chosenStep: 'לשאול את המנהל על ציפיות הזמינות בערב לפני מתן תשובה'
         }
       };
     }
@@ -187,6 +181,8 @@ export class MockAiProvider implements IAiProvider {
       return {
         humanDimensions: {
           consideration: 'המשך השקעה בפרויקט אטלס',
+          centralTension: 'מחויבות להמשך פיתוח של 3 חודשים מול סכנת שריפת משאבים ללא לקוח משלם',
+          keyHinge: 'האם נכונות לשלם מחייבת פיתוח מלא או שניתנת לבדיקה זולה תוך שבועיים',
           goalsPrices: 'אימות היתכנות מסחרית מבלי לשרוף משאבים',
           facts: 'שני לקוחות פוטנציאליים רוצים לבדוק את המוצר, כבר הושקעו 200K ואין לקוח משלם עדיין',
           assumptions: 'הלקוחות המתעניינים יסכימו להמיר לשימוש בתשלום, והפיתוח יסתיים תוך 3 חודשים',
@@ -209,12 +205,11 @@ export class MockAiProvider implements IAiProvider {
           strategy: 'missing_crucial_detail',
           questionText: 'אם יתברר שניסוי של שבועיים מספיק לבדיקת נכונות לשלם, האם תשקול אחרת?',
           triggerReason: 'הנחה שחייבים 3 חודשים לבדיקת ביקוש',
+          shouldIntervene: true,
+          expectedReflectionValue: 0.8,
+          responseWidget: 'confirmation',
+          responseOptions: ['כן, אעדיף ניסוי של שבועיים', 'לא, עדיין נדרשים 3 חודשים'],
           canSkip: true
-        },
-        refinedInsight: {
-          before: 'התלבטות בין 3 חודשי פיתוח נוספים לעצירה מלאה',
-          now: 'התחדד שניתן לבצע בדיקה קצרה בשבועיים',
-          chosenStep: 'הצעת פיילוט ממוקד לשני הלקוחות'
         }
       };
     }
@@ -222,6 +217,8 @@ export class MockAiProvider implements IAiProvider {
     return {
       humanDimensions: {
         consideration: rawText.slice(0, 80),
+        centralTension: 'בחירה בין החלופה המובילה לבין השארת המצב הקיים',
+        keyHinge: 'בדיקת ההנחה המרכזית שמובילה את ההכרעה',
         goalsPrices: 'השגת היעד בביטחון',
         facts: rawText.slice(0, 80),
         assumptions: 'הכיוון המוביל יביא לתוצאה הטובה ביותר',
@@ -244,13 +241,76 @@ export class MockAiProvider implements IAiProvider {
         strategy: 'no_intervention',
         questionText: 'תיארת את השיקולים ואת אי-הוודאות המרכזית. אפשר לשמור כך ולהמשיך.',
         triggerReason: 'Balanced description',
+        shouldIntervene: false,
+        expectedReflectionValue: 0.3,
+        smartSilenceMessage: 'נראה שכבר הפרדת היטב בין מה שאתה יודע לבין מה שאתה מניח. אין לי כרגע שאלה ששווה לעכב אותך בגללה.',
         canSkip: true
-      },
-      refinedInsight: {
-        before: rawText.slice(0, 80),
-        now: 'הדילמה נוסחה והוצגה במראה נקייה',
-        chosenStep: 'שמירה להמשך מעקב'
       }
+    };
+  }
+
+  async extractDelta(
+    rawCapture: string,
+    humanDimensions: FiveHumanDimensions,
+    _illuminationQuestion: string,
+    userAnswer: string,
+    isSkip: boolean
+  ): Promise<DeltaAnalysisResult> {
+    if (isSkip || !userAnswer || userAnswer.trim().length === 0) {
+      return {
+        refinedInsight: {
+          before: humanDimensions.consideration || rawCapture.slice(0, 80),
+          now: 'נשמר המצב המקורי ללא הרחבה נוספת',
+          chosenStep: 'שמירה והמשך מעקב'
+        },
+        userOwnershipVerified: true,
+        changedAssumptions: [],
+        newFacts: [],
+        resolvedUnknowns: []
+      };
+    }
+
+    const lower = userAnswer.toLowerCase();
+    // Career / Job answer check
+    if (lower.includes('מנהל') || lower.includes('זמינות') || lower.includes('ערב') || lower.includes('ערבים')) {
+      return {
+        refinedInsight: {
+          before: 'חשש שהתפקיד יפגע בזמן עם הילדים',
+          now: 'החשש מתמקד בזמינות בערבים שעדיין לא בוררה',
+          chosenStep: userAnswer
+        },
+        userOwnershipVerified: true,
+        changedAssumptions: ['ההנחה שהתפקיד בהכרח יפגע בכל הערבים נתונה לבירור'],
+        newFacts: [userAnswer],
+        resolvedUnknowns: ['ציפיות זמינות בערבים']
+      };
+    }
+
+    // Atlas answer check
+    if (lower.includes('פיילוט') || lower.includes('לקוחות') || lower.includes('שבועיים')) {
+      return {
+        refinedInsight: {
+          before: humanDimensions.consideration || 'התלבטות בין 3 חודשי פיתוח נוספים לעצירה מלאה',
+          now: 'התחדד שניתן לבצע בדיקה קצרה בשבועיים',
+          chosenStep: userAnswer
+        },
+        userOwnershipVerified: true,
+        changedAssumptions: ['נכונות לשלם מחייבת 3 חודשי פיתוח מלאים'],
+        newFacts: [userAnswer],
+        resolvedUnknowns: ['בדיקת נכונות לשלם בפיילוט']
+      };
+    }
+
+    return {
+      refinedInsight: {
+        before: humanDimensions.consideration || rawCapture.slice(0, 80),
+        now: `התחדד מתוך התשובה: ${userAnswer.slice(0, 80)}`,
+        chosenStep: userAnswer
+      },
+      userOwnershipVerified: true,
+      changedAssumptions: [],
+      newFacts: [userAnswer],
+      resolvedUnknowns: []
     };
   }
 

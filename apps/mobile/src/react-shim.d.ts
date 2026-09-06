@@ -14,6 +14,7 @@ declare namespace JSX {
 declare module 'react' {
   export const useState: <T = any>(initial: T | (() => T)) => [T, (val: T | ((prev: T) => T)) => void];
   export const useEffect: (effect: () => void | (() => void), deps?: any[]) => void;
+  export const useRef: <T = any>(initial?: T) => { current: T };
   export type FC<P = {}> = React.FC<P>;
   export const createElement: any;
   const React: any;
@@ -29,4 +30,5 @@ declare module 'react-native' {
   export const StyleSheet: any;
   export const SafeAreaView: any;
   export const StatusBar: any;
+  export const Platform: any;
 }
