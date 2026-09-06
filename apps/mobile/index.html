@@ -1775,27 +1775,30 @@
 - title: כותרת קצרה ומדויקת של הדילמה (עד 7 מילים)
 - consideration: "אתה שוקל:" — ניסוח בהיר בגוף שני של הדילמה או האפשרות הנבחנת
 - goalsPrices: "הבנתי שחשוב לך להשיג ולשמור:" — מה המשתמש שואף להשיג, ועל מה הוא רוצה לשמור או לא לשלם
-- facts: "עובדות קשיחות:" — מה כבר קרה בפועל, נתונים מוצקים ומידע ודאי
+- facts: "עובדות קשיחות:" — מה כבר קרה בפועל, נתונים מוצקים ומידע ודאי (למשל סכומים, היקף, מצב נוכחי)
 - assumptions: "ההנחות שלך:" — מה המשתמש משער, מניח או צופה לגבי העתיד
 - missingInfo: "מידע חסר לקבלת החלטה:" — אילו פערי מידע או שאלות פתוחות מונעים הכרעה
 - question: שאלת הארה סוקרטית אחת בלבד, חדה ומאירה, המאתגרת את ההנחה המרכזית ללא שיפוטיות
 - insightBefore: מה המשתמש הניח או חשב בנקודת המוצא (מבוסס על ההנחות שלו)
 - initialStep: הצעד המעשי והממוקד ביותר להמשך בירור או פעולה
+- proposedCriteria: מערך של 3 קריטריונים קונקרטיים להצלחה או מעקב עתידי המתאימים בדיוק לדילמה זו
 `;
 
-      try {
-        const cogController = new AbortController();
-        const cogTimer = setTimeout(() => cogController.abort(), 15000);
-
-        const cognitiveUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-        const cogRes = await fetch(cognitiveUrl, {
+      async function callCognitiveModel(modelName, timeoutMs = 10000) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+        const res = await fetch(url, {
           method: 'POST',
-          signal: cogController.signal,
+          signal: controller.signal,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               responseMimeType: 'application/json',
+              thinkingConfig: {
+                thinkingBudget: 0
+              },
               responseSchema: {
                 type: 'OBJECT',
                 properties: {
@@ -1807,33 +1810,56 @@
                   missingInfo: { type: 'STRING' },
                   question: { type: 'STRING' },
                   insightBefore: { type: 'STRING' },
-                  initialStep: { type: 'STRING' }
+                  initialStep: { type: 'STRING' },
+                  proposedCriteria: {
+                    type: 'ARRAY',
+                    items: { type: 'STRING' }
+                  }
                 },
-                required: ['title', 'consideration', 'goalsPrices', 'facts', 'assumptions', 'missingInfo', 'question', 'insightBefore', 'initialStep']
+                required: ['title', 'consideration', 'goalsPrices', 'facts', 'assumptions', 'missingInfo', 'question', 'insightBefore', 'initialStep', 'proposedCriteria']
               },
               temperature: 0.2
             }
           })
         });
-        clearTimeout(cogTimer);
+        clearTimeout(timer);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        let raw = '';
+        for (const p of parts) { if (p.text) raw += p.text; }
+        return JSON.parse(raw.replace(/```json/g, '').replace(/```/g, '').trim());
+      }
 
-        const cogData = await cogRes.json();
-        if (cogData.error) {
-          throw new Error(`שגיאת ניתוח קוגניטיבי: ${cogData.error.message || JSON.stringify(cogData.error)}`);
+      let parsed = null;
+      const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.6-flash'];
+      for (const m of modelsToTry) {
+        try {
+          parsed = await callCognitiveModel(m, 10000);
+          if (parsed && parsed.title) {
+            console.log(`[ECHO Cognitive] Analysis succeeded with model ${m}`);
+            break;
+          }
+        } catch (eModel) {
+          console.warn(`[ECHO Cognitive] Model ${m} failed:`, eModel.message);
         }
-        
-        const parts = cogData.candidates?.[0]?.content?.parts || [];
-        let rawJson = '';
-        for (const p of parts) {
-          if (p.text) rawJson += p.text;
-        }
+      }
 
-        rawJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsed = JSON.parse(rawJson);
+      if (!parsed) {
+        console.warn('[ECHO Cognitive] All cloud models failed, falling back to local engine');
+        runLocalCognitivePipeline(rawVerbatim);
+        return;
+      }
 
+      try {
         const factsVal = parsed.facts || 'נתונים שהוזנו בפועל';
         const assVal = parsed.assumptions || 'הנחות לגבי העתיד';
         const missVal = parsed.missingInfo || 'פערי מידע שטרם אומתו';
+
+        if (Array.isArray(parsed.proposedCriteria) && parsed.proposedCriteria.length >= 3) {
+          proposedCriteriaList = parsed.proposedCriteria.slice(0, 3);
+          updateCriteriaUI();
+        }
 
         const decisionRecord = {
           id: 'dc-' + Date.now(),
@@ -1852,6 +1878,7 @@
           insightBefore: parsed.insightBefore || assVal || 'נקודת המוצא הראשונית',
           insightNow: 'בדיקת הנחת הציר מול תרחיש הפוך',
           insightChosenStep: parsed.initialStep || 'בדיקה ממוקדת של המידע החסר',
+          proposedCriteria: proposedCriteriaList,
           selectedDays: 14
         };
 
@@ -1867,7 +1894,7 @@
         attemptScrollToNext('stageDeliberation');
 
       } catch (err) {
-        console.warn('Cloud Pipeline error, falling back to local cognitive engine:', err);
+        console.warn('Post-analysis formatting error:', err);
         runLocalCognitivePipeline(rawVerbatim);
       }
     }
