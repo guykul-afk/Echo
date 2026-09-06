@@ -22,25 +22,31 @@ export const App: React.FC = () => {
 
   // 1. Handle Quick Capture
   const handleCaptureSubmit = (rawText: string) => {
+    if (!rawText || !rawText.trim()) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setTimeout(() => {
       const now = Date.now();
+      const firstLine = rawText.split('\n')[0].trim();
+      const title = firstLine.slice(0, 50) + (firstLine.length > 50 ? '...' : '');
       const mockCase: DecisionCase = {
         id: 'dc-001',
         userId: 'user-noam',
-        title: 'שקילת מעבר לתפקיד חדש מול זמן עם הילדים',
+        title: title || 'דילמת שיקול דעת',
         status: 'deliberating',
-        family: 'career_transition',
+        family: 'general_deliberation',
         contextStakes: 'high',
         contextReversibility: 'partially_reversible',
         contextTimePressure: 'medium',
-        rawCaptureText: rawText || 'אני שוקל לקחת את התפקיד. השכר טוב יותר, אבל אני חושש שלא יהיה לי זמן לילדים. אולי אני סתם מפחד משינוי.',
+        rawCaptureText: rawText.trim(),
         frozenAt: now,
         frictionLevel: 'focused',
-        dimConsideration: 'מעבר לתפקיד חדש',
-        dimGoalsPrices: 'התקדמות והכנסה גבוהה יותר, תוך שמירה על זמן ונוכחות בבית',
-        dimReliance: 'הצעת שכר טובה יותר, תחושת חשש כללית',
-        dimUnknowns: 'מה יהיו שעות העבודה והזמינות בערבים בפועל',
+        dimConsideration: rawText.trim(),
+        dimGoalsPrices: 'השגת המטרה תוך שמירה על משאבים',
+        dimReliance: 'הנחות המוצא שהוזנו',
+        dimUnknowns: 'מידע חסר שטרם אומת',
         createdAt: now,
         updatedAt: now
       };

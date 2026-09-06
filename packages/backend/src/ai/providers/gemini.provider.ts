@@ -18,7 +18,7 @@ export class GeminiAiProvider implements IAiProvider {
   }
 
   /**
-   * Tier 1: Model 3.5 Transcribe (Verbatim Audio Speech-to-Text)
+   * Tier 1: Dedicated Transcribe (Verbatim Audio Speech-to-Text)
    */
   async transcribeAudio(audioBuffer: Buffer, mimeType: string = 'audio/mp3'): Promise<string> {
     if (!this.apiKey) {
@@ -27,6 +27,12 @@ export class GeminiAiProvider implements IAiProvider {
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.transcribeModel}:generateContent?key=${this.apiKey}`;
     const base64Audio = audioBuffer.toString('base64');
+
+    const antiHallucinationPrompt = `תמלל אך ורק ובמדויק מילה-במילה (Verbatim) את המילים שנאמרו במפורש בעברית בקובץ הקול.
+כללי ברזל מוחלטים למניעת הזיות (Strict Anti-Hallucination):
+1. אסור בהחלט להמציא, לנחש, לשער, להשלים או להוסיף מילים או משפטים שלא נשמעו בבירור מוחלט.
+2. אם ההקלטה שקטה, מכילה רעשי רקע, נשימות, מלמול בלתי מובן, או שלא ניתן להבין בוודאות מלאה דיבור ברור — השב אך ורק במילה אחת בדיוק: ריק
+3. אל תוסיף שום הקדמה, ברכה, הערה או סיכום.`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -42,13 +48,14 @@ export class GeminiAiProvider implements IAiProvider {
                 }
               },
               {
-                text: 'תמלל את הדיבור הבא מילה-במילה (Verbatim). אל תוסיף הקדמות, אל תסכם ואל תשמיט דבר.'
+                text: antiHallucinationPrompt
               }
             ]
           }
         ],
         generationConfig: {
-          temperature: 0.0
+          temperature: 0.0,
+          topP: 0.1
         }
       })
     });
@@ -58,7 +65,23 @@ export class GeminiAiProvider implements IAiProvider {
     }
 
     const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    const clean = rawText.replace(/[\s.,!?:;'"־\-`~()\[\]{}]+/g, '').trim();
+
+    if (
+      !rawText ||
+      clean === '' ||
+      clean === 'ריק' ||
+      clean.toLowerCase() === 'empty' ||
+      clean === 'לאברור' ||
+      clean === 'לא_ברור' ||
+      clean.toLowerCase() === 'unclear' ||
+      clean.length < 3
+    ) {
+      return '';
+    }
+
+    return rawText;
   }
 
   /**

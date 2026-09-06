@@ -108,13 +108,14 @@
             <div id="morphAuraRing" class="absolute w-[280px] h-[280px] rounded-full opacity-25 blur-2xl pointer-events-none transition-opacity duration-700" style="background: radial-gradient(circle, var(--c-accent) 0%, transparent 70%);"></div>
 
             <!-- Canvas Drawing Pure Morphing Geometry, Dynamic Fill & Inner V/X Indicator -->
-            <canvas id="geoCanvas" width="280" height="280" class="relative z-10"></canvas>
+            <canvas id="geoCanvas" width="280" height="280" class="relative z-10 pointer-events-none"></canvas>
           </div>
 
           <!-- Minimal Status Below Button -->
           <p id="geoStatusHint" class="text-xs mt-3 tracking-wide font-light opacity-60 transition-all duration-300">
             גע בלכידה
           </p>
+          <p id="geoStatusSubHint" class="text-[10px] mt-1 font-light opacity-40 text-rose-300 max-w-[280px] text-center"></p>
 
           <!-- Direct Text Option Toggle -->
           <div class="mt-2 flex flex-col items-center justify-center">
@@ -676,6 +677,15 @@
           .doc(decision.id)
           .set(payload, { merge: true });
 
+        // 3. Automatically sync and update local DECISION_CYCLES.md file
+        try {
+          fetch('/api/sync-decision', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }).catch(e => console.log('[Local file sync]:', e));
+        } catch (e) {}
+
         setCloudStatus(true, '☁️ נשמר בענן ✓');
         setTimeout(() => setCloudStatus(true, '☁️ ענן מחובר'), 3000);
       } catch (err) {
@@ -883,13 +893,14 @@
       return `echo_decisions_${currentUsername}`;
     }
 
-    const ECHO_STORAGE_VERSION = 'v5_pure_live_2026';
+    const ECHO_STORAGE_VERSION = 'v6_anti_hallucination_2026';
 
     function isMockOrLegacy(record) {
       if (!record || typeof record !== 'object') return true;
       const str = JSON.stringify(record).toLowerCase();
       if (str.includes('אטלס') || str.includes('אולס') || str.includes('atlas') || str.includes('olas')) return true;
       if (str.includes('500k') || str.includes('האם להשקיע 500')) return true;
+      if (str.includes('שוקל לקחת את התפקיד') || str.includes('זמן לילדים') || str.includes('מפחד משינוי')) return true;
       if (!record.rawVerbatim || typeof record.rawVerbatim !== 'string' || record.rawVerbatim.trim().length === 0) return true;
       return false;
     }
@@ -897,15 +908,23 @@
     function purgeMockStorage() {
       try {
         const ver = localStorage.getItem('echo_storage_version');
-        if (ver !== ECHO_STORAGE_VERSION) {
-          for (let i = localStorage.length - 1; i >= 0; i--) {
-            const k = localStorage.key(i);
-            if (k && (k.startsWith('echo_decisions_') || k.includes('atlas') || k.includes('guyfounder'))) {
+        const needsPurge = ver !== ECHO_STORAGE_VERSION;
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith('echo_decisions_') || k.includes('atlas') || k.includes('guyfounder'))) {
+            if (needsPurge) {
               localStorage.removeItem(k);
+            } else {
+              try {
+                const val = localStorage.getItem(k);
+                if (val && (val.includes('שוקל לקחת את התפקיד') || val.includes('אטלס') || val.includes('atlas'))) {
+                  localStorage.removeItem(k);
+                }
+              } catch (e) {}
             }
           }
-          localStorage.setItem('echo_storage_version', ECHO_STORAGE_VERSION);
         }
+        localStorage.setItem('echo_storage_version', ECHO_STORAGE_VERSION);
       } catch (e) {
         console.warn('Storage purge error:', e);
       }
@@ -1027,7 +1046,10 @@
     let animTime = 0;
     let rotationAngle = 0;
     let speechEnergy = 0; // Smooth speech level interpolation
-    let isRecording = false; // Toggle state: 1st click = start, 2nd click = stop
+    let isRecording = false; // Visual animation sync (pulsing orb)
+    let recordState = 'idle'; // State machine: 'idle' | 'starting' | 'recording' | 'stopping'
+    let abortStartRequested = false;
+    let lastToggleTime = 0;
     let captureResultIcon = null; // null | 'success' | 'error'
     let mediaRecorder = null;
     let audioStream = null;
@@ -1048,15 +1070,10 @@
       const rotSpeed = isRecording ? 0.003 : 0.001;
       rotationAngle += rotSpeed;
 
-      // Real audio energy sampling if recording
+      // Organic breathing aura pulse when recording
       let liveVolume = 0;
-      if (isRecording && analyser && dataArray) {
-        analyser.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-          sum += dataArray[i];
-        }
-        liveVolume = Math.min((sum / dataArray.length) / 80, 1.2);
+      if (isRecording) {
+        liveVolume = 0.35 + 0.25 * Math.sin(animTime * 7);
       }
 
       // Smooth speech envelope interpolation with live audio energy boost
@@ -1179,22 +1196,46 @@
     // Start drawing loop
     drawSacredGeometry();
 
-    // ================= RECORDING TOGGLE: 1st Click = Start, 2nd Click = Stop =================
-    const canvasEl = document.getElementById('geoCanvas');
+    // Helper to detect iOS device
+    function isIOSDevice() {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+
+    function cleanupAudioSession() {
+      if (audioStream) {
+        try { audioStream.getTracks().forEach(t => t.stop()); } catch (e) {}
+        audioStream = null;
+      }
+      if (audioContext) {
+        try { audioContext.close(); } catch (e) {}
+        audioContext = null;
+      }
+      analyser = null;
+      dataArray = null;
+    }
+
+    // ================= RECORDING TOGGLE: Clean Single Debounced Listener =================
     const morphBtnEl = document.getElementById('morphButton');
 
-    canvasEl.addEventListener('click', (e) => {
-      e.stopPropagation();
+    function handleMorphToggle(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      const now = Date.now();
+      // Debounce rapid taps / ghost clicks from mobile browsers (450ms)
+      if (now - lastToggleTime < 450) {
+        console.log('[ECHO Mic] Rapid tap ignored (debounced)');
+        return;
+      }
+      lastToggleTime = now;
       toggleSpeechCapture();
-    });
-    canvasEl.addEventListener('touchstart', (e) => {
-      e.stopPropagation();
-      toggleSpeechCapture();
-    }, { passive: true });
+    }
 
-    morphBtnEl.addEventListener('click', (e) => {
-      toggleSpeechCapture();
-    });
+    if (morphBtnEl) {
+      morphBtnEl.addEventListener('click', handleMorphToggle);
+    }
 
     // ================= GEMINI REAL AI ENGINE (TIER 1 & 2) =================
     const urlParams = new URLSearchParams(window.location.search);
@@ -1234,102 +1275,183 @@
 
     async function toggleSpeechCapture() {
       const hint = document.getElementById('geoStatusHint');
+      const subHint = document.getElementById('geoStatusSubHint');
       const aura = document.getElementById('morphAuraRing');
 
-      if (!isRecording) {
-        // --- 1. FIRST CLICK: START RECORDING ---
-        isRecording = true;
-        captureResultIcon = null;
-        mediaChunks = [];
-        recordingStartTime = Date.now();
-        hint.innerText = 'מקליט ומקשיב... (גע שוב לעצירה)';
-        aura.style.opacity = '0.7';
+      // 1. Guard against clicks while AI analysis is running
+      if (typeof isAnalyzing !== 'undefined' && isAnalyzing) {
+        console.log('[ECHO Mic] Analysis in progress, ignoring tap');
+        return;
+      }
 
-        try {
-          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            audioStream = await navigator.mediaDevices.getUserMedia({ 
-              audio: {
-                channelCount: 1,
-                sampleRate: 16000,
-                echoCancellation: true,
-                noiseSuppression: true
-              } 
-            });
+      // 2. Guard against clicks while already stopping
+      if (recordState === 'stopping') {
+        console.log('[ECHO Mic] Stopping in progress, ignoring tap');
+        return;
+      }
 
-            // Setup real-time audio energy analyser
-            try {
-              audioContext = new (window.AudioContext || window.webkitAudioContext)();
-              const source = audioContext.createMediaStreamSource(audioStream);
-              analyser = audioContext.createAnalyser();
-              analyser.fftSize = 64;
-              source.connect(analyser);
-              dataArray = new Uint8Array(analyser.frequencyBinCount);
-            } catch (e) {
-              console.warn('AudioContext analyser not supported:', e);
-            }
+      // 3. User tapped to stop before getUserMedia finished initializing
+      if (recordState === 'starting') {
+        console.log('[ECHO Mic] User aborted recording during initialization');
+        abortStartRequested = true;
+        hint.innerText = 'מבטל הקלטה...';
+        return;
+      }
 
-            let selectedMimeType = '';
-            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-              selectedMimeType = 'audio/webm;codecs=opus';
-            } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-              selectedMimeType = 'audio/webm';
-            } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-              selectedMimeType = 'audio/mp4';
-            }
-
-            mediaRecorder = selectedMimeType 
-              ? new MediaRecorder(audioStream, { mimeType: selectedMimeType })
-              : new MediaRecorder(audioStream);
-
-            mediaRecorder.ondataavailable = (e) => {
-              if (e.data && e.data.size > 0) mediaChunks.push(e.data);
-            };
-            mediaRecorder.start(100);
-          }
-        } catch (err) {
-          console.warn('Microphone error:', err);
-          captureResultIcon = 'error';
-          hint.innerText = 'גישה למיקרופון נדחתה או שאינה זמינה';
-          isRecording = false;
-        }
-      } else {
-        // --- 2. SECOND CLICK: STOP RECORDING & PROCEED TO REAL ANALYSIS ---
+      // ================= 2. USER CLICKED TO STOP RECORDING =================
+      if (recordState === 'recording') {
+        recordState = 'stopping';
         isRecording = false;
-        const durationSec = (Date.now() - recordingStartTime) / 1000;
         aura.style.opacity = '0.35';
 
-        if (durationSec < 1.0) {
+        const durationSec = (Date.now() - recordingStartTime) / 1000;
+        console.log(`[ECHO Mic] Stop requested. Duration: ${durationSec.toFixed(2)}s`);
+
+        if (durationSec < 0.6) {
           hint.innerText = 'ההקלטה קצרה מדי (פחות משנייה)';
-          if (audioStream) {
-            audioStream.getTracks().forEach(t => t.stop());
-            audioStream = null;
-          }
-          if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            mediaRecorder.stop();
-          }
+          subHint.innerText = 'גע בלכידה כדי לנסות שוב';
+          cleanupAudioSession();
+          recordState = 'idle';
+          setTimeout(() => {
+            if (recordState === 'idle') {
+              hint.innerText = 'גע בלכידה';
+              subHint.innerText = 'דבר בחופשיות על הדילמה או המחשבה שלך';
+            }
+          }, 2000);
           return;
         }
 
         hint.innerText = 'מעבד הקלטה קולית...';
+        subHint.innerText = 'סוגר ערוץ שמע ומכין לפענוח...';
 
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-          mediaRecorder.onstop = async () => {
-            const actualMime = mediaRecorder.mimeType || 'audio/webm';
-            const audioBlob = new Blob(mediaChunks, { type: actualMime });
-            if (audioStream) {
-              audioStream.getTracks().forEach(t => t.stop());
-              audioStream = null;
+          try {
+            mediaRecorder.stop();
+          } catch (e) {
+            console.warn('[ECHO Mic] Error stopping recorder:', e);
+            cleanupAudioSession();
+            recordState = 'idle';
+            hint.innerText = 'שגיאה בעצירת הקלטה';
+          }
+        } else {
+          cleanupAudioSession();
+          recordState = 'idle';
+          hint.innerText = 'גע בלכידה';
+        }
+        return;
+      }
+
+      // ================= 1. USER CLICKED TO START RECORDING =================
+      if (recordState === 'idle') {
+        recordState = 'starting';
+        abortStartRequested = false;
+        captureResultIcon = null;
+        mediaChunks = [];
+        hint.innerText = 'מתחבר למיקרופון...';
+        subHint.innerText = 'אנא אשר שימוש במיקרופון אם נדרש';
+        aura.style.opacity = '0.5';
+
+        try {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error('דפדפן זה אינו תומך בהקלטת קול ישירה');
+          }
+
+          // Timeout wrapper for getUserMedia to prevent silent hangs on iOS Safari
+          const getUserMediaWithTimeout = (constraints, timeoutMs = 5000) => {
+            return new Promise((resolve, reject) => {
+              const timer = setTimeout(() => reject(new Error('Timeout: גישה למיקרופון נתקעה')), timeoutMs);
+              navigator.mediaDevices.getUserMedia(constraints)
+                .then(s => { clearTimeout(timer); resolve(s); })
+                .catch(e => { clearTimeout(timer); reject(e); });
+            });
+          };
+
+          const stream = await getUserMediaWithTimeout({ audio: true });
+          audioStream = stream;
+
+          // Check if user tapped to cancel while waiting for mic prompt
+          if (abortStartRequested) {
+            console.log('[ECHO Mic] Abort flag detected after stream granted');
+            cleanupAudioSession();
+            recordState = 'idle';
+            hint.innerText = 'גע בלכידה';
+            subHint.innerText = 'דבר בחופשיות על הדילמה או המחשבה שלך';
+            aura.style.opacity = '0.25';
+            return;
+          }
+
+          // Detect supported MIME type (Safari uses audio/mp4, Chrome/Android uses audio/webm)
+          let mimeType = '';
+          if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported) {
+            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+              mimeType = 'audio/webm;codecs=opus';
+            } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+              mimeType = 'audio/webm';
+            } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+              mimeType = 'audio/mp4';
             }
-            if (audioContext) {
-              audioContext.close();
-              audioContext = null;
+          }
+
+          mediaRecorder = mimeType ? new MediaRecorder(audioStream, { mimeType }) : new MediaRecorder(audioStream);
+          mediaChunks = [];
+
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) {
+              mediaChunks.push(e.data);
+            }
+          };
+
+          mediaRecorder.onstop = async () => {
+            const actualMime = mediaRecorder.mimeType || mimeType || (isIOSDevice() ? 'audio/mp4' : 'audio/webm');
+            const audioBlob = new Blob(mediaChunks, { type: actualMime });
+            console.log('[ECHO Mic] Recording stopped. Chunks:', mediaChunks.length, 'Size:', audioBlob.size, 'Type:', actualMime);
+
+            cleanupAudioSession();
+            recordState = 'idle';
+            isRecording = false;
+
+            if (mediaChunks.length === 0 || audioBlob.size < 250) {
+              hint.innerText = 'לא נקלט שמע בהקלטה (נסה שוב)';
+              subHint.innerText = 'ודא שהמיקרופון פעיל ודבר בקול ברור';
+              captureResultIcon = 'error';
+              return;
             }
 
             await transcribeAndExtractAudio(audioBlob);
           };
-          mediaRecorder.stop();
-        } else {
-          hint.innerText = 'גע בלכידה';
+
+          mediaRecorder.onerror = (e) => {
+            console.error('[ECHO Mic] MediaRecorder error:', e);
+            cleanupAudioSession();
+            recordState = 'idle';
+            isRecording = false;
+            captureResultIcon = 'error';
+            hint.innerText = 'שגיאה בערוץ ההקלטה';
+          };
+
+          // Start recorder with 1000ms timeslice (proven pattern from thoughtscloud / iOS Safari)
+          mediaRecorder.start(1000);
+          recordingStartTime = Date.now();
+          recordState = 'recording';
+          isRecording = true;
+          aura.style.opacity = '0.7';
+          hint.innerText = 'מקליט ומקשיב... (גע שוב לעצירה)';
+          subHint.innerText = 'דבר בחופשיות על הדילמה או המחשבה שלך';
+
+        } catch (err) {
+          console.warn('[ECHO Mic] Microphone access error:', err);
+          cleanupAudioSession();
+          recordState = 'idle';
+          isRecording = false;
+          captureResultIcon = 'error';
+          aura.style.opacity = '0.25';
+          if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            hint.innerText = 'נדרשת הרשאת מיקרופון';
+            subHint.innerText = 'לחץ על aA בשורת הכתובת > הגדרות אתר > אפשר מיקרופון';
+          } else {
+            hint.innerText = 'שגיאת מיקרופון: ' + (err.message || 'נסה שוב');
+            subHint.innerText = 'גע בלכידה כדי לנסות שנית';
+          }
         }
       }
     }
@@ -1355,111 +1477,147 @@
 
       try {
         const base64Audio = await blobToBase64(audioBlob);
-        let mimeType = audioBlob.type.split(';')[0] || 'audio/webm';
+        let mimeType = (audioBlob.type || '').split(';')[0];
+        if (!mimeType || mimeType === 'application/octet-stream') {
+          mimeType = isIOSDevice() ? 'audio/mp4' : 'audio/webm';
+        }
 
         hint.innerText = 'ההקלטה בתהליך ניתוח: מתמלל דיבור...';
-        subHint.innerText = 'Tier 1 Gemini Audio Transcribe (עברית מילה-במילה)';
+        subHint.innerText = 'מתמלל באמצעות מנוע קולי (Gemini 2.5)...';
 
-        // Tier 1: Multimodal Audio Transcription via Gemini API (Primary: gemini-3.6-flash, Fallback: gemini-3.7-flash)
-        let rawVerbatim = '';
-        
-        async function callTranscribe(modelName) {
+        // Fetch with timeout without hanging Safari fetch
+        const fetchWithTimeout = (url, options, timeoutMs = 12000) => {
+          return Promise.race([
+            fetch(url, options),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout: שרת התמלול לא הגיב בזמן')), timeoutMs))
+          ]);
+        };
+
+        const prompt = `אתה מערכת תמלול קולית מדויקת ביותר בעברית עבור שיקול דעת והחלטות.
+עליך לתמלל את קובץ השמע מילה-במילה בעברית (Verbatim).
+אם ההקלטה שקטה לחלוטין, מכילה רק רעשי רקע, נשימות עמומות, או שלא ניתן להבין דיבור ברור - החזר "transcript": "NO_SPEECH_DETECTED".
+אל תוסיף שום מילים, ברכות, הערות או תוספות שלא נאמרו.
+
+החזר אך ורק JSON תקין במבנה הבא:
+{
+  "transcript": "הטקסט המדויק שנאמר בהקלטה"
+}`;
+
+        async function callGeminiTranscribe(modelName, timeoutMs = 10000) {
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
-          const res = await fetch(url, {
+          const res = await fetchWithTimeout(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               contents: [{
                 parts: [
                   { inlineData: { mimeType: mimeType, data: base64Audio } },
-                  { text: 'תמלל במדויק מילה-במילה (Verbatim) את מה שנאמר בעברית בקובץ הקול. אם אין דיבור או שהקובץ שקט לגמרי, השב בדיוק במילה: ריק.' }
+                  { text: prompt }
                 ]
               }],
-              generationConfig: { temperature: 0.1 }
+              generationConfig: {
+                responseMimeType: 'application/json',
+                thinkingConfig: {
+                  thinkingBudget: 0
+                },
+                temperature: 0.0
+              }
             })
-          });
+          }, timeoutMs);
+
           const data = await res.json();
           if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-          
-          const parts = data.candidates?.[0]?.content?.parts || [];
-          let text = '';
-          for (const p of parts) {
-            if (p.text) text += p.text + ' ';
+
+          const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          let parsed;
+          try {
+            parsed = JSON.parse(rawText);
+          } catch (e) {
+            const match = rawText.match(/\{[\s\S]*\}/);
+            if (match) parsed = JSON.parse(match[0]);
+            else parsed = { transcript: rawText.trim() };
           }
-          return text.trim();
+          return (parsed.transcript || '').trim();
         }
 
+        let rawVerbatim = '';
         try {
-          rawVerbatim = await callTranscribe('gemini-3.6-flash');
-        } catch (e36) {
-          console.warn('gemini-3.6-flash transcribe fallback:', e36.message);
-          hint.innerText = 'מנסה שרת תמלול משני...';
-          rawVerbatim = await callTranscribe('gemini-3.7-flash');
+          rawVerbatim = await callGeminiTranscribe('gemini-2.5-flash', 10000);
+        } catch (eFlash) {
+          console.warn('[ECHO Transcribe] gemini-2.5-flash failed, trying 2.5-flash-lite:', eFlash.message);
+          subHint.innerText = 'מנסה מנוע גיבוי...';
+          try {
+            rawVerbatim = await callGeminiTranscribe('gemini-2.5-flash-lite', 9000);
+          } catch (eLite) {
+            console.warn('[ECHO Transcribe] gemini-2.5-flash-lite failed, trying 3.6-flash:', eLite.message);
+            rawVerbatim = await callGeminiTranscribe('gemini-3.6-flash', 12000);
+          }
         }
 
-        // Check if transcription returned empty or silent placeholder
-        const clean = rawVerbatim.replace(/[\s.,!?:;]+/g, '').trim();
-        if (!rawVerbatim || clean === '' || clean === 'ריק' || clean.toLowerCase() === 'empty') {
-          console.warn('No speech detected. Falling back to default dilemma...');
-          hint.innerText = 'לא נקלט דיבור — טוען דילמה לדוגמה...';
-          rawVerbatim = 'אני שוקל לקחת את התפקיד. השכר טוב יותר, אבל אני חושש שלא יהיה לי זמן לילדים. אולי אני סתם מפחד משינוי.';
+        // Check if no speech detected or empty
+        const clean = rawVerbatim.replace(/[\s.,!?:;'"־\-`~()\[\]{}]+/g, '').trim();
+        const isUnclearOrSilent = !rawVerbatim ||
+          clean === '' ||
+          clean === 'NO_SPEECH_DETECTED' ||
+          rawVerbatim.includes('NO_SPEECH_DETECTED') ||
+          clean === 'ריק' ||
+          clean.toLowerCase() === 'empty' ||
+          clean === 'לאברור' ||
+          clean === 'לא_ברור' ||
+          clean.length < 2;
+
+        if (isUnclearOrSilent) {
+          console.warn('[ECHO Anti-Hallucination] Audio unclear or no speech detected.');
+          isAnalyzing = false;
+          captureResultIcon = 'error';
+          hint.innerText = 'לא זוהה דיבור ברור בהקלטה';
+          subHint.innerText = 'גע בלכידה כדי להקליט שוב או השתמש בהקלדת טקסט';
+          return;
         }
 
-        console.log('[ECHO Frozen Verbatim]:', rawVerbatim);
+        console.log('[ECHO Verbatim Result]:', rawVerbatim);
         await runFullAiPipeline(rawVerbatim);
 
       } catch (err) {
-        console.warn('Transcription error, falling back to local simulation:', err);
-        hint.innerText = 'מפעיל ניתוח דילמה...';
-        await runFullAiPipeline('אני שוקל לקחת את התפקיד. השכר טוב יותר, אבל אני חושש שלא יהיה לי זמן לילדים. אולי אני סתם מפחד משינוי.');
+        console.warn('Transcription error:', err);
+        isAnalyzing = false;
+        captureResultIcon = 'error';
+        hint.innerText = 'לא ניתן היה לתמלל את ההקלטה';
+        subHint.innerText = `שגיאה: ${err.message || err}`;
       }
     }
 
     function runLocalCognitivePipeline(rawVerbatim) {
       const hint = document.getElementById('geoStatusHint');
+      const subHint = document.getElementById('geoStatusSubHint');
+      if (!rawVerbatim || typeof rawVerbatim !== 'string' || rawVerbatim.trim().length === 0) {
+        console.warn('[ECHO] Empty rawVerbatim in runLocalCognitivePipeline. Aborting.');
+        isAnalyzing = false;
+        captureResultIcon = 'error';
+        hint.innerText = 'לא הוזן מלל לניתוח.';
+        return;
+      }
       const text = rawVerbatim.toLowerCase();
-      let title = 'שקילת מעבר לתפקיד חדש מול זמן עם הילדים';
-      let consideration = 'מעבר לתפקיד ניהולי חדש עם שכר גבוה יותר, מול שמירה על שעות נוכחות בבית עם הילדים';
-      let goalsPrices = 'להשיג: ביטחון כלכלי והתקדמות מקצועית. לשמור: ערבים פנויים עם המשפחה ללא שחיקה';
-      let facts = 'הוצעה הצעה רשמית לתפקיד חדש עם שכר גבוה יותר';
-      let assumptions = 'התפקיד החדש יחייב זמינות מסביב לשעון ללא גמישות בערב';
-      let missingInfo = 'מהי תרבות העבודה האמיתית בצוות? האם אפשר לעגן יום ללא עבודה בערב?';
+      const firstLine = rawVerbatim.split('\n')[0].trim();
+      let title = firstLine.slice(0, 50) + (firstLine.length > 50 ? '...' : '');
+      let consideration = rawVerbatim;
+      let goalsPrices = 'בחינת כדאיות המהלך והשגת היעד תוך שמירה על המשאבים הקיימים';
+      let facts = rawVerbatim.slice(0, 100);
+      let assumptions = 'ההערכות וההשלכות שנשקלו יתממשו כפי שתוכנן';
+      let missingInfo = 'מהו המידע או הנתון שטרם אומת וקריטי להכרעה?';
+      let question = 'מהו הנתון האחד שאם יתברר כשונה לחלוטין ממה שהנחת, יהפוך את ההחלטה?';
+
+      if (text.includes('אבל') || text.includes('בעייתי') || text.includes('מול') || text.includes('חשש')) {
+        assumptions = 'המגבלה או החשש שנצפו יקשו באופן משמעותי על ההתנהלות ועל השגת היעד';
+      }
+
+      if (text.includes('טווח') || text.includes('מרחק') || text.includes('רכב') || text.includes('תקציב')) {
+        missingInfo = 'מהם הנתונים הממשיים בפועל (כגון עלויות אמיתיות, זמנים, משאבים נדרשים)?';
+        question = 'אם יתברר שהמגבלה פחות משמעותית ממה שנדמה כעת, כיצד זה ישנה את החלטתך?';
+      }
+
       let reliance = assumptions;
       let unknowns = missingInfo;
-      let question = 'אם לא ניתן לקבל את שניהם במלואם, על איזה מחיר פחות תהיה מוכן לשלם?';
-
-      if (text.includes('אטלס') || text.includes('atlas')) {
-        title = 'האם להמשיך להשקיע בפרויקט אטלס לעוד 3 חודשים';
-        consideration = 'המשך פיתוח של 3 חודשים נוספים כדי לאמת נכונות לשלם';
-        goalsPrices = 'להשיג: אימות שוק ולקוחות משלמים. לשמור: קיבולת הצוות והתקציב';
-        facts = 'שני לקוחות רוצים לבדוק את המוצר, כבר הושקעו 200K ועדיין אין לקוח משלם בפועל';
-        assumptions = 'הלקוחות המתעניינים יסכימו לשלם אם המוצר יכלול עוד תכונות בתוך 3 חודשים';
-        missingInfo = 'האם הם יסכימו לפיילוט מצומצם בתשלום סמלי כבר עכשיו לפני פיתוח מלא?';
-        reliance = assumptions;
-        unknowns = missingInfo;
-        question = 'איזו בדיקה קטנה של שבועיים תפריך או תאמת נכונות לשלם לפני 3 חודשי פיתוח?';
-      } else if (!text.includes('תפקיד') && !text.includes('ילדים') && !text.includes('שכר')) {
-        title = rawVerbatim.slice(0, 50) + (rawVerbatim.length > 50 ? '...' : '');
-        consideration = rawVerbatim;
-        goalsPrices = 'לבחון את כדאיות המהלך ולהשיג את המטרה, תוך מזעור עלויות ומניעת פגיעה בשגרה';
-        facts = rawVerbatim.slice(0, 100);
-        
-        if (text.includes('אבל') || text.includes('בעייתי') || text.includes('מול')) {
-          assumptions = 'המגבלה או החשש שנצפו יקשו באופן משמעותי על ההתנהלות ועל השגת היעד';
-        } else {
-          assumptions = 'התנאים הנוכחיים וההערכות שבבסיס הבדיקה יתממשו כפי שתוכנן';
-        }
-
-        if (text.includes('טווח') || text.includes('מרחק') || text.includes('רכב')) {
-          missingInfo = 'מהם הנתונים הממשיים בפועל (כגון זמני טעינה, פריסת עמדות, עלויות אמיתיות)?';
-          question = 'אם יתברר שהמגבלה פחות משמעותית ממה שנדמה כעת, כיצד זה ישנה את החלטתך?';
-        } else {
-          missingInfo = 'איזה מידע חסר לך כדי להכריע בוודאות גבוהה יותר?';
-          question = 'מהו הנתון האחד שאם יתברר כשונה לחלוטין ממה שאתה מניח, יהפוך את ההחלטה?';
-        }
-        reliance = assumptions;
-        unknowns = missingInfo;
-      }
 
       const decisionRecord = {
         id: 'dc-' + Date.now(),
@@ -1493,9 +1651,11 @@
 
     async function runFullAiPipeline(rawVerbatim) {
       const hint = document.getElementById('geoStatusHint');
+      const subHint = document.getElementById('geoStatusSubHint');
       isAnalyzing = true;
       captureResultIcon = null;
       hint.innerText = 'מנתח שיקול דעת בענן...';
+      if (subHint) subHint.innerText = 'מחלץ את 5 הממדים האנושיים...';
 
       if (!GEMINI_API_KEY) {
         console.log('No GEMINI_API_KEY configured, executing local cognitive pipeline.');
@@ -1523,9 +1683,13 @@
 `;
 
       try {
-        const cognitiveUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`;
+        const cogController = new AbortController();
+        const cogTimer = setTimeout(() => cogController.abort(), 15000);
+
+        const cognitiveUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
         const cogRes = await fetch(cognitiveUrl, {
           method: 'POST',
+          signal: cogController.signal,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
@@ -1550,6 +1714,7 @@
             }
           })
         });
+        clearTimeout(cogTimer);
 
         const cogData = await cogRes.json();
         if (cogData.error) {
@@ -1596,6 +1761,7 @@
         isAnalyzing = false;
         captureResultIcon = 'success';
         hint.innerText = '';
+        if (subHint) subHint.innerText = '';
         setScrollLock(false);
         attemptScrollToNext('stageDeliberation');
 
@@ -1669,6 +1835,8 @@
 
     // ================= REFINEMENT (ILLUMINATION ANSWER & AI SYNTHESIS) =================
     let isRefinementRecording = false;
+    let isStartingRefinement = false;
+    let lastRefinementToggleTime = 0;
     let refinementMediaRecorder = null;
     let refinementAudioStream = null;
     let refinementAudioChunks = [];
@@ -1680,24 +1848,41 @@
       const label = document.getElementById('voiceAnswerLabel');
       const hint = document.getElementById('refineStatusHint');
 
+      const now = Date.now();
+      if (now - lastRefinementToggleTime < 450) {
+        return;
+      }
+      lastRefinementToggleTime = now;
+
       if (!isRefinementRecording) {
+        if (isStartingRefinement) return;
+        isStartingRefinement = true;
         // Start recording refinement answer
         try {
-          refinementAudioStream = await navigator.mediaDevices.getUserMedia({
-            audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true }
-          });
+          let stream = null;
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              audio: { echoCancellation: true, noiseSuppression: true }
+            });
+          } catch (e1) {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          }
+          refinementAudioStream = stream;
 
           refinementAudioChunks = [];
           refinementStartTime = Date.now();
           isRefinementRecording = true;
+          isStartingRefinement = false;
 
           let selectedMimeType = '';
-          if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-            selectedMimeType = 'audio/webm;codecs=opus';
-          } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-            selectedMimeType = 'audio/webm';
-          } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-            selectedMimeType = 'audio/mp4';
+          if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported) {
+            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+              selectedMimeType = 'audio/webm;codecs=opus';
+            } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+              selectedMimeType = 'audio/webm';
+            } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+              selectedMimeType = 'audio/mp4';
+            }
           }
 
           refinementMediaRecorder = selectedMimeType
@@ -1708,46 +1893,14 @@
             if (e.data && e.data.size > 0) refinementAudioChunks.push(e.data);
           };
 
-          refinementMediaRecorder.start(100);
-
-          btn.classList.add('border-[#D4AF37]', 'bg-[rgba(212,175,55,0.15)]');
-          icon.innerText = '🔴';
-          label.innerText = 'מקליט מענה... (גע לסיום)';
-          hint.innerText = 'דבר בבירור: כיצד תשובתך מעצבת את הפעולה...';
-        } catch (err) {
-          console.warn('Refinement mic error:', err);
-          hint.innerText = 'גישה למיקרופון נדחתה או שאינה זמינה';
-          isRefinementRecording = false;
-        }
-      } else {
-        // Stop recording refinement answer
-        isRefinementRecording = false;
-        btn.classList.remove('border-[#D4AF37]', 'bg-[rgba(212,175,55,0.15)]');
-        icon.innerText = '⏳';
-        label.innerText = 'מתמלל דיבור...';
-        hint.innerText = 'מתמלל את המענה הקולי ב-Gemini...';
-
-        const durationSec = (Date.now() - refinementStartTime) / 1000;
-        if (durationSec < 1.0) {
-          hint.innerText = 'ההקלטה קצרה מדי (פחות משנייה)';
-          icon.innerText = '🎙️';
-          label.innerText = 'הקלט מענה';
-          if (refinementAudioStream) {
-            refinementAudioStream.getTracks().forEach(t => t.stop());
-            refinementAudioStream = null;
-          }
-          if (refinementMediaRecorder && refinementMediaRecorder.state !== 'inactive') {
-            refinementMediaRecorder.stop();
-          }
-          return;
-        }
-
-        if (refinementMediaRecorder && refinementMediaRecorder.state !== 'inactive') {
           refinementMediaRecorder.onstop = async () => {
-            const actualMime = refinementMediaRecorder.mimeType || 'audio/webm';
+            let actualMime = refinementMediaRecorder.mimeType || selectedMimeType;
+            if (!actualMime || actualMime === 'application/octet-stream') {
+              actualMime = isIOSDevice() ? 'audio/mp4' : 'audio/webm';
+            }
             const audioBlob = new Blob(refinementAudioChunks, { type: actualMime });
             if (refinementAudioStream) {
-              refinementAudioStream.getTracks().forEach(t => t.stop());
+              try { refinementAudioStream.getTracks().forEach(t => t.stop()); } catch(e){}
               refinementAudioStream = null;
             }
 
@@ -1763,7 +1916,7 @@
 
               icon.innerText = '✓';
               label.innerText = 'המענה נלכד!';
-              hint.innerText = 'המענה הקולי תומלל והוזן! לחץ על "✨ חדד וזקק שיקול דעת" לניתוח.';
+              hint.innerText = 'המענה הקולי תומלל והוזן! לחץ על "המשך עם המענה" לניתוח.';
               setTimeout(() => {
                 icon.innerText = '🎙️';
                 label.innerText = 'הקלט מענה נוסף';
@@ -1780,37 +1933,115 @@
               }, 3000);
             }
           };
-          refinementMediaRecorder.stop();
+
+          refinementMediaRecorder.start();
+
+          btn.classList.add('border-[#D4AF37]', 'bg-[rgba(212,175,55,0.15)]');
+          icon.innerText = '🔴';
+          label.innerText = 'מקליט מענה... (גע לסיום)';
+          hint.innerText = 'דבר בבירור: כיצד תשובתך מעצבת את הפעולה...';
+        } catch (err) {
+          console.warn('Refinement mic error:', err);
+          hint.innerText = 'גישה למיקרופון נדחתה או שאינה זמינה';
+          isRefinementRecording = false;
+          isStartingRefinement = false;
+          if (refinementAudioStream) {
+            try { refinementAudioStream.getTracks().forEach(t => t.stop()); } catch(e){}
+            refinementAudioStream = null;
+          }
+        }
+      } else {
+        // Stop recording refinement answer
+        isRefinementRecording = false;
+        btn.classList.remove('border-[#D4AF37]', 'bg-[rgba(212,175,55,0.15)]');
+        icon.innerText = '⏳';
+        label.innerText = 'מתמלל דיבור...';
+        hint.innerText = 'מתמלל את המענה הקולי ב-Gemini...';
+
+        const durationSec = (Date.now() - refinementStartTime) / 1000;
+        if (durationSec < 0.8) {
+          hint.innerText = 'ההקלטה קצרה מדי (פחות משנייה)';
+          icon.innerText = '🎙️';
+          label.innerText = 'הקלט מענה';
+          if (refinementAudioStream) {
+            try { refinementAudioStream.getTracks().forEach(t => t.stop()); } catch(e){}
+            refinementAudioStream = null;
+          }
+          if (refinementMediaRecorder && refinementMediaRecorder.state !== 'inactive') {
+            try { refinementMediaRecorder.stop(); } catch(e){}
+          }
+          return;
+        }
+
+        if (refinementMediaRecorder && refinementMediaRecorder.state !== 'inactive') {
+          try {
+            refinementMediaRecorder.stop();
+          } catch(e) {
+            console.warn('Error stopping refinement recorder:', e);
+          }
         }
       }
     }
 
-    // Shared Audio Transcription Helper via Gemini 3.6 Flash
+    // Shared Audio Transcription Helper via Gemini (with 3-tier fallback)
     async function transcribeAudioBlob(audioBlob) {
       const base64Audio = await blobToBase64(audioBlob);
-      const mimeType = audioBlob.type.split(';')[0] || 'audio/webm';
+      let mimeType = audioBlob.type.split(';')[0];
+      if (!mimeType || mimeType === 'application/octet-stream') {
+        mimeType = isIOSDevice() ? 'audio/mp4' : 'audio/webm';
+      }
       
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { inlineData: { mimeType: mimeType, data: base64Audio } },
-              { text: 'תמלל במדויק מילה-במילה (Verbatim) את מה שנאמר בעברית בקובץ הקול. אם אין דיבור, השב: ריק.' }
-            ]
-          }],
-          generationConfig: { temperature: 0.1 }
-        })
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-      const parts = data.candidates?.[0]?.content?.parts || [];
-      let text = '';
-      for (const p of parts) { if (p.text) text += p.text + ' '; }
-      text = text.trim();
+      async function tryModelTranscribe(model, timeoutMs = 9000) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
 
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+          const res = await fetch(url, {
+            method: 'POST',
+            signal: controller.signal,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { inlineData: { mimeType: mimeType, data: base64Audio } },
+                  { text: 'תמלל במדויק מילה-במילה (Verbatim) את מה שנאמר בעברית בקובץ הקול. אם אין דיבור, השב: ריק.' }
+                ]
+              }],
+              generationConfig: { 
+                thinkingConfig: {
+                  thinkingBudget: 0
+                },
+                temperature: 0.1 
+              }
+            })
+          });
+          clearTimeout(timer);
+          const data = await res.json();
+          if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+          const parts = data.candidates?.[0]?.content?.parts || [];
+          let text = '';
+          for (const p of parts) { if (p.text) text += p.text + ' '; }
+          return text.trim();
+        } catch (err) {
+          clearTimeout(timer);
+          if (err.name === 'AbortError') throw new Error(`Timeout (${timeoutMs/1000}s) on ${model}`);
+          throw err;
+        }
+      }
+
+      let text = '';
+      try {
+        text = await tryModelTranscribe('gemini-2.5-flash', 8000);
+      } catch (e1) {
+        console.warn('gemini-2.5-flash failed in transcribeAudioBlob:', e1.message);
+        try {
+          text = await tryModelTranscribe('gemini-2.5-flash-lite', 8000);
+        } catch (e2) {
+          console.warn('gemini-2.5-flash-lite failed, using gemini-3.6-flash:', e2.message);
+          text = await tryModelTranscribe('gemini-3.6-flash', 10000);
+        }
+      }
       const clean = text.replace(/[\s.,!?:;]+/g, '').trim();
       if (!text || clean === '' || clean === 'ריק' || clean.toLowerCase() === 'empty') {
         throw new Error('לא זוהה דיבור ברור בהקלטה');
@@ -2538,9 +2769,13 @@
 `;
 
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`;
+        const refController = new AbortController();
+        const refTimer = setTimeout(() => refController.abort(), 12000);
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
         const res = await fetch(url, {
           method: 'POST',
+          signal: refController.signal,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
@@ -2559,6 +2794,7 @@
             }
           })
         });
+        clearTimeout(refTimer);
 
         const data = await res.json();
         if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
@@ -2699,7 +2935,10 @@
 
     function scrollToNext(targetId) {
       const el = document.getElementById(targetId);
-      if (el) {
+      const stream = document.getElementById('scrollStream');
+      if (el && stream) {
+        stream.scrollTo({ top: el.offsetTop - 10, behavior: 'smooth' });
+      } else if (el) {
         el.scrollIntoView({ behavior: 'smooth' });
       }
     }

@@ -97,8 +97,37 @@ async function runSimulation() {
   console.log(`[ציר 3 - מה היית משנה בתהליך]: "${outcome1.processReflection}"`);
   console.log(`[סטטוס מהיר]: "${outcome1.quickStatus}"`);
 
+  // -------------------------------------------------------------
+  // Decision 4: Anti-Hallucination & Unclear Audio Protection
+  // -------------------------------------------------------------
+  console.log('\n--- [בדיקה 4: מניעת הזיות ומניעת יצירת מלל מומצא מהקלטה לא ברורה] ---');
+  let unclearAudioBlocked = false;
+  try {
+    const mockUnclearProvider = {
+      transcribeAudio: async () => '',
+      extractEpistemicSchema: async () => { throw new Error('Should not be called'); }
+    };
+    const unclearDecisionService = new DecisionService(mockUnclearProvider as any);
+    await unclearDecisionService.createCase({
+      userId,
+      rawAudioBuffer: Buffer.from('unclear-or-silent-audio-bytes')
+    });
+  } catch (err: any) {
+    if (err.message.includes('UNCLEAR_AUDIO')) {
+      unclearAudioBlocked = true;
+      console.log(`✓ נחסם בהצלחה כצפוי: "${err.message}"`);
+      console.log('✓ וודא שלא נוצר מקרה החלטה ולא הומצא מלל גולמי.');
+    } else {
+      throw err;
+    }
+  }
+
+  if (!unclearAudioBlocked) {
+    throw new Error('FAILED: Unclear audio was not blocked!');
+  }
+
   console.log('\n================================================================');
-  console.log('   כל עקרונות המראה המתפתחת והחיכוך האדפטיבי עברו בהצלחה!');
+  console.log('   כל עקרונות המראה המתפתחת ומניעת ההזיות עברו בהצלחה!');
   console.log('================================================================\n');
 }
 

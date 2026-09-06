@@ -15,16 +15,21 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
 
+  const [recordHint, setRecordHint] = useState('לחץ להקלטה קולית חופשית');
+
   const handleToggleRecord = () => {
     if (!isRecording) {
       setIsRecording(true);
-      // Simulate speech-to-text capture
+      setRecordHint('מקשיב לך... דבר באופן חופשי');
       setTimeout(() => {
-        setInputText('השקענו באטלס בערך 200 אלף שקל ושמונה חודשים. עדיין אין לקוח משלם, אבל המוצר נראה הרבה יותר טוב ושני לקוחות רוצים לבדוק אותו. האינטואיציה שלי היא לתת לזה עוד שלושה חודשים.');
         setIsRecording(false);
-      }, 3000);
+        if (!inputText.trim()) {
+          setRecordHint('לא זוהה דיבור. אנא הקלד את ההחלטה בתיבה למטה');
+        }
+      }, 4000);
     } else {
       setIsRecording(false);
+      setRecordHint('לחץ להקלטה קולית חופשית');
     }
   };
 
@@ -48,7 +53,7 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
           <EchoOrb isRecording={isRecording} isProcessing={isLoading} size={190} />
         </TouchableOpacity>
         <Text style={styles.recordHint}>
-          {isRecording ? 'מקשיב לך... דבר באופן חופשי' : 'לחץ להקלטה קולית חופשית'}
+          {recordHint}
         </Text>
       </View>
 

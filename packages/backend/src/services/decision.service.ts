@@ -50,6 +50,9 @@ export class DecisionService {
     let rawCapture = dto.rawText || '';
     if (!rawCapture && dto.rawAudioBuffer) {
       rawCapture = await this.aiProvider.transcribeAudio(dto.rawAudioBuffer, dto.mimeType || 'audio/mp3');
+      if (!rawCapture || rawCapture.trim().length === 0) {
+        throw new Error('UNCLEAR_AUDIO: Audio was unclear or contained no recognizable speech. No raw text was generated.');
+      }
     }
 
     if (!rawCapture || rawCapture.trim().length === 0) {
