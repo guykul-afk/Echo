@@ -4,7 +4,6 @@ export * from './ai/providers/mock.provider.js';
 export * from './ai/providers/gemini.provider.js';
 export * from './services/decision.service.js';
 export * from './services/triFactorRetrieval.service.js';
-export * from './services/consolidation.service.js';
 export * from './services/delta.service.js';
 export * from './prompts/cognitive-engine.prompt.js';
 export * from './prompts/delta-engine.prompt.js';

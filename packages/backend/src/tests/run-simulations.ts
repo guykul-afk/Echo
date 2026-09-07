@@ -1,6 +1,5 @@
 import { DecisionService } from '../services/decision.service.js';
 import { TriFactorRetrievalService } from '../services/triFactorRetrieval.service.js';
-import { EpistemicConsolidationService } from '../services/consolidation.service.js';
 import { OperatingContext, PatternHypothesis, CalibrationTracker, AssumptionRegistryEntry, Outcome } from '@echo/shared';
 
 async function runSimulation() {

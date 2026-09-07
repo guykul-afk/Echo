@@ -32,8 +32,83 @@ export class KnowledgeGraphService {
 
   async saveAssertion(assertion: GraphAssertion): Promise<GraphAssertion> {
     const userMap = this.getUserAssertionsMap(assertion.userId);
-    userMap.set(assertion.id, { ...assertion });
-    return assertion;
+    // Strict atomic constraint: Maximum 120 characters per assertion
+    const cleanedStatement = (assertion.statement || '').trim();
+    const statement = cleanedStatement.length > 120 
+      ? cleanedStatement.slice(0, 117) + '...' 
+      : cleanedStatement;
+
+    const sanitized: GraphAssertion = {
+      ...assertion,
+      statement,
+      confirmedCount: assertion.confirmedCount ?? 0,
+      createdAt: assertion.createdAt || Date.now()
+    };
+    userMap.set(sanitized.id, sanitized);
+    return sanitized;
+  }
+
+  async recordAssertionConfirmation(userId: string, assertionId: string, confirmed: boolean): Promise<void> {
+    const userMap = this.getUserAssertionsMap(userId);
+    const assertion = userMap.get(assertionId);
+    if (!assertion) return;
+
+    if (confirmed) {
+      assertion.confirmedCount = (assertion.confirmedCount || 0) + 1;
+      assertion.lastConfirmedAt = Date.now();
+      assertion.sourceType = 'user_confirmed';
+    } else {
+      // User says not valid anymore / changed -> expire/supersede
+      assertion.validUntil = Date.now();
+    }
+    userMap.set(assertionId, assertion);
+  }
+
+  async recordAssertionAsked(userId: string, assertionId: string): Promise<void> {
+    const userMap = this.getUserAssertionsMap(userId);
+    const assertion = userMap.get(assertionId);
+    if (assertion) {
+      assertion.lastAskedAt = Date.now();
+      userMap.set(assertionId, assertion);
+    }
+  }
+
+  async findContradictingAssertions(userId: string, target: GraphAssertion): Promise<GraphAssertion[]> {
+    const active = await this.getActiveAssertionsByUser(userId);
+    const targetText = target.statement.toLowerCase();
+
+    // Key opposites / tension cues in decision contexts
+    const oppositePairs: [RegExp, RegExp][] = [
+      [/יציבות|בטוח|סיכון נמוך|שמירה/, /סיכון|הרפתקה|צמיחה|שינוי|חדש/],
+      [/עצמאות|לבד|סולו/, /שותפות|ביחד|צוות|הסכמה/],
+      [/מהירות|עכשיו|מיידי/, /סבלנות|בדיקה מעמיקה|לחכות|המתנה/],
+      [/פשטות|מינימליסטי/, /עומק|מקיף|מורכב/],
+      [/השקעה|התרחבות/, /צמצום|חיסכון|זהירות/]
+    ];
+
+    return active.filter(other => {
+      if (other.id === target.id) return false;
+
+      // 1. Same entity with differing polarity or sentiment
+      if (target.entityId && other.entityId === target.entityId) {
+        if (target.sentimentOrPolarity && other.sentimentOrPolarity && target.sentimentOrPolarity !== other.sentimentOrPolarity) {
+          return true;
+        }
+      }
+
+      // 2. Polarity clash
+      if (target.sentimentOrPolarity === 'risk_seeking' && other.sentimentOrPolarity === 'risk_averse') return true;
+      if (target.sentimentOrPolarity === 'risk_averse' && other.sentimentOrPolarity === 'risk_seeking') return true;
+
+      // 3. Semantic tension cues
+      const otherText = other.statement.toLowerCase();
+      for (const [cueA, cueB] of oppositePairs) {
+        if (cueA.test(targetText) && cueB.test(otherText)) return true;
+        if (cueB.test(targetText) && cueA.test(otherText)) return true;
+      }
+
+      return false;
+    });
   }
 
   async getEntitiesByUser(userId: string): Promise<KnowledgeEntity[]> {

@@ -131,15 +131,23 @@ async function runSimulator() {
         frictionLevel: 'deep'
       });
 
-      const question = session.illuminationQuestion;
-      console.log('  -> Intervention Question:', question);
-      
-      console.log('  -> Generating answer to intervention question...');
-      const answer = await answerQuestion(dilemma, question);
-      console.log('  -> Answer:', answer);
+      const shouldIntervene = session.bespokeQuestion?.shouldIntervene !== false;
+      let answer = '';
+      let finalResult;
 
-      console.log('  -> submitDeliberationAnswer()');
-      const finalResult = await decisionService.submitDeliberationAnswer(session.decisionCase.id, answer);
+      if (shouldIntervene) {
+        const question = session.illuminationQuestion;
+        console.log('  -> Intervention Question:', question);
+        console.log('  -> Generating answer to intervention question...');
+        answer = await answerQuestion(dilemma, question);
+        console.log('  -> Answer:', answer);
+        console.log('  -> submitDeliberationAnswer()');
+        finalResult = await decisionService.submitDeliberationAnswer(session.decisionCase.id, answer);
+      } else {
+        console.log('  -> Echo chose Smart Silence (no intervention needed). Persona stops.');
+        answer = '[שקט חכם - לא נדרשה התערבות]';
+        finalResult = await decisionService.submitDeliberationAnswer(session.decisionCase.id, '', true);
+      }
 
       const markdownEntry = [
         `## דילמה מס' ${i + 1}`,

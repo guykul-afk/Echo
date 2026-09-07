@@ -139,7 +139,7 @@ async function runSimulator() {
       let answer = '';
       let finalResult = caseResult;
       
-      if (frictionLevel !== 'quick') {
+      if (frictionLevel !== 'quick' && caseResult.bespokeQuestion?.shouldIntervene !== false) {
         console.log('  -> Intervention Question:', bespokeQuestion);
         answer = await generateAnswer(dilemmaText, bespokeQuestion, frictionLevel);
         try {
@@ -148,7 +148,7 @@ async function runSimulator() {
           console.log('  -> submitDeliberationAnswer fallback used');
         }
       } else {
-        console.log('  -> Smart Silence (Quick Flow) - No intervention question posed.');
+        console.log('  -> Smart Silence (Quick Flow or Echo choice) - No intervention question posed.');
         try {
           finalResult = await decisionService.submitDeliberationAnswer(session.id, '', true);
         } catch (e) {}

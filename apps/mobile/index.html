@@ -209,14 +209,14 @@
         <!-- 5 Human Dimensions (Live Editable Textareas) -->
         <div class="space-y-3.5 mb-6">
           
-          <!-- Dimension 1: Consideration (אתה שוקל) -->
+          <!-- Dimension 1: Consideration (אמרת: מהמילים שלך) -->
           <div class="p-3.5 rounded-xl border backdrop-blur-sm transition-all focus-within:border-amber-400" style="background-color: var(--c-glass); border-color: var(--c-border);">
             <div class="flex items-center justify-between mb-1.5">
               <span class="text-[11px] font-semibold text-amber-300/90 flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
                 אתה שוקל:
               </span>
-              <span class="text-[10px] opacity-40 font-mono">עריכה ישירה</span>
+              <span class="text-[9px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/10 text-stone-300 font-mono">אמרת · מהמילים שלך</span>
             </div>
             <textarea 
               id="editConsideration" 
@@ -227,14 +227,14 @@
             ></textarea>
           </div>
 
-          <!-- Dimension 2: Goals & Prices (הבנתי שחשוב לך להשיג ולשמור) -->
+          <!-- Dimension 2: Goals & Prices (הסקתי) -->
           <div class="p-3.5 rounded-xl border backdrop-blur-sm transition-all focus-within:border-amber-400" style="background-color: var(--c-glass); border-color: var(--c-border);">
             <div class="flex items-center justify-between mb-1.5">
               <span class="text-[11px] font-semibold text-stone-200 flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 rounded-full bg-stone-400"></span>
-                הבנתי שחשוב לך להשיג ולשמור:
+                מטרות ומחירים:
               </span>
-              <span class="text-[10px] opacity-40 font-mono">מטרות ומחירים</span>
+              <span class="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 font-mono">הסקתי</span>
             </div>
             <textarea 
               id="editGoalsPrices" 
@@ -245,14 +245,14 @@
             ></textarea>
           </div>
 
-          <!-- Dimension 3: Hard Facts (עובדות קשיחות) -->
+          <!-- Dimension 3: Hard Facts (אמרת) -->
           <div class="p-3.5 rounded-xl border backdrop-blur-sm transition-all focus-within:border-sky-400" style="background-color: var(--c-glass); border-color: var(--c-border);">
             <div class="flex items-center justify-between mb-1.5">
               <span class="text-[11px] font-semibold text-sky-300/90 flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
-                🧱 עובדות קשיחות:
+                🧱 עובדות קשיחות (נתונים מוצקים):
               </span>
-              <span class="text-[10px] opacity-40 font-mono text-sky-200">מה כבר קרה בפועל</span>
+              <span class="text-[9px] px-2 py-0.5 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-300 font-mono">אמרת</span>
             </div>
             <textarea 
               id="editFacts" 
@@ -263,43 +263,58 @@
             ></textarea>
           </div>
 
-          <!-- Dimension 4: Assumptions (ההנחות שלך) -->
-          <div class="p-3.5 rounded-xl border backdrop-blur-sm transition-all focus-within:border-amber-400" style="background-color: var(--c-glass); border-color: var(--c-border);">
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-[11px] font-semibold text-amber-200/90 flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-amber-300"></span>
-                💭 ההנחות שלך:
+          <!-- Dimension 4: Central Axis Assumption + Decision Hinge -->
+          <div class="p-3.5 rounded-xl border-2 backdrop-blur-sm transition-all focus-within:border-amber-400 space-y-2.5" style="background-color: rgba(212,175,55,0.03); border-color: rgba(212,175,55,0.35);">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                🎯 הנחת ציר מרכזית:
               </span>
-              <span class="text-[10px] opacity-40 font-mono text-amber-300">מה שאתה משער/צופה</span>
+              <div class="flex items-center gap-1">
+                <span class="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-200 border border-amber-500/30 font-mono">הנחה נושאת</span>
+                <span class="text-[9px] px-1.5 py-0.2 rounded bg-white/[0.05] text-stone-300 font-mono">הסקתי</span>
+              </div>
             </div>
             <textarea 
               id="editAssumptions" 
               rows="2" 
               oninput="onDimensionEdited(this)"
-              placeholder="על מה אתה נשען? מה אתה משער שיקרה בעתיד..."
-              class="w-full bg-transparent border-0 p-0 text-xs text-right focus:outline-none font-light opacity-95 resize-none leading-relaxed overflow-hidden"
+              placeholder="הנחת העבודה המרכזית שעליה נשענת ההחלטה..."
+              class="w-full bg-transparent border-0 p-0 text-xs text-right focus:outline-none font-medium text-amber-100 resize-none leading-relaxed overflow-hidden"
             ></textarea>
             <input type="hidden" id="editReliance" />
+
+            <!-- Calibration & Confidence Buttons on Central Assumption -->
+            <div class="pt-2 border-t border-white/5 flex items-center justify-between text-[10px]">
+              <span class="opacity-60 font-light">רמת ביטחון בהנחה:</span>
+              <div class="flex gap-1">
+                <button type="button" onclick="setAssumptionConfidence(30, this)" class="px-2 py-0.5 rounded border border-white/10 text-stone-400 hover:text-amber-200 hover:bg-white/[0.05] transition-all">30% נמוך</button>
+                <button type="button" onclick="setAssumptionConfidence(60, this)" class="px-2 py-0.5 rounded border border-amber-500/30 text-amber-300 bg-amber-500/10 transition-all font-medium">60% סביר</button>
+                <button type="button" onclick="setAssumptionConfidence(90, this)" class="px-2 py-0.5 rounded border border-white/10 text-stone-400 hover:text-amber-200 hover:bg-white/[0.05] transition-all">90% גבוה</button>
+              </div>
+            </div>
           </div>
 
-          <!-- Dimension 5: Missing Information (מידע חסר להחלטה) -->
-          <div class="p-3.5 rounded-xl border backdrop-blur-sm transition-all focus-within:border-rose-400" style="background-color: var(--c-glass); border-color: var(--c-border);">
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-[11px] font-semibold text-rose-300 flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
-                🔍 מידע חסר לקבלת החלטה:
+          <!-- Dimension 5: Folded Secondary Missing Information -->
+          <details class="p-3 rounded-xl border bg-white/[0.01] transition-all group" style="border-color: var(--c-border);">
+            <summary class="cursor-pointer text-[11px] font-light opacity-70 hover:opacity-100 flex items-center justify-between select-none">
+              <span class="flex items-center gap-1.5 text-stone-300">
+                <span>🔍</span>
+                <span>פערי מידע נוספים (מקופל כברירת מחדל):</span>
               </span>
-              <span class="text-[10px] opacity-40 font-mono text-rose-200">פערי מידע ושאלות</span>
+              <span class="text-[9px] font-mono text-stone-500 group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <div class="pt-2 mt-2 border-t border-white/5">
+              <textarea 
+                id="editMissingInfo" 
+                rows="2" 
+                oninput="onDimensionEdited(this)"
+                placeholder="שאלות פתוחות משניות..."
+                class="w-full bg-transparent border-0 p-0 text-xs text-right focus:outline-none font-light opacity-80 resize-none leading-relaxed overflow-hidden"
+              ></textarea>
+              <input type="hidden" id="editUnknowns" />
             </div>
-            <textarea 
-              id="editMissingInfo" 
-              rows="2" 
-              oninput="onDimensionEdited(this)"
-              placeholder="איזה מידע חסר לך כרגע כדי להכריע בוודאות גבוהה יותר..."
-              class="w-full bg-transparent border-0 p-0 text-xs text-right focus:outline-none font-light opacity-95 resize-none leading-relaxed overflow-hidden"
-            ></textarea>
-            <input type="hidden" id="editUnknowns" />
-          </div>
+          </details>
 
         </div>
 
@@ -344,28 +359,31 @@
         <div id="normalQuestionBox" class="p-5 sm:p-6 rounded-2xl border my-auto backdrop-blur-sm" style="background-color: var(--c-glass); border-color: var(--c-border);">
           <div class="flex items-center justify-between mb-2">
             <span class="text-[10px] block opacity-50 uppercase tracking-widest font-mono">שאלת הארה סוקרטית:</span>
-            <span id="ervBadge" class="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 font-mono">ERV: 85% גבוה</span>
+            <span class="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/25 font-sans">הסקתי משיקול הדעת שלך</span>
           </div>
 
           <p id="dispQuestion" class="font-editorial text-lg sm:text-xl font-medium leading-relaxed opacity-95 italic text-amber-100">
             "לאחר הקלטת הדילמה, כאן תופיע השאלה המאירה היחידה שמאתגרת את הנחת הציר שלך — בלי להפוך את ההחלטה לתחקיר."
           </p>
 
-          <!-- 1-Tap Fast Response Chips (Phase 2 Adaptive UI) -->
+          <!-- 1-Tap Fast Response Chips (מה הבסיס להנחה?) -->
           <div class="mt-3.5 pt-3 border-t border-white/5">
-            <span class="text-[10px] block opacity-60 font-medium mb-1.5 text-amber-300/80">מענה מהיר בלחיצה אחת (1-Tap):</span>
+            <span class="text-[10px] block opacity-60 font-medium mb-1.5 text-amber-300/80">מה הבסיס להנחה? (מענה בלחיצה אחת):</span>
             <div class="flex flex-wrap gap-1.5">
-              <button type="button" onclick="setAnswerAndSubmit('✓ מדויק, זהו ציר ההכרעה')" class="px-2.5 py-1 rounded-lg text-[10px] bg-amber-500/10 border border-amber-500/30 text-amber-200 hover:bg-amber-500/20 active:scale-95 transition-all">
-                ✓ מדויק, זה הציר
+              <button type="button" onclick="setAnswerAndSubmit('הבסיס: נתונים ועובדות מוצקות')" class="px-2.5 py-1 rounded-lg text-[10px] bg-sky-500/10 border border-sky-500/30 text-sky-200 hover:bg-sky-500/20 active:scale-95 transition-all">
+                📊 נתונים
               </button>
-              <button type="button" onclick="setAnswerAndSubmit('⚡ העדיפות היא פשטות ומהירות ביצוע')" class="px-2.5 py-1 rounded-lg text-[10px] bg-white/[0.04] border border-white/10 text-stone-300 hover:bg-white/[0.08] active:scale-95 transition-all">
-                ⚡ פשטות ומהירות
+              <button type="button" onclick="setAnswerAndSubmit('הבסיס: ניסיון העבר')" class="px-2.5 py-1 rounded-lg text-[10px] bg-amber-500/10 border border-amber-500/30 text-amber-200 hover:bg-amber-500/20 active:scale-95 transition-all">
+                🧠 ניסיון
               </button>
-              <button type="button" onclick="setAnswerAndSubmit('🛡️ העדיפות היא עמידות וגמישות לטווח ארוך')" class="px-2.5 py-1 rounded-lg text-[10px] bg-white/[0.04] border border-white/10 text-stone-300 hover:bg-white/[0.08] active:scale-95 transition-all">
-                🛡️ עמידות לטווח ארוך
+              <button type="button" onclick="setAnswerAndSubmit('הבסיס: מישהו אמר / הערכה חיצונית')" class="px-2.5 py-1 rounded-lg text-[10px] bg-white/[0.04] border border-white/10 text-stone-300 hover:bg-white/[0.08] active:scale-95 transition-all">
+                🗣️ מישהו אמר
               </button>
-              <button type="button" onclick="setAnswerAndSubmit('🔍 אברר ציפיות עם הצדדים לפני שאחליט')" class="px-2.5 py-1 rounded-lg text-[10px] bg-white/[0.04] border border-white/10 text-stone-300 hover:bg-white/[0.08] active:scale-95 transition-all">
-                🔍 אברר ציפיות מראש
+              <button type="button" onclick="setAnswerAndSubmit('הבסיס: תחושת בטן ואינטואיציה')" class="px-2.5 py-1 rounded-lg text-[10px] bg-white/[0.04] border border-white/10 text-stone-300 hover:bg-white/[0.08] active:scale-95 transition-all">
+                ✨ תחושה
+              </button>
+              <button type="button" onclick="setAnswerAndSubmit('לא בטוח, שווה בדיקה')" class="px-2.5 py-1 rounded-lg text-[10px] bg-rose-500/10 border border-rose-500/20 text-rose-300 hover:bg-rose-500/20 active:scale-95 transition-all">
+                ❓ לא בטוח
               </button>
             </div>
           </div>
@@ -574,50 +592,39 @@
         <p id="fuModalMeta" class="text-[10px] opacity-40 font-light mt-0.5"></p>
       </div>
 
-      <!-- Quick Status Chips (ביררתי / עדיין לא / כבר לא רלוונטי) -->
+      <!-- 5-Second Quick Outcome Chips (הצליח / חלקית / לא / עוד לא ברור) -->
       <div class="space-y-1.5">
-        <span class="text-[11px] block font-light opacity-70">סטטוס בדיקה מהיר:</span>
-        <div class="grid grid-cols-3 gap-1.5 text-center text-[11px]">
-          <button type="button" onclick="setFuQuickStatus('clarified')" id="btnFuStatusClarified" class="py-2 px-1 rounded-lg border font-medium transition-all" style="border-color: var(--c-accent); background-color: rgba(212,175,55,0.15); opacity: 1;">✓ ביררתי</button>
-          <button type="button" onclick="setFuQuickStatus('pending')" id="btnFuStatusPending" class="py-2 px-1 rounded-lg border border-stone-700 opacity-60 transition-all">⏳ עדיין לא</button>
-          <button type="button" onclick="setFuQuickStatus('irrelevant')" id="btnFuStatusIrrelevant" class="py-2 px-1 rounded-lg border border-stone-700 opacity-60 transition-all">✕ כבר לא רלוונטי</button>
+        <span class="text-[11px] block font-light opacity-70">1. מבחן התוצאה (ב-5 שניות):</span>
+        <div class="grid grid-cols-4 gap-1.5 text-center text-[10px]">
+          <button type="button" onclick="setFuQuickStatus('success')" id="btnFuStatusSuccess" class="py-2 px-1 rounded-lg border font-medium transition-all bg-emerald-500/10 border-emerald-500/30 text-emerald-300">✓ הצליח</button>
+          <button type="button" onclick="setFuQuickStatus('partial')" id="btnFuStatusPartial" class="py-2 px-1 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 transition-all font-medium">⚡ חלקית</button>
+          <button type="button" onclick="setFuQuickStatus('failed')" id="btnFuStatusFailed" class="py-2 px-1 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-300 transition-all">✕ לא</button>
+          <button type="button" onclick="setFuQuickStatus('unclear')" id="btnFuStatusUnclear" class="py-2 px-1 rounded-lg border border-stone-700 text-stone-400 opacity-60 transition-all">⏳ עוד לא</button>
         </div>
       </div>
 
-      <!-- Axis 1: Reality (מה קרה בפועל?) -->
+      <!-- Epistemic Calibration (איכות ההחלטה בזמן אמת - לפני ציון התוצאה!) -->
+      <div class="space-y-1.5 p-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.03]">
+        <span class="text-[11px] font-semibold text-amber-200 block">2. כיול תהליך: האם ההנחות היו סבירות עם המידע שהיה אז?</span>
+        <div class="grid grid-cols-3 gap-1 text-center text-[9px] pt-1">
+          <button type="button" onclick="setFuProcessReasonable('fully')" id="btnFuReasonableFully" class="py-1.5 px-1 rounded border border-amber-500/30 bg-amber-500/20 text-amber-200 font-medium">סבירות לחלוטין</button>
+          <button type="button" onclick="setFuProcessReasonable('partial')" id="btnFuReasonablePartial" class="py-1.5 px-1 rounded border border-white/10 text-stone-300">חלקית / נאיביות</button>
+          <button type="button" onclick="setFuProcessReasonable('blindspot')" id="btnFuReasonableBlind" class="py-1.5 px-1 rounded border border-rose-500/20 text-rose-300">נקודה עיוורת</button>
+        </div>
+      </div>
+
+      <!-- Key Cause (מה הגורם המרכזי שהשפיע?) -->
       <div class="space-y-1.5">
-        <span class="text-[11px] font-medium text-amber-200 block">1. מה קרה בפועל?</span>
-        <textarea 
+        <span class="text-[11px] font-medium text-stone-300 block">3. מה הגורם המרכזי שהשפיע על המציאות בפועל?</span>
+        <input 
           id="inputFuReality" 
-          rows="2" 
-          placeholder="תאר בקצרה מה התרחש במציאות מאז קבלת ההחלטה..."
-          class="w-full bg-black/40 border rounded-xl p-2.5 text-xs text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-400/80 transition-all resize-none"
+          type="text"
+          placeholder="משפט אחד קצר: למשל, פער בתיאום ציפיות, שינוי תקציב..."
+          class="w-full bg-black/40 border rounded-xl px-3 py-2 text-xs text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-400/80 transition-all"
           style="border-color: var(--c-border);"
-        ></textarea>
-      </div>
-
-      <!-- Axis 2: Assumption Audit (מה התברר לגבי ההנחה שלך?) -->
-      <div class="space-y-1.5">
-        <span class="text-[11px] font-medium text-amber-200 block">2. מה התברר לגבי ההנחה שלך?</span>
-        <textarea 
-          id="inputFuAssumption" 
-          rows="2" 
-          placeholder="האם הנחת הציר שעליה נשענת החזיקה מעמד? מה הפתיע אותך..."
-          class="w-full bg-black/40 border rounded-xl p-2.5 text-xs text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-400/80 transition-all resize-none"
-          style="border-color: var(--c-border);"
-        ></textarea>
-      </div>
-
-      <!-- Axis 3: Process Calibration (מה היית משנה באופן בחינת ההחלטה?) -->
-      <div class="space-y-1.5">
-        <span class="text-[11px] font-medium text-amber-200 block">3. מה היית משנה באופן בחינת ההחלטה?</span>
-        <textarea 
-          id="inputFuProcess" 
-          rows="2" 
-          placeholder="לא בדיעבד של התוצאה, אלא בתהליך: האם היה מידע ששווה היה לברר קודם?..."
-          class="w-full bg-black/40 border rounded-xl p-2.5 text-xs text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-400/80 transition-all resize-none"
-          style="border-color: var(--c-border);"
-        ></textarea>
+        />
+        <input type="hidden" id="inputFuAssumption" />
+        <input type="hidden" id="inputFuProcess" />
       </div>
 
       <!-- Save & Close Loop -->
@@ -1660,11 +1667,12 @@
 3. רק אם הקובץ שקט לחלוטין ללא כל דיבור אנושי, החזר: ריק.`;
 
         async function callGeminiTranscribe(modelName, timeoutMs = 12000) {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+          const url = `/api/gemini`;
           const res = await fetchWithTimeout(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+              model: modelName,
               contents: [{
                 parts: [
                   { inlineData: { mimeType: mimeType, data: base64Audio } },
@@ -1803,12 +1811,86 @@
       hint.innerText = 'מנתח שיקול דעת בענן...';
       if (subHint) subHint.innerText = 'מחלץ את 5 הממדים האנושיים...';
 
-      if (!GEMINI_API_KEY) {
-        console.log('No GEMINI_API_KEY configured, executing local cognitive pipeline.');
-        runLocalCognitivePipeline(rawVerbatim);
-        return;
+      // 1. Primary Unified Flow: Call Backend DecisionService (with Memory, Novelty Gate, and Smart Silence)
+      try {
+        const createRes = await fetch('/api/decision/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: currentUsername,
+            rawText: rawVerbatim,
+            frictionLevel: currentFrictionLevel
+          })
+        });
+
+        if (createRes.ok) {
+          const createData = await createRes.json();
+          if (createData.success && createData.sessionState) {
+            const ss = createData.sessionState;
+            const hd = ss.humanDimensions || {};
+            const bq = ss.bespokeQuestion || {};
+            const dc = ss.decisionCase || {};
+
+            // Handle Smart Silence (סעיף 14)
+            if (bq.shouldIntervene === false) {
+              const normalBox = document.getElementById('normalQuestionBox');
+              const silenceBox = document.getElementById('smartSilenceBox');
+              const silenceMsg = document.getElementById('smartSilenceMessage');
+              if (normalBox) normalBox.classList.add('hidden');
+              if (silenceBox) silenceBox.classList.remove('hidden');
+              if (silenceMsg) silenceMsg.innerText = bq.smartSilenceMessage || 'תיארת את זה מאוזן. אין לי שאלה ששווה לעכב אותך בגללה.';
+            } else {
+              const normalBox = document.getElementById('normalQuestionBox');
+              const silenceBox = document.getElementById('smartSilenceBox');
+              if (normalBox) normalBox.classList.remove('hidden');
+              if (silenceBox) silenceBox.classList.add('hidden');
+            }
+
+            const decisionRecord = {
+              id: dc.id || ('dc-' + Date.now()),
+              backendCaseId: dc.id,
+              userId: currentUsername,
+              frozenAt: Date.now(),
+              rawVerbatim: rawVerbatim,
+              title: hd.consideration ? `דילמה: ${hd.consideration.slice(0, 35)}` : 'דילמת שיקול דעת',
+              consideration: hd.consideration || dc.dimConsideration || rawVerbatim,
+              goalsPrices: hd.goalsPrices || dc.dimGoalsPrices || '',
+              facts: hd.facts || dc.dimFacts || '',
+              assumptions: hd.assumptions || dc.dimAssumptions || '',
+              missingInfo: hd.missingInfo || dc.dimMissingInfo || '',
+              reliance: `${hd.facts || ''} | ${hd.assumptions || ''}`.trim(),
+              unknowns: hd.missingInfo || '',
+              centralTension: hd.centralTension || dc.centralTension || '',
+              keyHinge: hd.keyHinge || dc.keyHinge || '',
+              question: bq.questionText || ss.illuminationQuestion || 'מהי הנחת הציר המרכזית שלך?',
+              insightBefore: hd.assumptions || 'נקודת המוצא',
+              insightNow: 'בדיקת הנחת הציר מול תרחיש הפוך',
+              insightChosenStep: 'בדיקה ממוקדת של המידע החסר',
+              proposedCriteria: [
+                'אימות הנחת הציר במועד המעקב',
+                'בדיקת שינוי במצב העובדות',
+                'בחינת תוצאות הצעד הנבחר'
+              ],
+              selectedDays: 14
+            };
+
+            applyDecisionToUI(decisionRecord);
+            saveDecisionForCurrentUser(decisionRecord);
+
+            isAnalyzing = false;
+            captureResultIcon = 'success';
+            hint.innerText = '';
+            if (subHint) subHint.innerText = '';
+            setScrollLock(false);
+            attemptScrollToNext('stageDeliberation');
+            return;
+          }
+        }
+      } catch (errBackend) {
+        console.warn('[ECHO] Backend /api/decision/create unavailable, falling back to direct prompt:', errBackend.message);
       }
 
+      // 2. Fallback Flow: Direct Gemini API via Local Proxy
       const prompt = `
 אתה מנוע הניתוח האפיסטמי של Echo (הד) - עוזר המאפשר לאדם לראות את החשיבה שלו, לזהות מה עשוי לשנות אותה ולבחור בעצמו אם להעמיק.
 הערך אינו בכמות התובנות, אלא בסיוע לאדם לבצע עוד מהלך חשיבה אחד שהיה חסר לו — בלי להפוך כל החלטה לתחקיר.
@@ -1832,12 +1914,13 @@
       async function callCognitiveModel(modelName, timeoutMs = 10000) {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+        const url = `/api/gemini`;
         const res = await fetch(url, {
           method: 'POST',
           signal: controller.signal,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            model: modelName,
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               responseMimeType: 'application/json',
@@ -2169,12 +2252,13 @@
         const timer = setTimeout(() => controller.abort(), timeoutMs);
 
         try {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+          const url = `/api/gemini`;
           const res = await fetch(url, {
             method: 'POST',
             signal: controller.signal,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+              model: model,
               contents: [{
                 parts: [
                   { inlineData: { mimeType: mimeType, data: base64Audio } },
@@ -2466,32 +2550,48 @@
       if (modal) modal.classList.add('hidden');
     }
 
-    function setFuQuickStatus(status) {
-      currentFuQuickStatus = status;
-      const btnClarified = document.getElementById('btnFuStatusClarified');
-      const btnPending = document.getElementById('btnFuStatusPending');
-      const btnIrrelevant = document.getElementById('btnFuStatusIrrelevant');
+    let currentAssumptionConfidence = 60;
+    function setAssumptionConfidence(conf, btn) {
+      currentAssumptionConfidence = conf;
+      const parent = btn.parentElement;
+      if (parent) {
+        parent.querySelectorAll('button').forEach(b => {
+          b.className = 'px-2 py-0.5 rounded border border-white/10 text-stone-400 hover:text-amber-200 hover:bg-white/[0.05] transition-all';
+        });
+      }
+      btn.className = 'px-2 py-0.5 rounded border border-amber-500/30 text-amber-300 bg-amber-500/10 transition-all font-medium';
+    }
 
-      const buttons = [
-        { el: btnClarified, key: 'clarified' },
-        { el: btnPending, key: 'pending' },
-        { el: btnIrrelevant, key: 'irrelevant' }
-      ];
-
-      buttons.forEach(b => {
-        if (!b.el) return;
-        if (b.key === status) {
-          b.el.style.borderColor = 'var(--c-accent)';
-          b.el.style.backgroundColor = 'rgba(212, 175, 55, 0.15)';
-          b.el.style.opacity = '1';
-          b.el.classList.add('font-medium');
-        } else {
-          b.el.style.borderColor = 'rgba(255,255,255,0.1)';
-          b.el.style.backgroundColor = 'transparent';
-          b.el.style.opacity = '0.5';
-          b.el.classList.remove('font-medium');
+    let currentFuReasonable = 'fully';
+    function setFuProcessReasonable(type) {
+      currentFuReasonable = type;
+      ['btnFuReasonableFully', 'btnFuReasonablePartial', 'btnFuReasonableBlind'].forEach(id => {
+        const b = document.getElementById(id);
+        if (b) {
+          b.className = 'py-1.5 px-1 rounded border border-white/10 text-stone-300';
         }
       });
+      const targetId = type === 'fully' ? 'btnFuReasonableFully' : (type === 'partial' ? 'btnFuReasonablePartial' : 'btnFuReasonableBlind');
+      const targetBtn = document.getElementById(targetId);
+      if (targetBtn) {
+        targetBtn.className = 'py-1.5 px-1 rounded border border-amber-500/30 bg-amber-500/20 text-amber-200 font-medium';
+      }
+    }
+
+    function setFuQuickStatus(status) {
+      currentFuQuickStatus = status;
+      const ids = ['btnFuStatusSuccess', 'btnFuStatusPartial', 'btnFuStatusFailed', 'btnFuStatusUnclear'];
+      ids.forEach(id => {
+        const b = document.getElementById(id);
+        if (!b) return;
+        b.style.opacity = '0.5';
+        b.classList.remove('font-bold', 'ring-1');
+      });
+      const activeBtn = document.getElementById('btnFuStatus' + status.charAt(0).toUpperCase() + status.slice(1));
+      if (activeBtn) {
+        activeBtn.style.opacity = '1';
+        activeBtn.classList.add('font-bold', 'ring-1');
+      }
     }
 
     function saveFollowUpResults() {
@@ -2504,8 +2604,8 @@
       const assumptionText = inputAssumption ? inputAssumption.value.trim() : '';
       const processText = inputProcess ? inputProcess.value.trim() : '';
 
-      if (!realityText && !assumptionText && !processText) {
-        alert('אנא מלא לפחות אחד מצירי הלמידה לפני שמירה');
+      if (!realityText && !currentFuQuickStatus) {
+        alert('אנא בחר סטטוס תוצאה או תאר בקצרה מה קרה');
         if (inputReality) inputReality.focus();
         return;
       }
@@ -2525,6 +2625,7 @@
         id: 'fu-' + Date.now(),
         timestamp: Date.now(),
         quickStatus: currentFuQuickStatus,
+        processReasonable: currentFuReasonable,
         realityText: realityText,
         assumptionText: assumptionText,
         processText: processText
@@ -2965,6 +3066,54 @@
         return;
       }
 
+      // 1. Primary Unified Flow: Call Backend DecisionService (with real Delta Engine & Atomic KG Storage)
+      try {
+        const key = getUserStorageKey();
+        const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        const cur = existing.length > 0 ? existing[existing.length - 1] : null;
+
+        const ansRes = await fetch('/api/decision/answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            caseId: (cur && cur.backendCaseId) || (cur && cur.id) || 'case-active',
+            userAnswer: answerText,
+            skip: isSkip
+          })
+        });
+
+        if (ansRes.ok) {
+          const ansData = await ansRes.json();
+          if (ansData.success && ansData.result?.refinedInsight) {
+            const ri = ansData.result.refinedInsight;
+            if (insBefore) insBefore.innerText = ri.before || '';
+            if (insNow) insNow.innerText = ri.now || '';
+            if (insStep) insStep.innerText = ri.chosenStep || '';
+
+            if (cur) {
+              cur.frictionLevel = currentFrictionLevel;
+              cur.userAnswer = isSkip ? '[נבחר מעבר ישיר ללא העמקה — מספיק לי לעכשיו]' : answerText;
+              cur.insightBefore = ri.before || '';
+              cur.insightNow = ri.now || '';
+              cur.insightChosenStep = ri.chosenStep || '';
+              localStorage.setItem(key, JSON.stringify(existing));
+              syncDecisionToCloud(cur);
+            }
+
+            isRefiningAnswer = false;
+            if (btn) {
+              btn.disabled = false;
+              btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+            if (hint) hint.innerText = 'נשמר בהצלחה! עובר לסיכום התחדדות ↓';
+            scrollToNext('stageContract');
+            return;
+          }
+        }
+      } catch (errBackendAns) {
+        console.warn('[ECHO] Backend /api/decision/answer unavailable, using direct synthesis:', errBackendAns.message);
+      }
+
       // If user gave an answer: run quick AI insight synthesis
       isRefiningAnswer = true;
       if (btn) {
@@ -2994,12 +3143,13 @@
         const refController = new AbortController();
         const refTimer = setTimeout(() => refController.abort(), 12000);
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        const url = `/api/gemini`;
         const res = await fetch(url, {
           method: 'POST',
           signal: refController.signal,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            model: 'gemini-2.5-flash',
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               responseMimeType: 'application/json',
@@ -3207,6 +3357,12 @@
       const activeCriterion = getActiveCriterionText();
       const customCrit = document.getElementById('inputCustomCriterion') ? document.getElementById('inputCustomCriterion').value.trim() : '';
       const queryText = document.getElementById('dispFollowUpQuery') ? document.getElementById('dispFollowUpQuery').innerText.trim() : '';
+
+      const finalCrit = selectedCriterionType === 'custom' ? customCrit : activeCriterion;
+      if (!finalCrit || finalCrit.length < 15 || finalCrit.includes('קריטריון מוצע ראשון') || finalCrit.includes('ייקבע עם לכידת הדילמה') || finalCrit.includes('טרם הוגדר')) {
+         alert("לא ניתן לחתום: יש להגדיר קריטריון תקין וממשי (מעל 15 תווים) לבחינת ההחלטה.");
+         return;
+      }
 
       const targetDueDate = Date.now() + selectedDays * 86400000;
       const formattedDueDate = new Date(targetDueDate).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: 'numeric' });

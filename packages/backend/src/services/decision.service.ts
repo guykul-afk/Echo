@@ -87,6 +87,21 @@ export class DecisionService {
     let bespokeQuestion: IlluminationQuestion | undefined;
     let humanDimensions: FiveHumanDimensions | undefined = extracted.fiveDimensions || (extracted.fourDimensions as FiveHumanDimensions);
 
+    // Phase 2 (Adaptive Friction): Infer from commitmentGradient / rawCapture length if not explicitly passed
+    const inputWords = rawCapture.trim().split(/\s+/).length;
+    const gradient = extracted.signature?.commitmentGradient ?? 0.5;
+    
+    let effectiveFriction: 'quick' | 'focused' | 'deep' = dto.frictionLevel || 'focused';
+    if (!dto.frictionLevel) {
+      if (gradient >= 0.85 || inputWords <= 7) {
+        effectiveFriction = 'quick';
+      } else if (inputWords >= 45 || (extracted.contextStakes === 'high' && extracted.contextReversibility === 'irreversible')) {
+        effectiveFriction = 'deep';
+      } else {
+        effectiveFriction = 'focused';
+      }
+    }
+
     if (this.aiProvider.extractCognitiveEngine) {
       const cognitiveResult = await this.aiProvider.extractCognitiveEngine(rawCapture);
       humanDimensions = cognitiveResult.humanDimensions || humanDimensions;
@@ -99,10 +114,26 @@ export class DecisionService {
         extractedAt: now
       };
 
-      const isQuickFriction = dto.frictionLevel === 'quick';
-      const shouldIntervene = isQuickFriction 
-        ? false 
-        : (cognitiveResult.illuminationQuestion.shouldIntervene ?? (cognitiveResult.illuminationQuestion.strategy !== 'no_intervention'));
+      // Phase 2 (Silence as a decision): Evaluate whether silence is warranted
+      const missingInfoText = (humanDimensions?.missingInfo || '').trim();
+      const isMissingInfoEmpty = !missingInfoText || 
+        ['אין', 'אין מידע חסר', 'אין פערי מידע', 'הכל ברור', 'לא צוין', '-'].some(c => missingInfoText.includes(c));
+
+      const isExplicitSilenceStrategy = cognitiveResult.illuminationQuestion.strategy === 'no_intervention' ||
+        cognitiveResult.illuminationQuestion.shouldIntervene === false;
+
+      let shouldIntervene = effectiveFriction === 'quick' ? false : !isExplicitSilenceStrategy;
+
+      // Smart silence when unknowns are empty and situation is balanced (סעיף 14)
+      if (shouldIntervene && isMissingInfoEmpty && (cognitiveResult.illuminationQuestion.expectedReflectionValue ?? 0.8) < 0.6) {
+        shouldIntervene = false;
+      }
+
+      const silenceMessage = shouldIntervene 
+        ? undefined
+        : (effectiveFriction === 'quick'
+            ? 'נבחר מסלול מהיר. השיקולים והמתח המרכזי נוסחו במראה ללא התערבות נוספת.'
+            : 'תיארת את זה מאוזן. אין לי שאלה ששווה לעכב אותך בגללה.');
 
       bespokeQuestion = {
         id: `illum-${caseId}`,
@@ -112,7 +143,7 @@ export class DecisionService {
         triggerReason: cognitiveResult.illuminationQuestion.triggerReason,
         shouldIntervene,
         expectedReflectionValue: cognitiveResult.illuminationQuestion.expectedReflectionValue ?? 0.8,
-        smartSilenceMessage: cognitiveResult.illuminationQuestion.smartSilenceMessage || (isQuickFriction ? 'נבחר מסלול מהיר. השיקולים והמתח המרכזי נוסחו במראה ללא התערבות נוספת.' : undefined),
+        smartSilenceMessage: cognitiveResult.illuminationQuestion.smartSilenceMessage || silenceMessage,
         responseWidget: cognitiveResult.illuminationQuestion.responseWidget || 'text',
         responseOptions: cognitiveResult.illuminationQuestion.responseOptions,
         isSecondary: false,
@@ -121,7 +152,7 @@ export class DecisionService {
       };
 
       if (shouldIntervene && bespokeQuestion) {
-        // Phase 3 & 4: Retrieval Before Ask check against Personal Memory
+        // Phase 1: Retrieval Before Ask check against Personal Memory with Novelty Gate & Contradictions
         const memoryCheck = await this.retrievalBeforeAskService.checkBeforeAsk(
           dto.userId,
           bespokeQuestion.questionText,
@@ -136,6 +167,9 @@ export class DecisionService {
         } else if (memoryCheck.canSuppressIntervention) {
           bespokeQuestion.shouldIntervene = false;
           bespokeQuestion.smartSilenceMessage = `המידע לגבי נתון זה כבר קיים בזיכרון האישי שלך ("${memoryCheck.knownAnswerFact}"). אין צורך בהתערבות נוספת.`;
+        } else if (memoryCheck.memoryPreamble) {
+          // Rule 11: Max 1-2 memories displayed as context before the illumination question, not replacing it
+          bespokeQuestion.questionText = `${memoryCheck.memoryPreamble}\n${bespokeQuestion.questionText}`;
         }
       }
     }
@@ -169,7 +203,7 @@ export class DecisionService {
       rawCaptureText: rawCapture,
       rawAudioPath: dto.rawAudioPath,
       frozenAt,
-      frictionLevel: dto.frictionLevel || 'focused',
+      frictionLevel: effectiveFriction || 'focused',
       dimConsideration: humanDimensions.consideration,
       dimGoalsPrices: humanDimensions.goalsPrices,
       dimFacts: humanDimensions.facts,
@@ -330,18 +364,59 @@ export class DecisionService {
         chosenStep: refinedInsight.chosenStep
       });
 
-      // Save user stated facts into Knowledge Graph
-      if (!skip && userAnswer.trim().length > 3) {
-        await this.knowledgeGraphService.saveAssertion({
-          id: `asrt-${caseId}-${now}`,
-          userId: session.decisionCase.userId,
-          caseId,
-          statement: userAnswer.trim(),
-          sourceType: 'user_stated',
-          timestamp: now,
-          confidenceLevel: 95,
-          createdAt: now
-        });
+      // Phase 1 (Epistemic Safety): Handle confirmation feedback if this was a confirmation question
+      if (session.bespokeQuestion?.responseWidget === 'confirmation') {
+        const isConfirmed = userAnswer.includes('כן') || userAnswer.includes('תקף') || userAnswer.includes('נכון');
+        const activeAssertions = await this.knowledgeGraphService.getActiveAssertionsByUser(session.decisionCase.userId);
+        for (const ast of activeAssertions) {
+          if (session.bespokeQuestion.questionText.includes(ast.statement.slice(0, 30))) {
+            await this.knowledgeGraphService.recordAssertionConfirmation(session.decisionCase.userId, ast.id, isConfirmed);
+          }
+        }
+      }
+
+      // Phase 1 (Epistemic Safety): Atomic extraction into Knowledge Graph
+      // NEVER save raw prose/answer. Save only newFacts, changedAssumptions, resolvedUnknowns (<= 120 chars each)
+      if (!skip) {
+        let savedCount = 0;
+        const itemsToSave: { text: string; category: 'fact' | 'assumption' }[] = [
+          ...(deltaResult.newFacts || []).map(f => ({ text: f, category: 'fact' as const })),
+          ...(deltaResult.changedAssumptions || []).map(a => ({ text: a, category: 'assumption' as const })),
+          ...(deltaResult.resolvedUnknowns || []).map(u => ({ text: u, category: 'fact' as const }))
+        ];
+
+        for (const item of itemsToSave) {
+          const cleanText = (item.text || '').trim();
+          if (cleanText.length >= 4) {
+            const statement = cleanText.length > 120 ? cleanText.slice(0, 117) + '...' : cleanText;
+            await this.knowledgeGraphService.saveAssertion({
+              id: `asrt-${caseId}-${now}-${savedCount++}`,
+              userId: session.decisionCase.userId,
+              caseId,
+              statement,
+              category: item.category,
+              sourceType: 'user_stated',
+              timestamp: now,
+              confidenceLevel: 90,
+              createdAt: now
+            });
+          }
+        }
+
+        // Fallback: If Delta Engine returned no structured items, but user answer is a single crisp sentence (<= 120 chars)
+        if (savedCount === 0 && userAnswer.trim().length >= 4 && userAnswer.trim().length <= 120) {
+          await this.knowledgeGraphService.saveAssertion({
+            id: `asrt-${caseId}-${now}-fallback`,
+            userId: session.decisionCase.userId,
+            caseId,
+            statement: userAnswer.trim(),
+            category: 'fact',
+            sourceType: 'user_stated',
+            timestamp: now,
+            confidenceLevel: 85,
+            createdAt: now
+          });
+        }
       }
     }
 

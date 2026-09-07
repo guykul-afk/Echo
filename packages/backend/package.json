@@ -5,7 +5,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "node dist/tests/run-simulations.js"
+    "test": "node dist/tests/run-simulations.js",
+    "test:phase1": "node dist/tests/phase1-memory.test.js"
   },
   "dependencies": {
     "@echo/shared": "^1.0.0",
