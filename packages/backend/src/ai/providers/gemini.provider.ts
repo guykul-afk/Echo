@@ -11,8 +11,8 @@ export class GeminiAiProvider implements IAiProvider {
 
   constructor(
     apiKey?: string,
-    cognitiveModel: string = process.env.COGNITIVE_MODEL || 'gemini-3.6',
-    transcribeModel: string = process.env.TRANSCRIBE_MODEL || 'gemini-2.5-flash'
+    cognitiveModel: string = process.env.COGNITIVE_MODEL || 'gemini-3.6-flash',
+    transcribeModel: string = process.env.TRANSCRIBE_MODEL || 'gemini-3.6-flash'
   ) {
     this.apiKey = apiKey || process.env.GEMINI_API_KEY || '';
     this.cognitiveModel = cognitiveModel;

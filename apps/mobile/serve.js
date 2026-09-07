@@ -1,6 +1,15 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+
+// Load environment variables if available (.env in root or apps/mobile)
+try {
+  require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+} catch (e) {}
+try {
+  require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+} catch (e) {}
+
 const { syncDecisionCycles, fetchAllDecisionsFromFirestore, generateMarkdown } = require('../../scripts/sync-decisions.js');
 
 const ROOT_DIR = path.resolve(__dirname, '../..');
@@ -119,12 +128,15 @@ const server = http.createServer(async (req, res) => {
     req.on('end', async () => {
       try {
         const payload = JSON.parse(body);
-        const modelName = payload.model || 'gemini-3.6-flash';
+        let modelName = payload.model || 'gemini-3.6-flash';
+        if (modelName.includes('2.0') || modelName.includes('2.5') || modelName.includes('3.5')) {
+          modelName = 'gemini-3.6-flash';
+        }
         
-        // Use process.env.GEMINI_API_KEY from the backend environment
-        const apiKey = process.env.GEMINI_API_KEY;
+        // Use apiKey from body, request header, or server environment
+        const apiKey = payload.apiKey || req.headers['x-gemini-api-key'] || process.env.GEMINI_API_KEY;
         if (!apiKey) {
-           res.writeHead(500, { 'Content-Type': 'application/json' });
+           res.writeHead(400, { 'Content-Type': 'application/json' });
            res.end(JSON.stringify({ error: 'GEMINI_API_KEY is missing on server' }));
            return;
         }
@@ -161,7 +173,7 @@ const server = http.createServer(async (req, res) => {
       try {
         const payload = JSON.parse(body);
         const { DecisionService, GeminiAiProvider, MockAiProvider } = await import('../../packages/backend/dist/index.js');
-        const apiKey = process.env.GEMINI_API_KEY;
+        const apiKey = payload.apiKey || req.headers['x-gemini-api-key'] || process.env.GEMINI_API_KEY;
         const provider = apiKey ? new GeminiAiProvider(apiKey, 'gemini-3.6-flash') : new MockAiProvider();
         const decisionService = new DecisionService(provider);
 
@@ -189,7 +201,7 @@ const server = http.createServer(async (req, res) => {
       try {
         const payload = JSON.parse(body);
         const { DecisionService, GeminiAiProvider, MockAiProvider } = await import('../../packages/backend/dist/index.js');
-        const apiKey = process.env.GEMINI_API_KEY;
+        const apiKey = payload.apiKey || req.headers['x-gemini-api-key'] || process.env.GEMINI_API_KEY;
         const provider = apiKey ? new GeminiAiProvider(apiKey, 'gemini-3.6-flash') : new MockAiProvider();
         const decisionService = new DecisionService(provider);
 

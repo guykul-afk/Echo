@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { LuxuryTheme } from '../theme/colors.js';
 import { EchoOrb } from '../graphics/EchoOrb.js';
@@ -15,11 +15,53 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [frictionLevel, setFrictionLevel] = useState<'quick' | 'focused' | 'deep'>('focused');
-
   const [recordHint, setRecordHint] = useState('לחץ להקלטה קולית חופשית');
+  const recognitionRef = useRef<any>(null);
 
   const handleToggleRecord = () => {
     if (!isRecording) {
+      const SpeechRec = typeof window !== 'undefined' && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+      if (SpeechRec) {
+        try {
+          const rec = new SpeechRec();
+          rec.lang = 'he-IL';
+          rec.continuous = true;
+          rec.interimResults = true;
+          rec.maxAlternatives = 1;
+
+          rec.onresult = (event: any) => {
+            let fullText = '';
+            for (let i = 0; i < event.results.length; ++i) {
+              fullText += event.results[i][0].transcript + ' ';
+            }
+            const trimmed = fullText.trim();
+            if (trimmed) {
+              setInputText(trimmed);
+              setRecordHint(`מקשיב: « ${trimmed.length > 35 ? '...' + trimmed.slice(-35) : trimmed} »`);
+            }
+          };
+
+          rec.onerror = (err: any) => {
+            console.warn('SpeechRecognition error:', err);
+            setRecordHint('לא זוהה דיבור ברור. ניתן להקליד ידנית בתיבה.');
+          };
+
+          rec.onend = () => {
+            setIsRecording(false);
+            setRecordHint('לחץ להקלטה קולית חופשית');
+          };
+
+          rec.start();
+          recognitionRef.current = rec;
+          setIsRecording(true);
+          setRecordHint('מקשיב לך... דבר באופן חופשי (גע לעצירה)');
+          return;
+        } catch (e) {
+          console.warn('Failed to start SpeechRecognition:', e);
+        }
+      }
+
+      // Fallback
       setIsRecording(true);
       setRecordHint('מקשיב לך... דבר באופן חופשי');
       setTimeout(() => {
@@ -29,6 +71,10 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
         }
       }, 4000);
     } else {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) {}
+        recognitionRef.current = null;
+      }
       setIsRecording(false);
       setRecordHint('לחץ להקלטה קולית חופשית');
     }
