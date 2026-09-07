@@ -1756,35 +1756,21 @@
 2. אל תוסיף שום הקדמה, הסבר, מרכאות או תוספת שלא נאמרה בהקלטה.
 3. רק אם הקובץ שקט לחלוטין ללא כל דיבור אנושי, החזר: ריק.`;
 
-        async function callGeminiTranscribe(modelName, timeoutMs = 12000) {
-          const url = `/api/gemini`;
-          const clientKey = (window.ENV_CONFIG && window.ENV_CONFIG.GEMINI_API_KEY) ||
-            localStorage.getItem('GEMINI_API_KEY') || '';
-
-          const res = await fetchWithTimeout(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(clientKey ? { 'x-gemini-api-key': clientKey } : {})
+        async function callGeminiTranscribe(modelName = 'gemini-3.6-flash', timeoutMs = 14000) {
+          const contents = [{
+            parts: [
+              { inlineData: { mimeType: mimeType, data: base64Audio } },
+              { text: prompt }
+            ]
+          }];
+          const data = await invokeGeminiGenerateContent({
+            model: modelName,
+            contents: contents,
+            generationConfig: {
+              temperature: 0.0
             },
-            body: JSON.stringify({
-              model: modelName,
-              apiKey: clientKey,
-              contents: [{
-                parts: [
-                  { inlineData: { mimeType: mimeType, data: base64Audio } },
-                  { text: prompt }
-                ]
-              }],
-              generationConfig: {
-                temperature: 0.0
-              }
-            })
-          }, timeoutMs);
-
-          const data = await res.json();
-          if (data.error) throw new Error(data.error.message || data.error || JSON.stringify(data.error));
-
+            timeoutMs: timeoutMs
+          });
           const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
           return cleanExtractedTranscript(rawText);
         }
@@ -1837,6 +1823,82 @@
         }
       }
     }
+    // Core unified Gemini caller supporting direct browser CORS (Firebase static hosting) and proxy fallback (local dev)
+    async function invokeGeminiGenerateContent({
+      model = 'gemini-3.6-flash',
+      contents,
+      generationConfig,
+      timeoutMs = 15000
+    }) {
+      const clientKey = (window.ENV_CONFIG && window.ENV_CONFIG.GEMINI_API_KEY) ||
+        localStorage.getItem('GEMINI_API_KEY') || '';
+
+      // Priority 1: Direct Google Generative Language API call with clientKey (supports static Firebase hosting & mobile)
+      if (clientKey) {
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), timeoutMs);
+          const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(clientKey)}`;
+
+          const res = await fetch(directUrl, {
+            method: 'POST',
+            signal: controller.signal,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: contents,
+              generationConfig: generationConfig
+            })
+          });
+          clearTimeout(timer);
+
+          if (res.ok) {
+            const data = await res.json();
+            if (!data.error) {
+              return data;
+            }
+            console.warn('[ECHO Gemini Direct] API returned error:', data.error);
+          } else {
+            const errBody = await res.text().catch(() => '');
+            console.warn('[ECHO Gemini Direct] HTTP status:', res.status, errBody);
+          }
+        } catch (directErr) {
+          console.warn('[ECHO Gemini Direct] Network/timeout error:', directErr.message);
+        }
+      }
+
+      // Priority 2: Fallback to local server proxy `/api/gemini` (when running locally with serve.js)
+      try {
+        const proxyController = new AbortController();
+        const proxyTimer = setTimeout(() => proxyController.abort(), 8000);
+        const res = await fetch('/api/gemini', {
+          method: 'POST',
+          signal: proxyController.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(clientKey ? { 'x-gemini-api-key': clientKey } : {})
+          },
+          body: JSON.stringify({
+            model: model,
+            apiKey: clientKey,
+            contents: contents,
+            generationConfig: generationConfig
+          })
+        });
+        clearTimeout(proxyTimer);
+
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.error) {
+            return data;
+          }
+          throw new Error(data.error.message || JSON.stringify(data.error));
+        } else {
+          throw new Error(`Proxy error HTTP ${res.status}`);
+        }
+      } catch (proxyErr) {
+        throw new Error(`Gemini invocation failed: ${proxyErr.message}`);
+      }
+    }
 
     function runLocalCognitivePipeline(rawVerbatim) {
       const hint = document.getElementById('geoStatusHint');
@@ -1848,24 +1910,14 @@
         hint.innerText = 'לא הוזן מלל לניתוח.';
         return;
       }
-      const text = rawVerbatim.toLowerCase();
       const firstLine = rawVerbatim.split('\n')[0].trim();
-      let title = firstLine.slice(0, 50) + (firstLine.length > 50 ? '...' : '');
-      let consideration = rawVerbatim;
-      let goalsPrices = 'בחינת כדאיות המהלך והשגת היעד תוך שמירה על המשאבים הקיימים';
-      let facts = rawVerbatim.slice(0, 100);
-      let assumptions = 'ההערכות וההשלכות שנשקלו יתממשו כפי שתוכנן';
-      let missingInfo = 'מהו המידע או הנתון שטרם אומת וקריטי להכרעה?';
+      let title = firstLine.slice(0, 45) + (firstLine.length > 45 ? '...' : '');
+      let consideration = `אתה בוחן: ${rawVerbatim}`;
+      let goalsPrices = `קידום היעד ביחס ל-${firstLine.slice(0, 35)} תוך שליטה בעלויות ובאי-ודאות`;
+      let facts = `הנתונים המוצגים בלכידה: "${firstLine.slice(0, 80)}"`;
+      let assumptions = `ההנחה שהתנאים הנוכחיים וההערכות הראשוניות ישקפו את המציאות בפועל`;
+      let missingInfo = `אימות נתוני השטח וההשלכות המעשיות של הצעד טרם קבלת החלטה מחייבת`;
       let question = 'מהו הנתון האחד שאם יתברר כשונה לחלוטין ממה שהנחת, יהפוך את ההחלטה?';
-
-      if (text.includes('אבל') || text.includes('בעייתי') || text.includes('מול') || text.includes('חשש')) {
-        assumptions = 'המגבלה או החשש שנצפו יקשו באופן משמעותי על ההתנהלות ועל השגת היעד';
-      }
-
-      if (text.includes('טווח') || text.includes('מרחק') || text.includes('רכב') || text.includes('תקציב')) {
-        missingInfo = 'מהם הנתונים הממשיים בפועל (כגון עלויות אמיתיות, זמנים, משאבים נדרשים)?';
-        question = 'אם יתברר שהמגבלה פחות משמעותית ממה שנדמה כעת, כיצד זה ישנה את החלטתך?';
-      }
 
       let reliance = assumptions;
       let unknowns = missingInfo;
@@ -1883,10 +1935,10 @@
         missingInfo: missingInfo,
         reliance: reliance,
         unknowns: unknowns,
-        question: `"${question.replace(/^"|"$/g, '').trim()}"`,
-        insightBefore: assumptions || reliance,
-        insightNow: 'בדיקה ממוקדת של הנחת הציר לפני התחייבות',
-        insightChosenStep: 'בירור מפורש של שאלת המפתח מול הצד השני',
+        question: `"${question}"`,
+        insightBefore: 'הנחת המוצא: שהערכות המצב הראשוניות יתממשו ללא שיבושים מפתיעים',
+        insightNow: 'התחדדות הצורך בבדיקה ממוקדת של הנחת הציר לפני התחייבות',
+        insightChosenStep: 'בירור מעשי וממוקד של נתוני המפתח מול הגורמים הרלוונטיים',
         selectedDays: 14
       };
 
@@ -2008,55 +2060,36 @@
 - proposedCriteria: מערך של 3 קריטריונים קונקרטיים להצלחה או מעקב עתידי המתאימים בדיוק לדילמה זו
 `;
 
-      async function callCognitiveModel(modelName, timeoutMs = 10000) {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), timeoutMs);
-        const url = `/api/gemini`;
-        const clientKey = (window.ENV_CONFIG && window.ENV_CONFIG.GEMINI_API_KEY) ||
-          localStorage.getItem('GEMINI_API_KEY') || '';
-
-        const res = await fetch(url, {
-          method: 'POST',
-          signal: controller.signal,
-          headers: {
-            'Content-Type': 'application/json',
-            ...(clientKey ? { 'x-gemini-api-key': clientKey } : {})
+      async function callCognitiveModel(modelName = 'gemini-3.6-flash', timeoutMs = 15000) {
+        const data = await invokeGeminiGenerateContent({
+          model: modelName,
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'OBJECT',
+              properties: {
+                title: { type: 'STRING' },
+                consideration: { type: 'STRING' },
+                goalsPrices: { type: 'STRING' },
+                facts: { type: 'STRING' },
+                assumptions: { type: 'STRING' },
+                missingInfo: { type: 'STRING' },
+                question: { type: 'STRING' },
+                insightBefore: { type: 'STRING' },
+                initialStep: { type: 'STRING' },
+                proposedCriteria: {
+                  type: 'ARRAY',
+                  items: { type: 'STRING' }
+                }
+              },
+              required: ['title', 'consideration', 'goalsPrices', 'facts', 'assumptions', 'missingInfo', 'question', 'insightBefore', 'initialStep', 'proposedCriteria']
+            },
+            temperature: 0.2
           },
-          body: JSON.stringify({
-            model: modelName,
-            apiKey: clientKey,
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              thinkingConfig: {
-                thinkingBudget: 0
-              },
-              responseSchema: {
-                type: 'OBJECT',
-                properties: {
-                  title: { type: 'STRING' },
-                  consideration: { type: 'STRING' },
-                  goalsPrices: { type: 'STRING' },
-                  facts: { type: 'STRING' },
-                  assumptions: { type: 'STRING' },
-                  missingInfo: { type: 'STRING' },
-                  question: { type: 'STRING' },
-                  insightBefore: { type: 'STRING' },
-                  initialStep: { type: 'STRING' },
-                  proposedCriteria: {
-                    type: 'ARRAY',
-                    items: { type: 'STRING' }
-                  }
-                },
-                required: ['title', 'consideration', 'goalsPrices', 'facts', 'assumptions', 'missingInfo', 'question', 'insightBefore', 'initialStep', 'proposedCriteria']
-              },
-              temperature: 0.2
-            }
-          })
+          timeoutMs: timeoutMs
         });
-        clearTimeout(timer);
-        const data = await res.json();
-        if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+
         const parts = data.candidates?.[0]?.content?.parts || [];
         let raw = '';
         for (const p of parts) { if (p.text) raw += p.text; }
@@ -2407,7 +2440,7 @@
       }
     }
 
-    // Shared Audio Transcription Helper via Gemini (with 2-tier fallback)
+    // Shared Audio Transcription Helper via Gemini (with direct client and proxy support)
     async function transcribeAudioBlob(audioBlob) {
       const base64Audio = await blobToBase64(audioBlob);
       let mimeType = audioBlob.type.split(';')[0];
@@ -2415,56 +2448,30 @@
         mimeType = isIOSDevice() ? 'audio/mp4' : 'audio/webm';
       }
       
-      async function tryModelTranscribe(model, timeoutMs = 12000) {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), timeoutMs);
-        const clientKey = (window.ENV_CONFIG && window.ENV_CONFIG.GEMINI_API_KEY) ||
-          localStorage.getItem('GEMINI_API_KEY') || '';
-
-        try {
-          const url = `/api/gemini`;
-          const res = await fetch(url, {
-            method: 'POST',
-            signal: controller.signal,
-            headers: {
-              'Content-Type': 'application/json',
-              ...(clientKey ? { 'x-gemini-api-key': clientKey } : {})
-            },
-            body: JSON.stringify({
-              model: model,
-              apiKey: clientKey,
-              contents: [{
-                parts: [
-                  { inlineData: { mimeType: mimeType, data: base64Audio } },
-                  { text: 'תמלל במדויק מילה-במילה (Verbatim) את כל מה שנאמר בעברית בקובץ הקול. אם אין דיבור כלל, השב: ריק.' }
-                ]
-              }],
-              generationConfig: { 
-                temperature: 0.0 
-              }
-            })
-          });
-          clearTimeout(timer);
-          const data = await res.json();
-          if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-          const parts = data.candidates?.[0]?.content?.parts || [];
-          let rawText = '';
-          for (const p of parts) { if (p.text) rawText += p.text + ' '; }
-          return cleanExtractedTranscript(rawText);
-        } catch (err) {
-          clearTimeout(timer);
-          if (err.name === 'AbortError') throw new Error(`Timeout (${timeoutMs/1000}s) on ${model}`);
-          throw err;
-        }
-      }
+      const contents = [{
+        parts: [
+          { inlineData: { mimeType: mimeType, data: base64Audio } },
+          { text: 'תמלל במדויק מילה-במילה (Verbatim) את כל מה שנאמר בעברית בקובץ הקול. אם אין דיבור כלל, השב: ריק.' }
+        ]
+      }];
 
       let text = '';
       try {
-        text = await tryModelTranscribe('gemini-3.6-flash', 12000);
+        const data = await invokeGeminiGenerateContent({
+          model: 'gemini-3.6-flash',
+          contents: contents,
+          generationConfig: { temperature: 0.0 },
+          timeoutMs: 14000
+        });
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        let rawText = '';
+        for (const p of parts) { if (p.text) rawText += p.text + ' '; }
+        text = cleanExtractedTranscript(rawText);
       } catch (e1) {
-        console.warn('gemini-3.6-flash failed in transcribeAudioBlob:', e1.message);
+        console.warn('Gemini audio transcription failed:', e1.message);
         throw e1;
       }
+
       const clean = text.replace(/[\s.,!?:;'"־\-`~()\[\]{}]+/g, '').trim();
       if (!text || clean === '' || clean === 'ריק' || clean.toLowerCase() === 'empty' || clean === 'לאברור' || clean.toLowerCase() === 'unclear') {
         throw new Error('לא זוהה דיבור ברור בהקלטה');
@@ -3292,60 +3299,48 @@
       if (hint) hint.innerText = '⏳ מזקק את פלאש ההתחדדות לאור המענה שלך...';
 
       const prompt = `
-אתה מנוע הזיכוך האפיסטמי של Echo (הד) - עוזר המאפשר לאדם לראות את החשיבה שלו, לזהות מה עשוי לשנות אותה ולבחור בעצמו אם להעמיק.
-המשתמש ענה על שאלת ההארה:
-- אתה שוקל: """${considerationVal}"""
-- חשוב לך להשיג ולשמור: """${goalsPricesVal}"""
-- עובדות קשיחות: """${factsVal}"""
-- ההנחות שלך: """${assumptionsVal}"""
-- מידע חסר להחלטה: """${missingInfoVal}"""
-- שאלת ההארה: """${qText}"""
-- מענה המשתמש: """${answerText}"""
+אתה מנוע הזיכוך וההתחדדות האפיסטמי של מערכת Echo (הד).
+תפקידך לסייע לאדם לראות את החשיבה שלו, לזהות מה השתנה בה בעקבות שאלת הארה, ולהוציא תובנה אופרטיבית חדה.
 
-חלץ פלט JSON קפדני עבור תמונת ההתחדדות (Before & After):
-1. insightBefore: משפט אחד המתאר מה הוא חשב קודם (מבוסס על הנחת הציר).
-2. insightNow: משפט אחד חד ומאיר המתאר מה התחדד כעת בעקבות המענה שלו.
-3. insightChosenStep: הצעד הקונקרטי והממוקד ביותר שנבחר לביצוע בעקבות זאת.
+הקשר הדילמה והניתוח:
+- הדילמה: """${considerationVal}"""
+- מה שחשוב לו להשיג ולשמור: """${goalsPricesVal}"""
+- עובדות קשיחות: """${factsVal}"""
+- הנחות המוצא: """${assumptionsVal}"""
+- המידע החסר: """${missingInfoVal}"""
+- שאלת ההארה שנשאלה: """${qText}"""
+- מענה המשתמש לשאלה: """${answerText}"""
+
+הוראות קריטיות לניתוח:
+1. אל תחזור בצורה שטחית או תוכי על המילים של המשתמש!
+2. בצע עיבוד מעמיק של התשובה שלו מול נקודת המוצא.
+3. חלץ פלט JSON קפדני:
+{
+  "insightBefore": "משפט אחד ממצה של מה שהאדם הניח או חשב בנקודת המוצא לפני שנשאל",
+  "insightNow": "משפט אחד מעמיק וחד שמסביר מה בדיוק התחדד, נחשף או השתנה בהבנת המצב לאור מענה המשתמש",
+  "insightChosenStep": "צעד אופרטיבי ומעשי אחד בלבד, ממוקד ומנוסח בבהירות, שעליו לנקוט כעת כדי לבדוק או לממש את התובנה"
+}
 `;
 
       try {
-        const refController = new AbortController();
-        const refTimer = setTimeout(() => refController.abort(), 12000);
-
-        const clientKey = (window.ENV_CONFIG && window.ENV_CONFIG.GEMINI_API_KEY) ||
-          localStorage.getItem('GEMINI_API_KEY') || '';
-
-        const url = `/api/gemini`;
-        const res = await fetch(url, {
-          method: 'POST',
-          signal: refController.signal,
-          headers: {
-            'Content-Type': 'application/json',
-            ...(clientKey ? { 'x-gemini-api-key': clientKey } : {})
-          },
-          body: JSON.stringify({
-            model: 'gemini-3.6-flash',
-            apiKey: clientKey,
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              responseSchema: {
-                type: 'OBJECT',
-                properties: {
-                  insightBefore: { type: 'STRING' },
-                  insightNow: { type: 'STRING' },
-                  insightChosenStep: { type: 'STRING' }
-                },
-                required: ['insightBefore', 'insightNow', 'insightChosenStep']
+        const data = await invokeGeminiGenerateContent({
+          model: 'gemini-3.6-flash',
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'OBJECT',
+              properties: {
+                insightBefore: { type: 'STRING' },
+                insightNow: { type: 'STRING' },
+                insightChosenStep: { type: 'STRING' }
               },
-              temperature: 0.2
-            }
-          })
+              required: ['insightBefore', 'insightNow', 'insightChosenStep']
+            },
+            temperature: 0.2
+          },
+          timeoutMs: 14000
         });
-        clearTimeout(refTimer);
-
-        const data = await res.json();
-        if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
 
         const parts = data.candidates?.[0]?.content?.parts || [];
         let rawJson = '';
@@ -3357,9 +3352,9 @@
         const insNow = document.getElementById('insightNow');
         const insStep = document.getElementById('insightChosenStep');
 
-        if (insBefore) insBefore.innerText = parsed.insightBefore || relianceVal;
+        if (insBefore) insBefore.innerText = parsed.insightBefore || relianceVal || 'הנחת המוצא המקורית';
         if (insNow) insNow.innerText = parsed.insightNow || 'הבנת ההשפעה של הנחת הציר על הפעולה';
-        if (insStep) insStep.innerText = parsed.insightChosenStep || 'ביצוע בדיקה מקדימה';
+        if (insStep) insStep.innerText = parsed.insightChosenStep || 'אימות הנתונים מול תנאי השטח';
 
         // Update active decision in localStorage & cloud
         try {
@@ -3373,9 +3368,9 @@
             if (preMortemInput && preMortemInput.value.trim()) {
               cur.preMortemScenario = preMortemInput.value.trim();
             }
-            cur.insightBefore = parsed.insightBefore;
-            cur.insightNow = parsed.insightNow;
-            cur.insightChosenStep = parsed.insightChosenStep;
+            cur.insightBefore = parsed.insightBefore || insBefore.innerText;
+            cur.insightNow = parsed.insightNow || insNow.innerText;
+            cur.insightChosenStep = parsed.insightChosenStep || insStep.innerText;
             localStorage.setItem(key, JSON.stringify(existing));
             syncDecisionToCloud(cur);
           }
@@ -3392,9 +3387,32 @@
         const insNow = document.getElementById('insightNow');
         const insStep = document.getElementById('insightChosenStep');
 
-        if (insBefore) insBefore.innerText = relianceVal || 'הנחת המוצא הראשונית';
-        if (insNow) insNow.innerText = 'חידוד ההחלטה באמצעות מענה מפורש';
-        if (insStep) insStep.innerText = answerText.slice(0, 80);
+        const cleanAns = (answerText || '').trim();
+        const fallbackBefore = relianceVal || 'הנחת המוצא: שהמצב הקיים יתנהל ללא שינוי מהותי';
+        const fallbackNow = cleanAns 
+          ? `הבנת המשמעות של: "${cleanAns.slice(0, 50)}" על כיוון הפעולה וההכרעה`
+          : 'התחדדות הצורך באימות מוקדם טרם קבלת החלטה סופית';
+        const fallbackStep = cleanAns 
+          ? `אימות ההנחה הנוגעת ל-"${cleanAns.slice(0, 40)}" לפני התחייבות רחבה`
+          : 'הגדרת מדד ברור לבחינת הכדאיות המעשית';
+
+        if (insBefore) insBefore.innerText = fallbackBefore;
+        if (insNow) insNow.innerText = fallbackNow;
+        if (insStep) insStep.innerText = fallbackStep;
+
+        try {
+          const key = getUserStorageKey();
+          const existing = JSON.parse(localStorage.getItem(key) || '[]');
+          if (existing.length > 0) {
+            const cur = existing[existing.length - 1];
+            cur.userAnswer = answerText;
+            cur.insightBefore = fallbackBefore;
+            cur.insightNow = fallbackNow;
+            cur.insightChosenStep = fallbackStep;
+            localStorage.setItem(key, JSON.stringify(existing));
+            syncDecisionToCloud(cur);
+          }
+        } catch (eStorage) {}
 
         scrollToNext('stageContract');
       } finally {
