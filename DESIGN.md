@@ -1,5 +1,5 @@
 ---
-name: Echo (הד) — The Learning Memory of Human Judgment
+name: echo
 colors:
   surface: '#0c1420'
   surface-dim: '#07080b'

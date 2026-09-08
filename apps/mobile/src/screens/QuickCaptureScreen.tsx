@@ -97,7 +97,7 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
             <Text style={styles.profileBtnText}>📊 פרופיל כיול</Text>
           </TouchableOpacity>
         )}
-        <Text style={styles.title}>הד</Text>
+        <Text style={styles.title}>echo</Text>
         <Text style={styles.subtitle}>הזיכרון הלומד של שיקול הדעת</Text>
       </View>
 

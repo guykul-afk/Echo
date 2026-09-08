@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     marginTop: 2
   },
   backBtn: {
-    backgroundColor: LuxuryTheme.background.elevated,
+    backgroundColor: LuxuryTheme.background.surfaceElevated,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     fontWeight: '600'
   },
   card: {
-    backgroundColor: LuxuryTheme.background.card,
+    backgroundColor: LuxuryTheme.background.surface,
     borderRadius: 16,
     padding: 18,
     borderWidth: 1,
