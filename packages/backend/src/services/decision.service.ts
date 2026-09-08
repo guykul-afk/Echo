@@ -105,7 +105,17 @@ export class DecisionService {
     }
 
     if (this.aiProvider.extractCognitiveEngine) {
-      const cognitiveResult = await this.aiProvider.extractCognitiveEngine(rawCapture);
+      // Anti-repetitiveness: Retrieve up to 3 recent questions for this user to avoid trope repetition
+      const recentQuestions: string[] = [];
+      const pastSessions = Array.from(DecisionService.casesCache.values());
+      for (let i = pastSessions.length - 1; i >= 0 && recentQuestions.length < 3; i--) {
+        const s = pastSessions[i];
+        if (s.decisionCase.userId === dto.userId && s.bespokeQuestion?.questionText && s.bespokeQuestion.shouldIntervene !== false) {
+          recentQuestions.push(s.bespokeQuestion.questionText);
+        }
+      }
+
+      const cognitiveResult = await this.aiProvider.extractCognitiveEngine(rawCapture, recentQuestions);
       humanDimensions = cognitiveResult.humanDimensions || humanDimensions;
 
       epistemicState = {
@@ -381,9 +391,17 @@ export class DecisionService {
     caseId: string,
     userAnswer: string,
     skip: boolean = false
-  ): Promise<{ success: boolean; refinedInsight: RefinedInsight; nextStep: string }> {
+  ): Promise<{ success: boolean; refinedInsight: RefinedInsight | null; nextStep: string | null }> {
     const session = DecisionService.casesCache.get(caseId);
     const now = Date.now();
+
+    const isNonCollaboration = Boolean(
+      skip ||
+      !userAnswer ||
+      userAnswer.trim().length === 0 ||
+      userAnswer.includes('[דילוג') ||
+      userAnswer.includes('[נטישה')
+    );
 
     const deltaService = new DeltaService(this.aiProvider);
     const deltaResult = await deltaService.computeDelta({
@@ -397,29 +415,32 @@ export class DecisionService {
       },
       illuminationQuestion: session?.illuminationQuestion || '',
       userAnswer,
-      isSkip: skip
+      isSkip: isNonCollaboration
     });
 
-    const refinedInsight: RefinedInsight = deltaResult.refinedInsight;
+    const refinedInsight: RefinedInsight | null = deltaResult.refinedInsight;
+    const chosenStep: string | null = (refinedInsight && refinedInsight.chosenStep) ? refinedInsight.chosenStep : null;
 
     if (session) {
-      session.decisionCase.nextStep = refinedInsight.chosenStep;
+      session.decisionCase.nextStep = chosenStep || undefined;
       session.decisionCase.refinedInsight = refinedInsight;
-      session.refinedInsight = refinedInsight;
-      session.decisionCase.status = 'decided';
+      session.refinedInsight = refinedInsight || undefined;
+      session.decisionCase.status = isNonCollaboration ? 'skipped' : (refinedInsight ? 'decided' : 'deliberating');
       session.decisionCase.updatedAt = now;
       if (session.bespokeQuestion) {
         session.bespokeQuestion.userResponseText = skip ? '[דלג / מספיק לי לעכשיו]' : userAnswer;
         session.bespokeQuestion.respondedAt = now;
       }
 
-      // Phase 3 & 4: Create Frozen Decision Snapshot to prevent hindsight bias
-      await this.knowledgeGraphService.createFrozenSnapshot(caseId, session.decisionCase.userId, {
-        knownFactsAtTime: [session.decisionCase.dimFacts || ''],
-        assumptionsAtTime: [session.decisionCase.dimAssumptions || ''],
-        unknownsAtTime: [session.decisionCase.dimMissingInfo || ''],
-        chosenStep: refinedInsight.chosenStep
-      });
+      // Phase 3 & 4: Create Frozen Decision Snapshot to prevent hindsight bias ONLY if there is an actual chosen step
+      if (chosenStep) {
+        await this.knowledgeGraphService.createFrozenSnapshot(caseId, session.decisionCase.userId, {
+          knownFactsAtTime: [session.decisionCase.dimFacts || ''],
+          assumptionsAtTime: [session.decisionCase.dimAssumptions || ''],
+          unknownsAtTime: [session.decisionCase.dimMissingInfo || ''],
+          chosenStep
+        });
+      }
 
       // Phase 1 (Epistemic Safety): Handle confirmation feedback if this was a confirmation question
       if (session.bespokeQuestion?.responseWidget === 'confirmation') {
@@ -434,7 +455,8 @@ export class DecisionService {
 
       // Phase 1 (Epistemic Safety): Atomic extraction into Knowledge Graph
       // NEVER save raw prose/answer. Save only newFacts, changedAssumptions, resolvedUnknowns (<= 120 chars each)
-      if (!skip) {
+      // Strictly disabled if user skipped, abandoned, or if refinedInsight is null!
+      if (!isNonCollaboration && refinedInsight !== null) {
         let savedCount = 0;
         const itemsToSave: { text: string; category: 'fact' | 'assumption' }[] = [
           ...(deltaResult.newFacts || []).map(f => ({ text: f, category: 'fact' as const })),
@@ -460,8 +482,9 @@ export class DecisionService {
           }
         }
 
-        // Fallback: If Delta Engine returned no structured items, but user answer is a single crisp sentence (<= 120 chars)
-        if (savedCount === 0 && userAnswer.trim().length >= 4 && userAnswer.trim().length <= 120) {
+        // Fallback: If Delta Engine returned no structured items, but user answer is a single crisp substantive sentence (<= 120 chars)
+        const isPushbackOrMeta = userAnswer.includes('[') || userAnswer.includes('לא רלוונטי') || userAnswer.includes('כבר סגרתי');
+        if (!isPushbackOrMeta && savedCount === 0 && userAnswer.trim().length >= 4 && userAnswer.trim().length <= 120) {
           await this.knowledgeGraphService.saveAssertion({
             id: `asrt-${caseId}-${now}-fallback`,
             userId: session.decisionCase.userId,
@@ -480,7 +503,7 @@ export class DecisionService {
     return {
       success: true,
       refinedInsight,
-      nextStep: refinedInsight.chosenStep
+      nextStep: chosenStep
     };
   }
 

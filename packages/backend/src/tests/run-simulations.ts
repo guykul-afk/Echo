@@ -88,9 +88,9 @@ async function runSimulation() {
     case1.decisionCase.id,
     'לשאול את המנהל על ציפיות הזמינות בערבים לפני מתן תשובה'
   );
-  console.log(`  • קודם: "${answerResult.refinedInsight.before}"`);
-  console.log(`  • כעת התחדד: "${answerResult.refinedInsight.now}"`);
-  console.log(`  • הצעד שבחרת: "${answerResult.refinedInsight.chosenStep}"\n`);
+  console.log(`  • קודם: "${answerResult.refinedInsight?.before}"`);
+  console.log(`  • כעת התחדד: "${answerResult.refinedInsight?.now}"`);
+  console.log(`  • הצעד שבחרת: "${answerResult.refinedInsight?.chosenStep}"\n`);
 
   // -------------------------------------------------------------
   // Decision 2: Atlas Project (Testing "מספיק לי לעכשיו" exit)
@@ -115,10 +115,10 @@ async function runSimulation() {
   console.log(`  • שקט חכם הופעל בהצלחה: "${case2.bespokeQuestion.smartSilenceMessage}"`);
   console.log(`[המשתמש לוחץ "מספיק לי לעכשיו"]...`);
   const quickExit = await decisionService.submitDeliberationAnswer(case2.decisionCase.id, '', true);
-  if (quickExit.nextStep !== 'שמירה והמשך מעקב') {
-    throw new Error(`Expected skip nextStep to be 'שמירה והמשך מעקב', got '${quickExit.nextStep}'`);
+  if (quickExit.refinedInsight !== null || quickExit.nextStep !== null) {
+    throw new Error(`Expected skip to produce null refinedInsight and null nextStep, got insight: ${quickExit.refinedInsight}, nextStep: ${quickExit.nextStep}`);
   }
-  console.log(`  • סטטוס יציאה: ${quickExit.success}, צעד נשמר: "${quickExit.nextStep}" (אומת: אין ניחוש של צעד מראש!)\n`);
+  console.log(`  • סטטוס יציאה: ${quickExit.success}, צעד: ${quickExit.nextStep} (אומת: אין צעד פיקטיבי ואין זיהום גרף!)\n`);
 
   // -------------------------------------------------------------
   // Decision 3: Longitudinal 3-Axis Outcome Learning Loop

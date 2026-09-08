@@ -19,7 +19,13 @@ export class DeltaService {
   }
 
   async computeDelta(params: DeltaComputeParams): Promise<DeltaAnalysisResult> {
-    const isSkip = Boolean(params.isSkip || !params.userAnswer || params.userAnswer.trim().length === 0);
+    const isExplicitNonAnswer = Boolean(
+      params.isSkip ||
+      !params.userAnswer ||
+      params.userAnswer.trim().length === 0 ||
+      params.userAnswer.includes('[דילוג') ||
+      params.userAnswer.includes('[נטישה')
+    );
 
     if (this.aiProvider.extractDelta) {
       return await this.aiProvider.extractDelta(
@@ -27,19 +33,15 @@ export class DeltaService {
         params.humanDimensions,
         params.illuminationQuestion,
         params.userAnswer,
-        isSkip
+        isExplicitNonAnswer
       );
     }
 
     // Fallback deterministic Delta if provider does not implement extractDelta
-    if (isSkip) {
+    if (isExplicitNonAnswer) {
       return {
-        refinedInsight: {
-          before: params.humanDimensions.consideration || params.rawCapture.slice(0, 80),
-          now: 'נשמר המצב המקורי ללא הרחבה נוספת',
-          chosenStep: 'שמירה והמשך מעקב'
-        },
-        userOwnershipVerified: true,
+        refinedInsight: null,
+        userOwnershipVerified: false,
         changedAssumptions: [],
         newFacts: [],
         resolvedUnknowns: []

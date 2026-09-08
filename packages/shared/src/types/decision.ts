@@ -3,7 +3,9 @@ export type DecisionStatus =
   | 'decided'
   | 'monitoring'
   | 'resolved'
-  | 'archived';
+  | 'archived'
+  | 'abandoned'
+  | 'skipped';
 
 export type ContextStakes = 'low' | 'medium' | 'high' | 'very_high';
 export type ContextReversibility = 'reversible' | 'partially_reversible' | 'irreversible';
@@ -74,7 +76,7 @@ export interface DecisionCase {
   aiInterventionUsed?: string; // שאלת הארה ראשית: ממוקדת בדילמה הנוכחית
   historicalInterventionUsed?: string; // שאלת עבר מותנית: מופעלת רק אם מזוהה צורך
   nextStep?: string;
-  refinedInsight?: RefinedInsight;
+  refinedInsight?: RefinedInsight | null;
 
   resolvedAt?: number;
   vectorEmbedding?: number[];

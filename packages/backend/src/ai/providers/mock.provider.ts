@@ -137,7 +137,7 @@ export class MockAiProvider implements IAiProvider {
     };
   }
 
-  async extractCognitiveEngine(rawText: string): Promise<CognitiveAnalysisResult> {
+  async extractCognitiveEngine(rawText: string, recentQuestions?: string[]): Promise<CognitiveAnalysisResult> {
     const lower = rawText.toLowerCase();
 
     if (lower.includes('תפקיד') || lower.includes('ילדים') || lower.includes('שכר') || lower.includes('job')) {
@@ -256,14 +256,10 @@ export class MockAiProvider implements IAiProvider {
     userAnswer: string,
     isSkip: boolean
   ): Promise<DeltaAnalysisResult> {
-    if (isSkip || !userAnswer || userAnswer.trim().length === 0) {
+    if (isSkip || !userAnswer || userAnswer.trim().length === 0 || userAnswer.includes('[דילוג') || userAnswer.includes('[נטישה')) {
       return {
-        refinedInsight: {
-          before: humanDimensions.consideration || rawCapture.slice(0, 80),
-          now: 'נשמר המצב המקורי ללא הרחבה נוספת',
-          chosenStep: 'שמירה והמשך מעקב'
-        },
-        userOwnershipVerified: true,
+        refinedInsight: null,
+        userOwnershipVerified: false,
         changedAssumptions: [],
         newFacts: [],
         resolvedUnknowns: []
