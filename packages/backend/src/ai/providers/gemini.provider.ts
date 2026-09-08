@@ -4,6 +4,23 @@ import { EPISTEMIC_EXTRACTION_SYSTEM_PROMPT } from '../../prompts/epistemic-extr
 import { COGNITIVE_ENGINE_PROMPT, CognitiveAnalysisResult } from '../../prompts/cognitive-engine.prompt.js';
 import { DELTA_ENGINE_PROMPT, DeltaAnalysisResult } from '../../prompts/delta-engine.prompt.js';
 
+function cleanAndParseJson<T>(raw: string): T {
+  let cleaned = raw.trim();
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  }
+  try {
+    return JSON.parse(cleaned) as T;
+  } catch (err: any) {
+    const sanitized = cleaned
+      .replace(/,\s*([\]}])/g, '$1')
+      .replace(/[\x00-\x1F\x7F-\x9F]/g, ' ');
+    return JSON.parse(sanitized) as T;
+  }
+}
+
 export class GeminiAiProvider implements IAiProvider {
   private apiKey: string;
   private transcribeModel: string;
@@ -133,7 +150,7 @@ Extract the epistemic breakdown, decision signature, four human dimensions, and 
       throw new Error('No content returned from Gemini.');
     }
 
-    return JSON.parse(candidateText) as EpistemicExtractionResult;
+    return cleanAndParseJson<EpistemicExtractionResult>(candidateText);
   }
 
   async extractCognitiveEngine(rawText: string): Promise<CognitiveAnalysisResult> {
@@ -168,7 +185,7 @@ Extract the epistemic breakdown, decision signature, four human dimensions, and 
       throw new Error('No content returned from Gemini Cognitive Engine.');
     }
 
-    return JSON.parse(candidateText) as CognitiveAnalysisResult;
+    return cleanAndParseJson<CognitiveAnalysisResult>(candidateText);
   }
 
   async extractDelta(
