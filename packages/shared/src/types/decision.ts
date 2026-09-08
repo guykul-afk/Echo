@@ -71,7 +71,8 @@ export interface DecisionCase {
   centralTension?: string;   // המתח המרכזי (First 20 Seconds)
   keyHinge?: string;         // נראה שההכרעה תלויה בעיקר ב... (First 20 Seconds)
   mirrorFeedback?: 'accurate' | 'inaccurate'; // משוב המשתמש למראה: מדויק / לא בדיוק
-  aiInterventionUsed?: string;
+  aiInterventionUsed?: string; // שאלת הארה ראשית: ממוקדת בדילמה הנוכחית
+  historicalInterventionUsed?: string; // שאלת עבר מותנית: מופעלת רק אם מזוהה צורך
   nextStep?: string;
   refinedInsight?: RefinedInsight;
 

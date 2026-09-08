@@ -62,4 +62,5 @@ export interface IAiProvider {
     isSkip: boolean
   ): Promise<DeltaAnalysisResult>;
   generateStructuralEmbedding(signature: ExtractedSignatureDTO, context: Record<string, any>): Promise<number[]>;
+  generateSemanticEmbedding(text: string): Promise<number[]>;
 }

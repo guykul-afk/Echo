@@ -9,6 +9,7 @@ interface DecisionRoomScreenProps {
   signature?: DecisionSignature;
   illuminationQuestion?: string;
   bespokeQuestion?: IlluminationQuestion;
+  historicalQuestion?: IlluminationQuestion;
   similarCaseAnalogy?: { title: string; reason: string; strength: string };
   initialRefinedInsight?: RefinedInsight;
   onAnswerSubmit: (answer: string, skip?: boolean) => void;
@@ -20,6 +21,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   decisionCase,
   illuminationQuestion,
   bespokeQuestion,
+  historicalQuestion,
   similarCaseAnalogy,
   initialRefinedInsight,
   onAnswerSubmit,
@@ -45,6 +47,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   const shouldIntervene = bespokeQuestion ? bespokeQuestion.shouldIntervene !== false : Boolean(effectiveQuestion);
 
   const [userAnswer, setUserAnswer] = useState('');
+  const [userHistoricalAnswer, setUserHistoricalAnswer] = useState('');
   const [showRawText, setShowRawText] = useState(false);
   const [activeTab, setActiveTab] = useState<'mirror' | 'insight'>('mirror');
   const [insight, setInsight] = useState<RefinedInsight | null>(initialRefinedInsight || null);
@@ -100,14 +103,18 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   };
 
   const handleProceedWithAnswer = () => {
+    let combined = userAnswer || 'התחדדו השיקולים המרכזיים';
+    if (userHistoricalAnswer.trim()) {
+      combined += ` (מענה לעבר: ${userHistoricalAnswer.trim()})`;
+    }
     const refined: RefinedInsight = {
       before: consideration,
-      now: userAnswer || 'התחדדו השיקולים המרכזיים',
+      now: combined,
       chosenStep: userAnswer.slice(0, 80) || 'בירור מוקדם לפני הכרעה'
     };
     setInsight(refined);
     setActiveTab('insight');
-    onAnswerSubmit(userAnswer, false);
+    onAnswerSubmit(combined, false);
   };
 
   const handleSkip = () => {
@@ -334,12 +341,13 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         </View>
       )}
 
-      {/* --- התערבות אדפטיבית ממוקדת --- */}
+      {/* --- שאלות הארה והתערבות (2 שאלות: דילמה נוכחית + עבר מותנה) --- */}
       {shouldIntervene && effectiveQuestion && activeTab === 'mirror' && (
         <View style={styles.illuminationHero}>
+          {/* שאלה 1: שאלת הארה לדילמה הנוכחית (מדויקת למלל הנוכחי) */}
           <View style={styles.illuminationHeaderRow}>
             <View style={styles.illuminationBadge}>
-              <Text style={styles.illuminationBadgeText}>התערבות ממוקדת אחת</Text>
+              <Text style={styles.illuminationBadgeText}>1. שאלת חידוד לדילמה הנוכחית</Text>
             </View>
             {typeof bespokeQuestion?.expectedReflectionValue === 'number' && (
               <View style={styles.ervBadge}>
@@ -352,7 +360,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
 
           <Text style={styles.illuminationQuestionText}>"{effectiveQuestion}"</Text>
 
-          {/* ווידג'ט מענה מותאם בלחיצה אחת (Adaptive Response Widget) */}
+          {/* ווידג'ט מענה מותאם בלחיצה אחת לשאלה 1 */}
           {bespokeQuestion?.responseWidget && bespokeQuestion.responseWidget !== 'text' && (
             <View style={styles.widgetSection}>
               <Text style={styles.widgetHeader}>
@@ -385,12 +393,56 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
           <TextInput
             style={styles.answerInput}
             multiline
-            placeholder="מענה קצר או כיוון בירור (או דלג למטה)..."
+            placeholder="מענה קצר או כיוון בירור לדילמה הנוכחית..."
             placeholderTextColor={LuxuryTheme.text.tertiary}
             value={userAnswer}
             onChangeText={setUserAnswer}
             textAlign="right"
           />
+
+          {/* שאלה 2: שאלת עבר מותנית (מופעלת אך ורק אם זוהה צורך אמיתי) */}
+          {historicalQuestion && historicalQuestion.shouldIntervene !== false && (
+            <View style={styles.historicalCard}>
+              <View style={styles.historicalHeaderRow}>
+                <View style={styles.historicalBadge}>
+                  <Text style={styles.historicalBadgeText}>2. שאלת עבר והקשר היסטורי</Text>
+                </View>
+                {historicalQuestion.triggerReason && (
+                  <View style={styles.historicalReasonBadge}>
+                    <Text style={styles.historicalReasonText}>{historicalQuestion.triggerReason}</Text>
+                  </View>
+                )}
+              </View>
+
+              <Text style={styles.historicalQuestionText}>"{historicalQuestion.questionText}"</Text>
+
+              {historicalQuestion.responseWidget === 'confirmation' && (
+                <View style={styles.widgetOptionsContainer}>
+                  {(historicalQuestion.responseOptions || ['כן, רלוונטי', 'לא, הנסיבות שונות']).map((opt, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      style={[
+                        styles.widgetOptionBtn,
+                        userHistoricalAnswer === opt && styles.historicalOptionBtnActive
+                      ]}
+                      onPress={() => setUserHistoricalAnswer(opt)}
+                    >
+                      <Text style={styles.widgetOptionBtnText}>{opt}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              <TextInput
+                style={[styles.answerInput, { minHeight: 48, marginBottom: 0, marginTop: 8 }]}
+                placeholder="התייחסות ללקח מהעבר (אופציונלי)..."
+                placeholderTextColor={LuxuryTheme.text.tertiary}
+                value={userHistoricalAnswer}
+                onChangeText={setUserHistoricalAnswer}
+                textAlign="right"
+              />
+            </View>
+          )}
 
           <View style={styles.actionRow}>
             <TouchableOpacity
@@ -751,6 +803,54 @@ const styles = StyleSheet.create({
     lineHeight: 25,
     textAlign: 'right',
     marginBottom: 14
+  },
+  historicalCard: {
+    backgroundColor: 'rgba(245, 158, 11, 0.05)',
+    borderColor: 'rgba(245, 158, 11, 0.25)',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+    marginTop: 4
+  },
+  historicalHeaderRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8
+  },
+  historicalBadge: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8
+  },
+  historicalBadgeText: {
+    color: '#F59E0B',
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  historicalReasonBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8
+  },
+  historicalReasonText: {
+    color: LuxuryTheme.text.tertiary,
+    fontSize: 10
+  },
+  historicalQuestionText: {
+    color: LuxuryTheme.text.primary,
+    fontSize: 15,
+    fontWeight: '500',
+    lineHeight: 22,
+    textAlign: 'right',
+    marginBottom: 10
+  },
+  historicalOptionBtnActive: {
+    borderColor: '#F59E0B',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)'
   },
   answerInput: {
     backgroundColor: LuxuryTheme.background.base,

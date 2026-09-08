@@ -17,4 +17,5 @@ export interface DecisionSignature {
   reversibilityDecayDays: number; // estimated days until window of reversibility closes
   principalAgentTension: PrincipalAgentTension;
   decisionTempo: DecisionTempo;
+  signatureEmbedding?: number[]; // Vector representation of the structural signature for RAG analogy search
 }

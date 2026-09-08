@@ -19,4 +19,5 @@ export interface Statement {
   provenanceSource: ProvenanceSource;
   confidenceScore: number; // 0.0 - 1.0 (extraction confidence, NOT truth of the claim)
   createdAt: number;
+  semanticEmbedding?: number[]; // Only populated for roles like 'assumption' for semantic searches
 }

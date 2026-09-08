@@ -164,13 +164,21 @@ async function runSimulation() {
     frictionLevel: 'focused'
   });
 
-  if (followUpCase.bespokeQuestion?.responseWidget !== 'confirmation') {
-    throw new Error(`Expected bespokeQuestion to be converted to 'confirmation' by RetrievalBeforeAsk, got '${followUpCase.bespokeQuestion?.responseWidget}'`);
+  // Verify Question 1: Direct dilemma question is preserved
+  if (!followUpCase.bespokeQuestion || followUpCase.bespokeQuestion.origin !== 'current_dilemma') {
+    throw new Error('Expected primary bespokeQuestion to remain strictly focused on the current dilemma');
   }
-  console.log(`✓ Retrieval Before Ask המיר בהצלחה שאלת איסוף לשאלת אישור מהירה:`);
-  console.log(`  • שאלה מוצעת: "${followUpCase.bespokeQuestion.questionText}"`);
-  console.log(`  • ווידג'ט תגובה: "${followUpCase.bespokeQuestion.responseWidget}"`);
-  console.log(`  • אופציות אישור מהיר: [${followUpCase.bespokeQuestion.responseOptions?.join(' | ')}]`);
+  console.log(`✓ שאלה 1 (דילמה נוכחית): "${followUpCase.bespokeQuestion.questionText}" [ווידג'ט: ${followUpCase.bespokeQuestion.responseWidget}]`);
+
+  // Verify Question 2: Secondary historical question is generated conditionally
+  if (!followUpCase.historicalQuestion || followUpCase.historicalQuestion.responseWidget !== 'confirmation') {
+    throw new Error(`Expected historicalQuestion to be generated with 'confirmation' by RetrievalBeforeAsk, got '${followUpCase.historicalQuestion?.responseWidget}'`);
+  }
+  console.log(`✓ שאלה 2 (שאלת עבר מותנית הופעלה בהצלחה):`);
+  console.log(`  • שאלת עבר: "${followUpCase.historicalQuestion.questionText}"`);
+  console.log(`  • סיבת הפעלה: "${followUpCase.historicalQuestion.triggerReason}"`);
+  console.log(`  • ווידג'ט תגובה: "${followUpCase.historicalQuestion.responseWidget}"`);
+  console.log(`  • אופציות אישור מהיר: [${followUpCase.historicalQuestion.responseOptions?.join(' | ')}]`);
 
   // 3. Verify Multi-Tenant Knowledge Isolation
   const strangerAssertions = await kgService.getActiveAssertionsByUser('stranger_user_999');

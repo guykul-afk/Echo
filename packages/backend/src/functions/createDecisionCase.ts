@@ -60,6 +60,7 @@ export async function createDecisionCaseHandler(
     signature: session.signature,
     illuminationQuestion: session.illuminationQuestion,
     epistemicState: session.epistemicState,
-    bespokeQuestion: session.bespokeQuestion
+    bespokeQuestion: session.bespokeQuestion,
+    historicalQuestion: session.historicalQuestion
   };
 }

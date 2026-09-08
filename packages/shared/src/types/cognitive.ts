@@ -95,6 +95,7 @@ export interface IlluminationQuestion {
   questionText: string;         // The bespoke tailored question referencing user's quotes
   triggerReason: string;        // Why this strategy was selected by priority
   isSecondary: boolean;
+  origin?: 'current_dilemma' | 'historical_precedent';
   canSkip?: boolean;            // User can skip with "מספיק לי לעכשיו"
   
   // Phase 2: Adaptive Friction & Smart Silence

@@ -33,6 +33,7 @@ export interface CaseSessionState {
   illuminationQuestion: string;
   epistemicState?: EpistemicState;
   bespokeQuestion?: IlluminationQuestion;
+  historicalQuestion?: IlluminationQuestion;
   humanDimensions?: FiveHumanDimensions;
   refinedInsight?: RefinedInsight;
 }
@@ -85,6 +86,7 @@ export class DecisionService {
 
     let epistemicState: EpistemicState | undefined;
     let bespokeQuestion: IlluminationQuestion | undefined;
+    let historicalQuestion: IlluminationQuestion | undefined;
     let humanDimensions: FiveHumanDimensions | undefined = extracted.fiveDimensions || (extracted.fourDimensions as FiveHumanDimensions);
 
     // Phase 2 (Adaptive Friction): Infer from commitmentGradient / rawCapture length if not explicitly passed
@@ -135,6 +137,7 @@ export class DecisionService {
             ? 'נבחר מסלול מהיר. השיקולים והמתח המרכזי נוסחו במראה ללא התערבות נוספת.'
             : 'תיארת את זה מאוזן. אין לי שאלה ששווה לעכב אותך בגללה.');
 
+      // Question 1: שאלת הארה ראשית - ממוקדת בצורה ישירה ומדויקת בדילמה הנוכחית ובמלל שנלכד
       bespokeQuestion = {
         id: `illum-${caseId}`,
         caseId,
@@ -142,6 +145,7 @@ export class DecisionService {
         questionText: cognitiveResult.illuminationQuestion.questionText,
         triggerReason: cognitiveResult.illuminationQuestion.triggerReason,
         shouldIntervene,
+        origin: 'current_dilemma',
         expectedReflectionValue: cognitiveResult.illuminationQuestion.expectedReflectionValue ?? 0.8,
         smartSilenceMessage: cognitiveResult.illuminationQuestion.smartSilenceMessage || silenceMessage,
         responseWidget: cognitiveResult.illuminationQuestion.responseWidget || 'text',
@@ -151,25 +155,61 @@ export class DecisionService {
         createdAt: now
       };
 
-      if (shouldIntervene && bespokeQuestion) {
-        // Phase 1: Retrieval Before Ask check against Personal Memory with Novelty Gate & Contradictions
+      // Question 2: שאלת עבר מותנית - מופעלת אך ורק אם מזוהה צורך אמיתי (תקדים, סתירה, או הנחה שברירית מהעבר)
+      if (shouldIntervene) {
         const memoryCheck = await this.retrievalBeforeAskService.checkBeforeAsk(
           dto.userId,
           bespokeQuestion.questionText,
           rawCapture
         );
 
-        if (memoryCheck.shouldConvertToConfirmation && memoryCheck.confirmationQuestion) {
-          bespokeQuestion.questionText = memoryCheck.confirmationQuestion;
-          bespokeQuestion.responseWidget = 'confirmation';
-          bespokeQuestion.responseOptions = ['כן, עדיין תקף', 'לא, השתנה'];
-          bespokeQuestion.triggerReason = 'המרת שאלת איסוף לשאלת אישור על בסיס זיכרון קיים (Retrieval Before Ask)';
-        } else if (memoryCheck.canSuppressIntervention) {
-          bespokeQuestion.shouldIntervene = false;
-          bespokeQuestion.smartSilenceMessage = `המידע לגבי נתון זה כבר קיים בזיכרון האישי שלך ("${memoryCheck.knownAnswerFact}"). אין צורך בהתערבות נוספת.`;
-        } else if (memoryCheck.memoryPreamble) {
-          // Rule 11: Max 1-2 memories displayed as context before the illumination question, not replacing it
-          bespokeQuestion.questionText = `${memoryCheck.memoryPreamble}\n${bespokeQuestion.questionText}`;
+        const hasContradiction = Boolean(memoryCheck.contradictingAssertions && memoryCheck.contradictingAssertions.length > 0);
+        const hasDirectPrecedent = Boolean(memoryCheck.shouldConvertToConfirmation && memoryCheck.knownAnswerFact);
+        const hasRelevantHistoricalPreamble = Boolean(memoryCheck.memoryPreamble && memoryCheck.assertions.length > 0);
+
+        if (hasContradiction) {
+          historicalQuestion = {
+            id: `illum-hist-${caseId}`,
+            caseId,
+            strategy: 'contradiction_dissonance',
+            origin: 'historical_precedent',
+            questionText: `${memoryCheck.memoryPreamble} כיצד אתה רואה את ההבדל בהחלטה זו?`,
+            triggerReason: 'זוהה דיסוננס או סתירה מהחלטות קודמות',
+            shouldIntervene: true,
+            isSecondary: true,
+            canSkip: true,
+            responseWidget: 'text',
+            createdAt: now
+          };
+        } else if (hasDirectPrecedent) {
+          historicalQuestion = {
+            id: `illum-hist-${caseId}`,
+            caseId,
+            strategy: 'outcome_contract_anchor',
+            origin: 'historical_precedent',
+            questionText: `בעבר ציינת לגבי נושא דומה: "${memoryCheck.knownAnswerFact}". האם לקח זה רלוונטי גם לדילמה הנוכחית?`,
+            triggerReason: 'זוהה תקדים עבר ישיר בנושא דומה',
+            shouldIntervene: true,
+            isSecondary: true,
+            canSkip: true,
+            responseWidget: 'confirmation',
+            responseOptions: ['כן, לקח רלוונטי', 'לא, הנסיבות שונות'],
+            createdAt: now
+          };
+        } else if (hasRelevantHistoricalPreamble) {
+          historicalQuestion = {
+            id: `illum-hist-${caseId}`,
+            caseId,
+            strategy: 'outcome_contract_anchor',
+            origin: 'historical_precedent',
+            questionText: `${memoryCheck.memoryPreamble} האם יש כאן דפוס חוזר שכדאי לקחת בחשבון?`,
+            triggerReason: 'הדהוד תקדים משיק מהעבר',
+            shouldIntervene: true,
+            isSecondary: true,
+            canSkip: true,
+            responseWidget: 'text',
+            createdAt: now
+          };
         }
       }
     }
@@ -214,6 +254,7 @@ export class DecisionService {
       centralTension: humanDimensions.centralTension,
       keyHinge: humanDimensions.keyHinge,
       aiInterventionUsed: bespokeQuestion?.shouldIntervene !== false ? (bespokeQuestion?.questionText || extracted.illuminationQuestion) : undefined,
+      historicalInterventionUsed: historicalQuestion?.shouldIntervene !== false ? historicalQuestion?.questionText : undefined,
       refinedInsight: undefined,
       createdAt: now,
       updatedAt: now
@@ -221,6 +262,8 @@ export class DecisionService {
 
     // 4. Construct Atomic Statements
     const extractedStatements = Array.isArray(extracted.statements) ? extracted.statements : [];
+    
+    // Embed only assumptions to save time/cost
     const statements: Statement[] = [
       {
         id: `stmt-${now}-goal`,
@@ -231,8 +274,18 @@ export class DecisionService {
         provenanceSource: 'inferred_by_ai',
         confidenceScore: 0.95,
         createdAt: now
-      },
-      ...extractedStatements.map((s, idx) => ({
+      }
+    ];
+
+    for (let idx = 0; idx < extractedStatements.length; idx++) {
+      const s = extractedStatements[idx];
+      let semanticEmbedding: number[] | undefined = undefined;
+      
+      if (s.role === 'assumption' && this.aiProvider.generateSemanticEmbedding) {
+        semanticEmbedding = await this.aiProvider.generateSemanticEmbedding(s.text);
+      }
+
+      statements.push({
         id: `stmt-${now}-${idx}`,
         caseId,
         userId: dto.userId,
@@ -240,9 +293,10 @@ export class DecisionService {
         role: s.role,
         provenanceSource: 'inferred_by_ai' as const,
         confidenceScore: s.confidenceScore || 0.9,
-        createdAt: now
-      }))
-    ];
+        createdAt: now,
+        semanticEmbedding
+      });
+    }
 
     // 5. Construct Options
     const extractedOptions = Array.isArray(extracted.options) ? extracted.options : [];
@@ -257,6 +311,7 @@ export class DecisionService {
     }));
 
     // 6. Construct Decision Signature
+    const signatureEmbedding = await this.aiProvider.generateStructuralEmbedding?.(extracted.signature, {}) || [];
     const signature: DecisionSignature = {
       id: `sig-${caseId}`,
       caseId,
@@ -265,7 +320,8 @@ export class DecisionService {
       informationCostRatio: extracted.signature?.informationCostRatio ?? 0.5,
       reversibilityDecayDays: extracted.signature?.reversibilityDecayDays ?? 30,
       principalAgentTension: extracted.signature?.principalAgentTension ?? 'sole_actor',
-      decisionTempo: extracted.signature?.decisionTempo ?? 'tactical_weeks'
+      decisionTempo: extracted.signature?.decisionTempo ?? 'tactical_weeks',
+      signatureEmbedding
     };
 
     const sessionState: CaseSessionState = {
@@ -278,6 +334,7 @@ export class DecisionService {
         : extracted.illuminationQuestion,
       epistemicState,
       bespokeQuestion,
+      historicalQuestion,
       humanDimensions,
       refinedInsight: undefined
     };

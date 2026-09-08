@@ -277,4 +277,29 @@ User's Response:
     const data = await response.json();
     return data.embedding?.values || [];
   }
+
+  async generateSemanticEmbedding(text: string): Promise<number[]> {
+    if (!this.apiKey) {
+      return [0.0, 0.0, 0.0];
+    }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${this.apiKey}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'models/text-embedding-004',
+        content: { parts: [{ text }] }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini Semantic Embedding error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data.embedding?.values || [];
+  }
 }

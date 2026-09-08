@@ -5,11 +5,13 @@ import { EchoOrb } from '../graphics/EchoOrb.js';
 
 interface QuickCaptureScreenProps {
   onCaptureSubmit: (text: string, frictionLevel?: 'quick' | 'focused' | 'deep') => void;
+  onOpenProfile?: () => void;
   isLoading?: boolean;
 }
 
 export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
   onCaptureSubmit,
+  onOpenProfile,
   isLoading = false
 }) => {
   const [inputText, setInputText] = useState('');
@@ -90,6 +92,11 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
+        {onOpenProfile && (
+          <TouchableOpacity style={styles.profileBtn} onPress={onOpenProfile}>
+            <Text style={styles.profileBtnText}>📊 פרופיל כיול</Text>
+          </TouchableOpacity>
+        )}
         <Text style={styles.title}>הד</Text>
         <Text style={styles.subtitle}>הזיכרון הלומד של שיקול הדעת</Text>
       </View>
@@ -141,7 +148,25 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginTop: 20
+    marginTop: 10,
+    width: '100%',
+    position: 'relative'
+  },
+  profileBtn: {
+    position: 'absolute',
+    left: 0,
+    top: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)'
+  },
+  profileBtnText: {
+    color: LuxuryTheme.accent.auraGlow,
+    fontSize: 11,
+    fontWeight: '600'
   },
   title: {
     fontSize: 28,

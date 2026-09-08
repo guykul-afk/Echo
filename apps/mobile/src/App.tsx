@@ -4,9 +4,10 @@ import { LuxuryTheme } from './theme/colors.js';
 import { QuickCaptureScreen } from './screens/QuickCaptureScreen.js';
 import { DecisionRoomScreen } from './screens/DecisionRoomScreen.js';
 import { OutcomeModal } from './screens/OutcomeModal.js';
+import { DecisionProfileScreen } from './screens/DecisionProfileScreen.js';
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, QuickLoopStatus, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
 
-type AppStep = 'capture' | 'decision_room' | 'outcome';
+type AppStep = 'capture' | 'decision_room' | 'outcome' | 'profile';
 
 export const App: React.FC = () => {
   const [step, setStep] = useState<AppStep>('capture');
@@ -18,6 +19,7 @@ export const App: React.FC = () => {
   const [signature, setSignature] = useState<DecisionSignature | null>(null);
   const [illuminationQuestion, setIlluminationQuestion] = useState<string>('');
   const [bespokeQuestion, setBespokeQuestion] = useState<IlluminationQuestion | undefined>(undefined);
+  const [historicalQuestion, setHistoricalQuestion] = useState<IlluminationQuestion | undefined>(undefined);
   const [refinedInsight, setRefinedInsight] = useState<RefinedInsight | undefined>(undefined);
   const [chosenNextStep, setChosenNextStep] = useState<string>('');
 
@@ -70,8 +72,29 @@ export const App: React.FC = () => {
           ? ['נתונים מוצקים בשטח', 'ניסיון עבר אישי', 'תחושת בטן']
           : ['פשטות ומהירות', 'עמידות לטווח ארוך'],
         isSecondary: false,
+        origin: 'current_dilemma',
         createdAt: now
       };
+
+      // Question 2: שאלת עבר מותנית - נוצרת רק אם יש הקשר עבר רלוונטי
+      let mockHistorical: IlluminationQuestion | undefined;
+      const lower = rawText.toLowerCase();
+      if (lower.includes('תפקיד') || lower.includes('ילדים') || lower.includes('שכר') || lower.includes('job') || lower.includes('קבלן') || lower.includes('בטון')) {
+        mockHistorical = {
+          id: 'illum-hist-mock',
+          caseId: 'dc-001',
+          strategy: 'outcome_contract_anchor',
+          origin: 'historical_precedent',
+          questionText: 'במעבר התפקיד הקודם (2024) ציינת בדיעבד שזמן הבית היה קריטי בהרבה ממה שהערכת. האם הלקח הזה תקף להחלטה הנוכחית?',
+          triggerReason: 'זוהה תקדים עבר ישיר בנושא דומה',
+          shouldIntervene: true,
+          isSecondary: true,
+          canSkip: true,
+          responseWidget: 'confirmation',
+          responseOptions: ['כן, לקח רלוונטי', 'לא, הנסיבות שונות'],
+          createdAt: now
+        };
+      }
 
       const mockInsight: RefinedInsight = {
         before: 'חשש שהתפקיד יפגע בזמן עם הילדים או פחד משינוי',
@@ -100,6 +123,7 @@ export const App: React.FC = () => {
       setSignature(mockSignature);
       setIlluminationQuestion(mockQuestion);
       setBespokeQuestion(mockBespoke);
+      setHistoricalQuestion(mockHistorical);
       setRefinedInsight(mockInsight);
 
       setIsLoading(false);
@@ -150,7 +174,14 @@ export const App: React.FC = () => {
         {step === 'capture' && (
           <QuickCaptureScreen
             onCaptureSubmit={handleCaptureSubmit}
+            onOpenProfile={() => setStep('profile')}
             isLoading={isLoading}
+          />
+        )}
+
+        {step === 'profile' && (
+          <DecisionProfileScreen
+            onBack={() => setStep('capture')}
           />
         )}
 
@@ -161,6 +192,7 @@ export const App: React.FC = () => {
             signature={signature || undefined}
             illuminationQuestion={illuminationQuestion}
             bespokeQuestion={bespokeQuestion}
+            historicalQuestion={historicalQuestion}
             initialRefinedInsight={refinedInsight}
             similarCaseAnalogy={{
               title: 'החלטה קודמת על תפקיד (2024)',

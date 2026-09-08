@@ -324,4 +324,8 @@ export class MockAiProvider implements IAiProvider {
       0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 0.0
     ];
   }
+
+  async generateSemanticEmbedding(text: string): Promise<number[]> {
+    return [0.1, 0.2, 0.3, text.length / 100, 0.5];
+  }
 }
