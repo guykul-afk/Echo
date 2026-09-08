@@ -352,32 +352,9 @@ export async function runRanSimulation() {
           if (isSilent) silenceSuccessCount++;
         }
 
-        // 4. TriFactor Retrieval across past cases
-        let bestAnalogy: any = null;
-        for (const past of memoryStore) {
-          const rel = TriFactorRetrievalService.calculateRelevance(
-            currentSignature,
-            past.signature,
-            ranEra,
-            past.era,
-            calculateCosineSimilarity(rawCapture, past.rawText)
-          );
-          if (!bestAnalogy || rel.score > bestAnalogy.score) {
-            bestAnalogy = { past, ...rel };
-          }
-        }
-
-        const analogySurfaced = bestAnalogy && bestAnalogy.score >= 0.78;
-        let analogyTextForPrompt: string | null = null;
+        // 4. TriFactor Structural Analogy (Decommissioned per empirical review: noisy, repetitive verbatim reasoning)
+        // Structural analogy cards are disabled in favor of Atomic Memory Contradiction Retrieval
         let analogyCardMd = '';
-        if (analogySurfaced) {
-          analogyTextForPrompt = `התאמה מבנית ${Math.round(bestAnalogy.score * 100)}% למקרה #${bestAnalogy.past.caseIndex}: "${bestAnalogy.past.dimConsideration}". צעד שנבחר אז: ${bestAnalogy.past.chosenStep}`;
-          analogyCardMd = `### 🏛️ כרטיס אנלוגיה מבנית (שלב 5 באפיון)
-- **התאמה מבנית:** \`${Math.round(bestAnalogy.score * 100)}%\` למקרה מס' ${bestAnalogy.past.caseIndex}
-- **סיבת ההתאמה:** ${bestAnalogy.reason}
-- **הדילמה במקרה הקודם:** ${bestAnalogy.past.dimConsideration}
-- **הצעד שנבחר אז:** ${bestAnalogy.past.chosenStep}`;
-        }
 
         // 5. Check Contradiction
         let questionText = caseResult.illuminationQuestion || 'האם יש כאן החלטה להכרעה?';
@@ -395,7 +372,7 @@ export async function runRanSimulation() {
         }
 
         // 7. Behavioral Interaction
-        const { answerText, mirrorUpdate } = await generateRanResponse(rawCapture, questionText, behavior, analogyTextForPrompt);
+        const { answerText, mirrorUpdate } = await generateRanResponse(rawCapture, questionText, behavior, null);
 
         if (behavior === 'mirror_correction' && mirrorUpdate) {
           mirrorEditsCount++;
@@ -415,9 +392,10 @@ export async function runRanSimulation() {
           } catch (e) {}
         }
 
-        const refinedBefore = finalResult.refinedInsight?.before || caseResult.refinedInsight?.before || session.dimConsideration;
-        const refinedNow = finalResult.refinedInsight?.now || caseResult.refinedInsight?.now || 'סגירת עמדה בהתאם לקו הפעולה של רן';
-        const refinedNext = finalResult.refinedInsight?.chosenStep || caseResult.refinedInsight?.chosenStep || 'מעבר לביצוע מיידי';
+        const isNonCollab = behavior === 'abandonment' || behavior === 'skip_enough' || behavior === 'pushback_irrelevant';
+        const refinedBefore = finalResult.refinedInsight?.before || (isNonCollab ? null : session.dimConsideration);
+        const refinedNow = finalResult.refinedInsight?.now || null;
+        const refinedNext = finalResult.refinedInsight?.chosenStep || null;
 
         // Store in memory for future reference
         memoryStore.push({
@@ -427,7 +405,7 @@ export async function runRanSimulation() {
           title: fixture.title,
           rawText: rawCapture,
           dimConsideration: session.dimConsideration || fixture.title,
-          chosenStep: refinedNext,
+          chosenStep: refinedNext || 'ללא צעד נבחר (דילוג/נטישה)',
           signature: currentSignature,
           era: ranEra
         });
@@ -463,9 +441,9 @@ export async function runRanSimulation() {
           `- **הערת שופט:** ${judgeResult.critique}`,
           ``,
           `### חיווי התחדדות (Refined Insight)`,
-          `- **קודם חשב:** ${refinedBefore}`,
-          `- **כעת התחדד:** ${refinedNow}`,
-          `- **הצעד שנבחר:** ${refinedNext}`,
+          `- **קודם חשב:** ${refinedBefore || '[לא הוגדר שינוי / נשמר המצב המקורי]'}`,
+          `- **כעת התחדד:** ${refinedNow || '[לא נוצרה התחדדות – המשתמש דילג/נטש/דחה את ההתערבות]'}`,
+          `- **הצעד שנבחר:** ${refinedNext || '[ללא צעד נבחר]'}`,
           ``,
           `---`,
           ``

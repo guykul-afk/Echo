@@ -14,10 +14,29 @@ function cleanAndParseJson<T>(raw: string): T {
   try {
     return JSON.parse(cleaned) as T;
   } catch (err: any) {
-    const sanitized = cleaned
+    let sanitized = cleaned
       .replace(/,\s*([\]}])/g, '$1')
       .replace(/[\x00-\x1F\x7F-\x9F]/g, ' ');
-    return JSON.parse(sanitized) as T;
+    try {
+      return JSON.parse(sanitized) as T;
+    } catch (e2: any) {
+      const firstBrace = sanitized.indexOf('{');
+      const lastBrace = sanitized.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        const sub = sanitized.slice(firstBrace, lastBrace + 1);
+        try {
+          return JSON.parse(sub) as T;
+        } catch (e3: any) {}
+      }
+      // If trailing unclosed brackets/braces
+      try {
+        return JSON.parse(sanitized + '"}') as T;
+      } catch (e4: any) {}
+      try {
+        return JSON.parse(sanitized + '}') as T;
+      } catch (e5: any) {}
+      throw err;
+    }
   }
 }
 
@@ -153,13 +172,19 @@ Extract the epistemic breakdown, decision signature, four human dimensions, and 
     return cleanAndParseJson<EpistemicExtractionResult>(candidateText);
   }
 
-  async extractCognitiveEngine(rawText: string): Promise<CognitiveAnalysisResult> {
+  async extractCognitiveEngine(rawText: string, recentQuestions?: string[]): Promise<CognitiveAnalysisResult> {
     if (!this.apiKey) {
       throw new Error('GEMINI_API_KEY is not configured.');
     }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.cognitiveModel}:generateContent?key=${this.apiKey}`;
-    const userPrompt = `Raw capture: """${rawText}"""`;
+    let userPrompt = `Raw capture: """${rawText}"""`;
+    if (recentQuestions && recentQuestions.length > 0) {
+      userPrompt += `\n\nRECENT INTERVENTIONS TO AVOID REPEATING (Anti-Repetition Negative Constraints):
+The user was recently asked the following illumination questions in previous decisions:
+${recentQuestions.map((q, i) => `${i + 1}. "${q}"`).join('\n')}
+CRITICAL: DO NOT repeat these angles, tropes (e.g. freemium, binary dichotomy), or identical strategic questions. Pick a fresh angle or use 'no_intervention'.`;
+    }
 
     const response = await fetch(url, {
       method: 'POST',
@@ -195,14 +220,10 @@ Extract the epistemic breakdown, decision signature, four human dimensions, and 
     userAnswer: string,
     isSkip: boolean
   ): Promise<DeltaAnalysisResult> {
-    if (isSkip || !userAnswer || userAnswer.trim().length === 0) {
+    if (isSkip || !userAnswer || userAnswer.trim().length === 0 || userAnswer.includes('[דילוג') || userAnswer.includes('[נטישה')) {
       return {
-        refinedInsight: {
-          before: humanDimensions.consideration || rawCapture.slice(0, 80),
-          now: 'נשמר המצב המקורי ללא הרחבה נוספת',
-          chosenStep: 'שמירה והמשך מעקב'
-        },
-        userOwnershipVerified: true,
+        refinedInsight: null,
+        userOwnershipVerified: false,
         changedAssumptions: [],
         newFacts: [],
         resolvedUnknowns: []
@@ -257,16 +278,18 @@ User's Response:
     }
 
     const parsed = JSON.parse(candidateText);
+    const hasDelta = parsed.hasDelta !== false && (parsed.now || parsed.chosenStep);
+
     return {
-      refinedInsight: {
+      refinedInsight: hasDelta ? {
         before: parsed.before || humanDimensions.consideration || rawCapture.slice(0, 80),
         now: parsed.now || userAnswer.slice(0, 80),
-        chosenStep: parsed.chosenStep || userAnswer.slice(0, 100)
-      },
-      userOwnershipVerified: Boolean(parsed.userOwnershipVerified ?? true),
-      changedAssumptions: Array.isArray(parsed.changedAssumptions) ? parsed.changedAssumptions : [],
-      newFacts: Array.isArray(parsed.newFacts) ? parsed.newFacts : [],
-      resolvedUnknowns: Array.isArray(parsed.resolvedUnknowns) ? parsed.resolvedUnknowns : []
+        chosenStep: parsed.chosenStep || ''
+      } : null,
+      userOwnershipVerified: Boolean(parsed.userOwnershipVerified && hasDelta),
+      changedAssumptions: hasDelta && Array.isArray(parsed.changedAssumptions) ? parsed.changedAssumptions : [],
+      newFacts: hasDelta && Array.isArray(parsed.newFacts) ? parsed.newFacts : [],
+      resolvedUnknowns: hasDelta && Array.isArray(parsed.resolvedUnknowns) ? parsed.resolvedUnknowns : []
     };
   }
 
