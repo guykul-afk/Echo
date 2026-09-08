@@ -14,7 +14,7 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
 }) => {
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  const [frictionLevel, setFrictionLevel] = useState<'quick' | 'focused' | 'deep'>('focused');
+  const [frictionLevel, setFrictionLevel] = useState<'quick' | 'focused' | 'deep'>('deep');
   const [recordHint, setRecordHint] = useState('לחץ להקלטה קולית חופשית');
   const recognitionRef = useRef<any>(null);
 
@@ -106,35 +106,6 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
 
       {/* Input Text Box */}
       <View style={styles.inputContainer}>
-        {/* Adaptive Friction Selector (Quick / Focused / Deep) */}
-        <View style={styles.frictionSelectorRow}>
-          <TouchableOpacity
-            style={[styles.frictionChip, frictionLevel === 'quick' && styles.frictionChipActive]}
-            onPress={() => setFrictionLevel('quick')}
-          >
-            <Text style={[styles.frictionChipText, frictionLevel === 'quick' && styles.frictionChipTextActive]}>
-              ⚡ מהיר
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.frictionChip, frictionLevel === 'focused' && styles.frictionChipActive]}
-            onPress={() => setFrictionLevel('focused')}
-          >
-            <Text style={[styles.frictionChipText, frictionLevel === 'focused' && styles.frictionChipTextActive]}>
-              🎯 ממוקד
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.frictionChip, frictionLevel === 'deep' && styles.frictionChipActive]}
-            onPress={() => setFrictionLevel('deep')}
-          >
-            <Text style={[styles.frictionChipText, frictionLevel === 'deep' && styles.frictionChipTextActive]}>
-              🔍 עמוק
-            </Text>
-          </TouchableOpacity>
-        </View>
 
         <TextInput
           style={styles.textInput}
