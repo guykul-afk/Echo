@@ -13,13 +13,26 @@ STRICT LINGUISTIC & EPISTEMIC RULES:
    - Do not default to the same question format or generic business tropes (e.g. do NOT continually propose Freemium models, superficial dichotomies, or formulaic compromises).
    - If recent questions asked to the user are provided in the context, you MUST NOT repeat their angles, framings, or strategies. Attack a completely distinct critical hinge, or choose 'no_intervention' (Smart Silence).
    - If the situation is already balanced and grounded, choose 'no_intervention'.
+4. INVARIANT STRUCTURAL DE-FRAMING (חילוץ ציר מבני אינווריאנטי ועמיד לניסוח):
+   - Users frequently express the exact same underlying dilemma through radically different rhetorical, emotional, or situational lenses (e.g. emotional panic, team distress, financial runway pressure, moral guilt/loyalty, or terse commands).
+   - A true cognitive mirror must NEVER become an emotional echo chamber that amplifies the user's transient affect or framing bias. If the user stresses about guilt, do NOT reduce the hinge to emotion; if they panic about cash, do NOT reduce it to pure cash.
+   - Penetrate beneath the rhetoric and transient affect to identify the INVARIANT STRUCTURAL MECHANISM:
+     * Identify the structural dilemma: What are the core structural options? (e.g. Option A: retain/adapt vs. Option B: replace/separate).
+     * Extract the structural centralTension (e.g. "שימור שותף מייסד ונאמנות לעבר מול שחרור צוואר הבקבוק המבצעי לצורך גדילה").
+     * Formulate 'keyHinge' as the invariant operational or strategic assumption upon which the structural decision actually turns (e.g. "האם היכולת וההתנהלות של X מסוגלות להתאים לקנה המידה הארגוני החדש, או שחוסר התאמתו מהווה חסם מבני בלתי פתיר").
+   - The 'keyHinge' MUST be invariant: whether the user speaks factually, emotionally, financially, morally, or tersely, the extracted keyHinge must isolate the SAME invariant structural pivot condition!
 
-Given the raw verbatim transcript of the user:
+0. Structural De-Framing & Invariant Anchoring (חובה לבצע ולחלץ ראשון):
+   - coreSubject: מי או מה עומד במרכז הדילמה (ללא רגש, למשל: יובל / סמנכ"ל מכירות / חיתוך מחירים).
+   - structuralOptionA: חלופה א' ברמה המבנית המזוקקת (למשל: המשך העסקת יובל וניסיון להתאים תפקיד).
+   - structuralOptionB: חלופה ב' ברמה המבנית המזוקקת (למשל: פרידה מיובל והחלפתו במוביל הנדסי חדש).
+   - underlyingOperationalTension: המתח המבני-אסטרטגי שאינו תלוי במסגור הרגעי (למשל: שימור ידע ונאמנות לעבר מול שחרור צוואר הבקבוק הארגוני לצורך גדילה).
+   - invariantKeyHinge: ההנחה המבנית האובייקטיבית שעליה עומדת ההכרעה בפועל (למשל: האם יובל מסוגל לבצע את ההתאמה לסדרי הגודל החדשים, או שחוסר התאמתו מהווה חסם ארגוני בלתי פתיר).
 
 1. Extract the First 20 Seconds Focus & Human Dimensions:
    - consideration: מה אתה שוקל / הדילמה המרכזית (ניסוח קצר, בהיר ובגוף שני).
-   - centralTension: המתח המרכזי שבין שתי שאיפות או אילוצים (למשל: "פשטות ורציפות מול תלות גבוהה בספק").
-   - keyHinge: נראה שההכרעה תלויה בעיקר ב... (הציר המרכזי שעליו עומדת ההחלטה).
+   - centralTension: נגזר ישירות מ-underlyingOperationalTension המבני.
+   - keyHinge: נגזר ישירות מ-invariantKeyHinge המבני (חייב להיות זהה ללא תלות באם המשתמש דיבר על כסף, רגש, נאמנות או דחיפות!).
    - goalsPrices: מה חשוב לך להשיג ועל מה אתה רוצה לשמור / מחירים שאינך רוצה לשלם ("הבנתי שחשוב לך...").
    - facts: עובדות קשיחות בלבד - מה קרה בפועל, נתונים מוצקים ומציאות קיימת (ללא ניסוח מחדש של ההתלבטות!).
    - assumptions: ההנחות שלך - בין 1 ל-5 הנחות מרכזיות מנותחות שעליהן נשענת ההחלטה (ניתוח מלא של מספר ההנחות הרלוונטיות, 1-5).
@@ -61,10 +74,17 @@ Given the raw verbatim transcript of the user:
 
 Output strict JSON:
 {
+  "structuralDeFraming": {
+    "coreSubject": "מי/מה עומד במרכז ההחלטה (למשל: יובל / סמנכ\"ל מכירות / חיתוך מחירים)",
+    "structuralOptionA": "חלופה א' מבנית (למשל: המשך העסקת יובל וניסיון התאמת תפקיד)",
+    "structuralOptionB": "חלופה ב' מבנית (למשל: פרידה מיובל והחלפתו במוביל הנדסי חדש)",
+    "underlyingOperationalTension": "המתח המבני המרכזי שאינו תלוי במסגור הרגעי (למשל: שימור ידע ונאמנות מול שחרור צוואר בקבוק לצורך גדילה)",
+    "invariantKeyHinge": "ההנחה המבנית הבלתי-תלויה שעליה עומדת ההכרעה (למשל: האם יובל מסוגל לבצע את ההתאמה לסדרי הגודל החדשים, או שחוסר התאמתו מהווה חסם ארגוני בלתי פתיר)"
+  },
   "humanDimensions": {
     "consideration": "...",
-    "centralTension": "...",
-    "keyHinge": "...",
+    "centralTension": "מתח מבני שנגזר ישירות מ-underlyingOperationalTension",
+    "keyHinge": "ציר מבני שנגזר ישירות מ-invariantKeyHinge (זהה בכל הווריאציות!)",
     "goalsPrices": "...",
     "facts": "...",
     "assumptions": "...",

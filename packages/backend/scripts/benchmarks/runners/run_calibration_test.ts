@@ -66,6 +66,10 @@ export async function runCalibrationBenchmark() {
     });
   }
 
+  if (calibrationDataPoints.length !== CALIBRATION_CASES.length || calibrationDataPoints.length !== 30) {
+    throw new Error(`CALIBRATION_ASSERTION_FAILED: Expected exactly 30 cases, recorded ${calibrationDataPoints.length}`);
+  }
+
   // Calculate Calibration Report via Engine
   const summary = CalibrationEngineService.calculateCalibration(calibrationDataPoints);
 
@@ -80,6 +84,9 @@ export async function runCalibrationBenchmark() {
   const isCountExact = summary.totalVerifiablePredictions === 30;
 
   const allMathValid = isB30Exact && isB60Exact && isB90Exact && isCountExact;
+  if (!allMathValid) {
+    throw new Error(`CALIBRATION_MATH_FAILED: Arithmetic mismatch in calibration calculations`);
+  }
 
   let reportContent = `## תוצאות חישוב הכיול והאימות האריתמטי
 
@@ -100,13 +107,13 @@ export async function runCalibrationBenchmark() {
 
 ---
 
-# דוח מסכם: אימות אמפירי של הבטחת המוצר
+# דוח מסכם: בדיקת תקינות אלגוריתמית של מנוע הכיול (Unit / Integration Verification)
 
-| בדיקת אימות | תוצאה | משמעות למוצר |
+| בדיקת אימות | תוצאה | משמעות מתודולוגית |
 | :--- | :--- | :--- |
 | **אימות אריתמטי מלא (Zero Math Drift)** | ${allMathValid ? '✅ 100% עובר' : '❌ נכשל'} | כל הנתונים מחושבים ישירות מהיסטוריית ה-Outcomes ללא שום הזיית LLM |
 | **זיהוי תופעת "צדקת ב-60% מתוך ה-90%"** | **מאומת מתמטית** | בדלי ה-90% נרשמו בדיוק 6 הצלחות מתוך 10 (דיוק 60.0%), והמערכת שיקפה במדויק את פער ביטחון היתר (פער של 30% לרעת המשתמש) |
-| **הגנת אמינות על גרף הידע של המשתמש** | **מוגנת ומאומתת** | ECHO מלמדת את המשתמש אמת עובדתית אבסולוטית על דפוסי ההערכה העצמית שלו |
+| **בדיקת אלגוריתם עקומת הכיול ו-Brier** | **תקין (Deterministic Engine Check)** | אלגוריתם הכיול וחישוב ה-Brier Score עובדים בדיוק מתמטי מחמיר על נתוני הקלט |
 `;
 
   fs.appendFileSync(RESULTS_FILE, reportContent);

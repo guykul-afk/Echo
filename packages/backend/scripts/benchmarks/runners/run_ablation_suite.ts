@@ -241,6 +241,10 @@ export async function runAblationBenchmark() {
     results.push(res);
   }
 
+  if (results.length !== modes.length || results.length !== 5) {
+    throw new Error(`ABLATION_ASSERTION_FAILED: Expected 5 ablation mode evaluations, recorded ${results.length}`);
+  }
+
   // Generate Comparative Ablation Markdown
   let report = `# בנצ'מרק 3: רשת אבלציה (Ablation Suite) — איזה רכיב באמת תורם?
 **תאריך ריצה:** ${new Date().toISOString().split('T')[0]}  

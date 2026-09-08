@@ -91,7 +91,7 @@ export async function runStabilityBenchmark() {
     });
 
     const session = caseResult.decisionCase;
-    const keyHinge = session.dimAssumptions || session.centralTension || 'לא חולץ ציר';
+    const keyHinge = session.keyHinge || session.centralTension || session.dimAssumptions || 'לא חולץ ציר';
 
     results.push({
       variation: v,
@@ -114,7 +114,8 @@ export async function runStabilityBenchmark() {
       `### ממדי המראה שחולצו על ידי ECHO`,
       `- **מה נשקל (Consideration):** ${session.dimConsideration}`,
       `- **מתח מרכזי (Central Tension):** ${session.centralTension || 'N/A'}`,
-      `- **הנחות ציר / מפתח (Key Hinges):** ${session.dimAssumptions}`,
+      `- **ציר ההכרעה שנבדק (Evaluated Key Hinge):** ${keyHinge}`,
+      `- **הנחות מנותחות (Assumptions):** ${session.dimAssumptions}`,
       `- **שאלת ההארה שנבחרה:** ${caseResult.illuminationQuestion}`,
       ``,
       `---`,
@@ -147,6 +148,13 @@ export async function runStabilityBenchmark() {
 
       pairwiseComparisonTable += `| ניסוח ${resA.variation.variationIndex} ↔ ניסוח ${resB.variation.variationIndex} | ${pairVerdict.isEquivalent ? '✅ עקבי (אותו ציר)' : '❌ לא עקבי (ציר שונה)'} | ${pairVerdict.similarityScore}% | ${pairVerdict.reason} |\n`;
     }
+  }
+
+  if (results.length !== STABILITY_BENCHMARK.variations.length || results.length !== 5) {
+    throw new Error(`STABILITY_ASSERTION_FAILED: Expected 5 variation results, recorded ${results.length}`);
+  }
+  if (totalPairs !== 10) {
+    throw new Error(`STABILITY_ASSERTION_FAILED: Expected 10 pairwise comparisons, conducted ${totalPairs}`);
   }
 
   const stabilityIndex = Math.round((equivalentPairsCount / totalPairs) * 100);

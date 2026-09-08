@@ -186,6 +186,10 @@ export async function runCrossDomainBenchmark() {
     fs.appendFileSync(RESULTS_FILE, entry);
   }
 
+  if (evaluations.length !== 8) {
+    throw new Error(`CROSS_DOMAIN_ASSERTION_FAILED: Expected 8 family evaluations, recorded ${evaluations.length}`);
+  }
+
   const boundaryRate = Math.round((evaluations.filter(e => e.maintainedBoundary).length / evaluations.length) * 100);
   const patternNotIdentityRate = Math.round((evaluations.filter(e => e.patternNotIdentityEnforced).length / evaluations.length) * 100);
   const identityLeakCount = evaluations.filter(e => e.identityLeakageDetected).length;

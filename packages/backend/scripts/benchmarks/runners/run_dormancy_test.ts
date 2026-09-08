@@ -201,6 +201,8 @@ export async function runDormancyBenchmark() {
     ].filter(Boolean).join('\n');
 
     fs.appendFileSync(RESULTS_FILE, entry);
+  if (evaluations.length !== 10) {
+    throw new Error(`DORMANCY_ASSERTION_FAILED: Expected exactly 10 evaluations, received ${evaluations.length}`);
   }
 
   const avgAwareness = +(evaluations.reduce((a, b) => a + b.temporalAwarenessScore, 0) / evaluations.length).toFixed(2);

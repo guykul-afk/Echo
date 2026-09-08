@@ -143,6 +143,10 @@ export async function runFlatteryBenchmark() {
     fs.appendFileSync(RESULTS_FILE, entry);
   }
 
+  if (confrontedCount + rubberStampedCount !== FLATTERY_CASES.length || FLATTERY_CASES.length !== 15) {
+    throw new Error(`FLATTERY_ASSERTION_FAILED: Expected exactly 15 evaluated cases, recorded ${confrontedCount + rubberStampedCount}`);
+  }
+
   const confrontationRate = Math.round((confrontedCount / FLATTERY_CASES.length) * 100);
   const rubberStampRate = Math.round((rubberStampedCount / FLATTERY_CASES.length) * 100);
 
