@@ -72,35 +72,20 @@
   <!-- Mobile Frame Mockup (Continuous Vertical Scroll Stream) -->
   <div class="relative w-full max-w-[395px] h-[810px] rounded-[50px] border-[6px] border-[#202330] shadow-[0_25px_70px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col" style="background-color: var(--c-void);">
 
-    <!-- Technical Top Header Bar (Persistent Status Pill + Expandable Settings Drawer) -->
+    <!-- Collapsible Technical Top Header Bar (Hidden by default, toggled via small arrow) -->
     <div class="w-full shrink-0 z-30 flex flex-col items-center">
-      <!-- Minimalist Persistent Status Bar (Always Visible) -->
-      <div class="w-full px-5 pt-3 pb-1 flex items-center justify-between text-xs select-none">
-        <div class="flex items-center gap-2">
-          <span id="topBarUserTag" class="text-xs font-mono font-medium tracking-wider text-amber-300">@guy_founder</span>
-          <span id="topBarCloudStatus" class="text-[10px] font-light text-amber-300/80 flex items-center gap-1.5" title="סטטוס חיבור לשרת">
-            <span id="topBarCloudIndicator" class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span id="topBarCloudStatusText">מתחבר לענן...</span>
-          </span>
-        </div>
-        <div class="flex items-center gap-2">
-          <button onclick="openDecisionsJournal()" class="px-2.5 py-1 rounded-full text-[11px] border border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/25 transition-all flex items-center gap-1 cursor-pointer font-medium shadow-sm active:scale-95">
-            <span>יומן ומעקב</span>
-            <span id="topBarJournalBadge" class="text-[10px] font-bold"></span>
-          </button>
-          <button 
-            id="btnToggleTechHeader"
-            onclick="toggleTechnicalHeader()" 
-            class="p-1 flex items-center justify-center text-[#D4AF37] opacity-60 hover:opacity-100 transition-all focus:outline-none cursor-pointer group active:scale-90"
-            title="פתיחת/סגירת הגדרות"
-            aria-label="הגדרות"
-          >
-            <svg id="techHeaderChevron" class="w-3.5 h-3.5 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </button>
-        </div>
-      </div>
+      <!-- Minimalist Small Arrow Button (Matches Spec / Screenshot) -->
+      <button 
+        id="btnToggleTechHeader"
+        onclick="toggleTechnicalHeader()" 
+        class="pt-3 pb-1 px-4 flex items-center justify-center text-[#D4AF37] opacity-60 hover:opacity-100 transition-all focus:outline-none cursor-pointer group select-none active:scale-90"
+        title="פתיחת/סגירת תפריט טכני והגדרות"
+        aria-label="תפריט טכני"
+      >
+        <svg id="techHeaderChevron" class="w-3.5 h-3.5 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
 
       <!-- Expandable Technical Drawer Panel -->
       <div id="technicalDrawer" class="w-full px-4 overflow-hidden transition-all duration-300 ease-in-out max-h-0 opacity-0 pointer-events-none">
@@ -1013,20 +998,14 @@
     }
 
     function updateTopBarStatus(text, isPending = false) {
-      const txtEl = document.getElementById('topBarCloudStatusText');
-      const indEl = document.getElementById('topBarCloudIndicator');
-      if (txtEl) txtEl.innerText = text;
-      if (indEl) {
-        indEl.className = isPending 
-          ? 'inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse'
-          : 'inline-block w-1.5 h-1.5 rounded-full bg-emerald-400';
-      }
+      setCloudStatus(!isPending, text);
     }
 
     function updateJournalBadges(count) {
-      const badge = document.getElementById('topBarJournalBadge');
+      const badge = document.getElementById('badgeDueFollowUps');
       if (badge) {
         badge.innerText = count > 0 ? `(${count})` : '';
+        if (count > 0) badge.classList.remove('hidden');
       }
     }
 
@@ -1301,10 +1280,8 @@
       const formatted = '@' + currentUsername;
       const navDisplay = document.getElementById('currentUserNameDisplay');
       const badgeDisplay = document.getElementById('badgeUserTag');
-      const topBarTag = document.getElementById('topBarUserTag');
       if (navDisplay) navDisplay.innerText = formatted;
       if (badgeDisplay) badgeDisplay.innerText = formatted;
-      if (topBarTag) topBarTag.innerText = formatted;
     }
 
     function getUserStorageKey() {
