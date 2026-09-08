@@ -2231,6 +2231,8 @@
               centralTension: hd.centralTension || dc.centralTension || '',
               keyHinge: hd.keyHinge || dc.keyHinge || '',
               question: bq.questionText || ss.illuminationQuestion || 'מהי הנחת הציר המרכזית שלך?',
+              historicalQuestion: (ss.historicalQuestion && ss.historicalQuestion.shouldIntervene !== false) ? ss.historicalQuestion.questionText : '',
+              historicalTrigger: ss.historicalQuestion ? ss.historicalQuestion.triggerReason : '',
               insightBefore: assList[0] || 'נקודת המוצא',
               insightNow: 'בדיקת הנחת הציר מול תרחיש הפוך',
               proposedSteps: propSteps,
@@ -2261,11 +2263,21 @@
         console.warn('[ECHO] Backend /api/decision/create unavailable, falling back to direct prompt:', errBackend.message);
       }
 
-      // 2. Fallback Flow: Direct Gemini API via Local Proxy
+      // 2. Fallback Flow: Direct Gemini API via Local Proxy (with past decisions context)
+      let pastSummary = '';
+      try {
+        const pastList = JSON.parse(localStorage.getItem(getUserStorageKey()) || '[]').slice(-6);
+        if (pastList.length > 0) {
+          pastSummary = `\nהיסטוריית החלטות קודמות של המשתמש לצורך זיהוי תקדימים או סתירות:\n` + pastList.map((d, idx) => 
+            `- מקרה ${idx+1}: "${d.title}", הנחות: "${d.assumptions || ''}", צעד שנבחר: "${d.insightChosenStep || ''}"`
+          ).join('\n') + `\n`;
+        }
+      } catch (e) {}
+
       const prompt = `
 אתה מנוע הניתוח האפיסטמי של Echo (הד) - עוזר המאפשר לאדם לראות את החשיבה שלו, לזהות מה עשוי לשנות אותה ולבחור בעצמו אם להעמיק.
 הערך אינו בכמות התובנות, אלא בסיוע לאדם לבצע עוד מהלך חשיבה אחד שהיה חסר לו — בלי להפוך כל החלטה לתחקיר.
-
+${pastSummary}
 הטקסט הגולמי שהוקפא בלכידה:
 """${rawVerbatim}"""
 
@@ -2276,7 +2288,9 @@
 - facts: "עובדות קשיחות:" — מה כבר קרה בפועל, נתונים מוצקים ומידע ודאי (למשל סכומים, היקף, מצב נוכחי)
 - assumptions: "ההנחות שלך:" — רשימה של 1 עד 5 הנחות מרכזיות שהמשתמש משער, מניח או צופה לגבי העתיד (או לגבי התנהגות גורמים/שותפים). המספר המדויק (1-5) ייקבע לפי ניתוח מעמיק של מספר ההנחות הרלוונטיות באמת.
 - missingInfo: "פערי מידע:" — אילו פערי מידע, נתונים חסרים או שאלות פתוחות מונעים הכרעה בטוחה
-- question: שאלת הארה אחת בלבד, חדה ומאירה, המאתגרת את ההנחה המרכזית ללא שיפוטיות
+- question: שאלת הארה ראשית אחת בלבד, חדה ומאירה, הממוקדת אך ורק בדילמה הנוכחית ובמלל שנלכד (ללא התייחסות לעבר)
+- historicalQuestion: שאלת עבר מותנית — אך ורק אם זיהית תקדים עבר ישיר, סתירה, או הנחה שברירית מההיסטוריה. אם אין צורך אמיתי, החזר מחרוזת ריקה ""
+- historicalTrigger: סיבת הפעלת שאלת העבר (למשל: "זוהה תקדים עבר בנושא דומה") או "" אם לא הופעלה
 - insightBefore: מה המשתמש הניח או חשב בנקודת המוצא (מבוסס על ההנחות שלו)
 - proposedSteps: מערך של 1 עד 3 חלופות קונקרטיות ומעשיות לפעולה או לבירור ממוקד שהמערכת מציעה (הצעת המערכת)
 - proposedCriteria: מערך של 3 קריטריונים קונקרטיים להצלחה או מעקב עתידי המתאימים בדיוק לדילמה זו
@@ -2302,6 +2316,8 @@
                 },
                 missingInfo: { type: 'STRING' },
                 question: { type: 'STRING' },
+                historicalQuestion: { type: 'STRING' },
+                historicalTrigger: { type: 'STRING' },
                 insightBefore: { type: 'STRING' },
                 proposedSteps: {
                   type: 'ARRAY',
@@ -2400,6 +2416,8 @@
           reliance: assVal || `${factsVal} | ${assVal}`,
           unknowns: missVal,
           question: parsed.question ? `"${parsed.question.replace(/^"|"$/g, '').trim()}"` : '"מהי הנחת הציר המרכזית שלך?"',
+          historicalQuestion: parsed.historicalQuestion ? parsed.historicalQuestion.trim() : '',
+          historicalTrigger: parsed.historicalTrigger ? parsed.historicalTrigger.trim() : '',
           insightBefore: parsed.insightBefore || assList[0] || 'נקודת המוצא הראשונית',
           insightNow: 'בדיקת הנחת הציר מול תרחיש הפוך',
           proposedSteps: stepsList,
