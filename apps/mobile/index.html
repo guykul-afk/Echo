@@ -72,20 +72,35 @@
   <!-- Mobile Frame Mockup (Continuous Vertical Scroll Stream) -->
   <div class="relative w-full max-w-[395px] h-[810px] rounded-[50px] border-[6px] border-[#202330] shadow-[0_25px_70px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col" style="background-color: var(--c-void);">
 
-    <!-- Collapsible Technical Top Header Bar (Hidden by default, toggled via small arrow) -->
+    <!-- Technical Top Header Bar (Persistent Status Pill + Expandable Settings Drawer) -->
     <div class="w-full shrink-0 z-30 flex flex-col items-center">
-      <!-- Minimalist Small Arrow Button (Matches Spec / Screenshot) -->
-      <button 
-        id="btnToggleTechHeader"
-        onclick="toggleTechnicalHeader()" 
-        class="pt-3 pb-1 px-4 flex items-center justify-center text-[#D4AF37] opacity-60 hover:opacity-100 transition-all focus:outline-none cursor-pointer group select-none active:scale-90"
-        title="פתיחת/סגירת תפריט טכני והגדרות"
-        aria-label="תפריט טכני"
-      >
-        <svg id="techHeaderChevron" class="w-3.5 h-3.5 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="6 9 12 15 18 9"></polyline>
-        </svg>
-      </button>
+      <!-- Minimalist Persistent Status Bar (Always Visible) -->
+      <div class="w-full px-5 pt-3 pb-1 flex items-center justify-between text-xs select-none">
+        <div class="flex items-center gap-2">
+          <span id="topBarUserTag" class="text-xs font-mono font-medium tracking-wider text-amber-300">@guy_founder</span>
+          <span id="topBarCloudStatus" class="text-[10px] font-light text-amber-300/80 flex items-center gap-1.5" title="סטטוס חיבור לשרת">
+            <span id="topBarCloudIndicator" class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span id="topBarCloudStatusText">מתחבר לענן...</span>
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openDecisionsJournal()" class="px-2.5 py-1 rounded-full text-[11px] border border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/25 transition-all flex items-center gap-1 cursor-pointer font-medium shadow-sm active:scale-95">
+            <span>יומן ומעקב</span>
+            <span id="topBarJournalBadge" class="text-[10px] font-bold"></span>
+          </button>
+          <button 
+            id="btnToggleTechHeader"
+            onclick="toggleTechnicalHeader()" 
+            class="p-1 flex items-center justify-center text-[#D4AF37] opacity-60 hover:opacity-100 transition-all focus:outline-none cursor-pointer group active:scale-90"
+            title="פתיחת/סגירת הגדרות"
+            aria-label="הגדרות"
+          >
+            <svg id="techHeaderChevron" class="w-3.5 h-3.5 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+        </div>
+      </div>
 
       <!-- Expandable Technical Drawer Panel -->
       <div id="technicalDrawer" class="w-full px-4 overflow-hidden transition-all duration-300 ease-in-out max-h-0 opacity-0 pointer-events-none">
@@ -968,66 +983,162 @@
       }
     }
 
-    async function syncWithCloud(username) {
-      if (!firestoreDb) return;
-      try {
-        setCloudStatus(true, 'מושך מהענן...');
-        const snapshot = await firestoreDb
-          .collection('users')
-          .doc(username)
-          .collection('decisions')
-          .get();
-
-        const cloudDecisions = [];
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          if (data && !isMockOrLegacy(data)) {
-            cloudDecisions.push(data);
-          }
-        });
-
-        const key = `echo_decisions_${username}`;
-        const localDecisions = JSON.parse(localStorage.getItem(key) || '[]').filter(d => !isMockOrLegacy(d));
-        
-        // Merge by id, newest timestamp wins
-        const map = new Map();
-        localDecisions.forEach(d => map.set(d.id, d));
-        cloudDecisions.forEach(d => {
-          const existing = map.get(d.id);
-          if (!existing || (d.lastSyncedAt || d.frozenAt || 0) >= (existing.lastSyncedAt || existing.frozenAt || 0)) {
-            map.set(d.id, d);
-          }
-        });
-
-        const merged = Array.from(map.values()).sort((a, b) => (a.frozenAt || 0) - (b.frozenAt || 0));
-        localStorage.setItem(key, JSON.stringify(merged));
-
-        // If latest decision is unsealed, apply to UI
-        if (merged.length > 0) {
-          const latest = merged[merged.length - 1];
-          if (!latest.sealed) {
-            applyDecisionToUI(latest);
-            captureResultIcon = 'success';
-          }
+    function decodeFirestoreValue(val) {
+      if (!val) return null;
+      if ('stringValue' in val) return val.stringValue;
+      if ('integerValue' in val) return parseInt(val.integerValue, 10);
+      if ('doubleValue' in val) return parseFloat(val.doubleValue);
+      if ('booleanValue' in val) return val.booleanValue;
+      if ('timestampValue' in val) return val.timestampValue;
+      if ('nullValue' in val) return null;
+      if ('arrayValue' in val) {
+        return (val.arrayValue.values || []).map(decodeFirestoreValue);
+      }
+      if ('mapValue' in val) {
+        const res = {};
+        for (const [k, v] of Object.entries(val.mapValue.fields || {})) {
+          res[k] = decodeFirestoreValue(v);
         }
+        return res;
+      }
+      return val;
+    }
 
-        // Push any local decisions that might not be in cloud yet
+    function decodeDoc(doc) {
+      const res = {};
+      for (const [k, v] of Object.entries(doc.fields || {})) {
+        res[k] = decodeFirestoreValue(v);
+      }
+      return res;
+    }
+
+    function updateTopBarStatus(text, isPending = false) {
+      const txtEl = document.getElementById('topBarCloudStatusText');
+      const indEl = document.getElementById('topBarCloudIndicator');
+      if (txtEl) txtEl.innerText = text;
+      if (indEl) {
+        indEl.className = isPending 
+          ? 'inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse'
+          : 'inline-block w-1.5 h-1.5 rounded-full bg-emerald-400';
+      }
+    }
+
+    function updateJournalBadges(count) {
+      const badge = document.getElementById('topBarJournalBadge');
+      if (badge) {
+        badge.innerText = count > 0 ? `(${count})` : '';
+      }
+    }
+
+    async function syncWithCloud(username) {
+      setCloudStatus(true, 'מתחבר לשרת...');
+      updateTopBarStatus('טוען נתונים מהענן...', true);
+      const cloudDecisions = [];
+
+      // Tier 1: Firestore Web SDK (User-scoped collection & Root collection)
+      if (firestoreDb) {
+        try {
+          const userSnap = await firestoreDb
+            .collection('users')
+            .doc(username)
+            .collection('decisions')
+            .get();
+
+          userSnap.forEach(doc => {
+            const data = doc.data();
+            if (data && !isMockOrLegacy(data)) {
+              cloudDecisions.push(data);
+            }
+          });
+
+          if (cloudDecisions.length === 0) {
+            const rootSnap = await firestoreDb.collection('decisions').get();
+            rootSnap.forEach(doc => {
+              const data = doc.data();
+              if (data && !isMockOrLegacy(data)) {
+                cloudDecisions.push(data);
+              }
+            });
+          }
+        } catch (sdkErr) {
+          console.warn('[ECHO Cloud]: Firestore SDK query notice:', sdkErr.message);
+        }
+      }
+
+      // Tier 2: Direct Firestore REST API (Guaranteed browser CORS & no SDK dependency)
+      if (cloudDecisions.length === 0) {
+        try {
+          const restUrl = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/decisions?key=${firebaseConfig.apiKey}&pageSize=100`;
+          const res = await fetch(restUrl);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.documents && data.documents.length > 0) {
+              const parsed = data.documents.map(decodeDoc).filter(d => !isMockOrLegacy(d));
+              cloudDecisions.push(...parsed);
+              console.log(`[ECHO Cloud]: Fetched ${parsed.length} decisions via Firestore REST API`);
+            }
+          }
+        } catch (restErr) {
+          console.warn('[ECHO Cloud]: Firestore REST API fallback error:', restErr.message);
+        }
+      }
+
+      // Tier 3: Bundled seed DECISION_CYCLES.json fallback
+      if (cloudDecisions.length === 0) {
+        try {
+          const res = await fetch('DECISION_CYCLES.json');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.decisions && data.decisions.length > 0) {
+              const parsed = data.decisions.filter(d => !isMockOrLegacy(d));
+              cloudDecisions.push(...parsed);
+              console.log(`[ECHO Cloud]: Loaded ${parsed.length} decisions from DECISION_CYCLES.json`);
+            }
+          }
+        } catch (jsonErr) {}
+      }
+
+      const key = `echo_decisions_${username}`;
+      const localDecisions = JSON.parse(localStorage.getItem(key) || '[]').filter(d => !isMockOrLegacy(d));
+      
+      // Merge by id, newest timestamp wins
+      const map = new Map();
+      localDecisions.forEach(d => map.set(d.id, d));
+      cloudDecisions.forEach(d => {
+        const existing = map.get(d.id);
+        if (!existing || (d.lastSyncedAt || d.frozenAt || 0) >= (existing.lastSyncedAt || existing.frozenAt || 0)) {
+          map.set(d.id, d);
+        }
+      });
+
+      const merged = Array.from(map.values()).sort((a, b) => (a.frozenAt || 0) - (b.frozenAt || 0));
+      localStorage.setItem(key, JSON.stringify(merged));
+
+      // Always populate the latest decision into Section 2 so the deliberation mirror shows real data
+      if (merged.length > 0) {
+        const latest = merged[merged.length - 1];
+        applyDecisionToUI(latest);
+        // Unlock scroll thread so user can explore their deliberation room
+        setScrollLock(false);
+      }
+
+      // Sync any local-only records up to Firestore if SDK is ready
+      if (firestoreDb) {
         for (const d of localDecisions) {
           if (!cloudDecisions.some(cd => cd.id === d.id)) {
             syncDecisionToCloud(d);
           }
         }
+      }
 
-        checkAndPromptDueFollowUps();
-        const journalModal = document.getElementById('modalDecisionsJournal');
-        if (journalModal && !journalModal.classList.contains('hidden')) {
-          renderDecisionsJournal();
-        }
+      updateTopBarStatus(`ענן מחובר (${merged.length} החלטות)`, false);
+      setCloudStatus(true, `ענן מחובר (${merged.length})`);
+      updateJournalBadges(merged.length);
+      checkAndPromptDueFollowUps();
 
-        setCloudStatus(true, 'ענן מחובר');
-      } catch (err) {
-        console.warn('[ECHO Cloud]: Sync error:', err);
-        setCloudStatus(false);
+      const journalModal = document.getElementById('modalDecisionsJournal');
+      if (journalModal && !journalModal.classList.contains('hidden')) {
+        renderDecisionsJournal();
       }
     }
 
@@ -1190,8 +1301,10 @@
       const formatted = '@' + currentUsername;
       const navDisplay = document.getElementById('currentUserNameDisplay');
       const badgeDisplay = document.getElementById('badgeUserTag');
+      const topBarTag = document.getElementById('topBarUserTag');
       if (navDisplay) navDisplay.innerText = formatted;
       if (badgeDisplay) badgeDisplay.innerText = formatted;
+      if (topBarTag) topBarTag.innerText = formatted;
     }
 
     function getUserStorageKey() {
@@ -1521,11 +1634,10 @@
             }
             if (valid.length > 0) {
               const latest = valid[valid.length - 1];
-              // If the latest decision was already sealed, we stay in clean state ready for new capture
-              if (!latest.sealed) {
-                applyDecisionToUI(latest);
-                captureResultIcon = 'success';
-              }
+              applyDecisionToUI(latest);
+              setScrollLock(false);
+              updateJournalBadges(valid.length);
+              updateTopBarStatus(`ענן מחובר (${valid.length} החלטות)`, false);
             }
           }
         } catch (e) {
@@ -2358,7 +2470,8 @@
           })
         });
 
-        if (createRes.ok) {
+        const createContentType = createRes.headers.get('content-type') || '';
+        if (createRes.ok && createContentType.includes('application/json')) {
           const createData = await createRes.json();
           if (createData.success && createData.sessionState) {
             const ss = createData.sessionState;
