@@ -75,30 +75,29 @@
 
       <!-- Expandable Technical Drawer Panel -->
       <div id="technicalDrawer" class="w-full px-4 overflow-hidden transition-all duration-300 ease-in-out max-h-0 opacity-0 pointer-events-none">
-        <div class="mb-2 py-2 px-3 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-md flex flex-col gap-2 shadow-xl">
-          <!-- Row 1: Active User, Switch, Key, Cloud -->
+        <div class="mb-2 py-2 px-3 rounded-2xl bg-white/[0.03] border border-amber-500/20 backdrop-blur-md flex flex-col gap-2 shadow-xl">
+          <!-- Row 1: Active User, Switch, Key, Cloud (Pure Amber Text) -->
           <div class="flex items-center justify-between gap-1.5 text-xs">
             <div class="flex items-center gap-1.5 flex-wrap">
-              <div class="w-2 h-2 rounded-full animate-pulse" style="background-color: var(--c-accent);"></div>
-              <span id="currentUserNameDisplay" class="text-xs font-semibold tracking-wider text-[#E6E8EE]">@guy_founder</span>
-              <button onclick="promptSwitchUser()" class="px-2 py-0.5 rounded-full text-[10px] border border-white/10 bg-white/[0.04] opacity-70 hover:opacity-100 transition-all font-light">
+              <span id="currentUserNameDisplay" class="text-xs font-semibold tracking-wider text-amber-300">@guy_founder</span>
+              <button onclick="promptSwitchUser()" class="px-2 py-0.5 rounded-full text-[10px] border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-all font-light">
                 החלף
               </button>
-              <button onclick="promptConfigureApiKey()" title="הגדר מפתח Gemini API (אופציונלי)" class="px-2 py-0.5 rounded-full text-[10px] border border-white/10 bg-white/[0.04] opacity-70 hover:opacity-100 transition-all font-light">
-                🔑 מפתח
+              <button onclick="promptConfigureApiKey()" title="הגדר מפתח Gemini API (אופציונלי)" class="px-2 py-0.5 rounded-full text-[10px] border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-all font-light">
+                מפתח
               </button>
             </div>
-            <span id="cloudSyncStatus" class="text-[9px] font-light text-amber-300/80 flex items-center gap-0.5 shrink-0" title="Firebase Cloud Firestore">☁️ ענן מחובר</span>
+            <span id="cloudSyncStatus" class="text-[10px] font-light text-amber-300/80 shrink-0" title="Firebase Cloud Firestore">ענן מחובר</span>
           </div>
 
-          <!-- Row 2: Calibration Profile & Decision Journal -->
-          <div class="flex items-center justify-between gap-1.5 pt-1.5 border-t border-white/5">
-            <button onclick="openDecisionProfileModal()" class="flex-1 py-1 px-2 rounded-xl text-[10px] border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-all font-medium flex items-center justify-center gap-1">
-              <span>📊 פרופיל כיול</span>
+          <!-- Row 2: Calibration Profile & Decision Journal (Pure Amber Text) -->
+          <div class="flex items-center justify-between gap-1.5 pt-1.5 border-t border-amber-500/15">
+            <button onclick="openDecisionProfileModal()" class="flex-1 py-1.5 px-2 rounded-xl text-[11px] border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-all font-medium flex items-center justify-center">
+              <span>פרופיל כיול</span>
             </button>
-            <button onclick="openDecisionsJournal()" class="flex-1 py-1 px-2 rounded-xl text-[10px] border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-all font-medium flex items-center justify-center gap-1.5">
-              <span>📋 יומן ומעקב</span>
-              <span id="badgeDueFollowUps" class="hidden px-1.5 py-0.2 text-[9px] rounded-full bg-amber-400 text-black font-bold animate-pulse">0</span>
+            <button onclick="openDecisionsJournal()" class="flex-1 py-1.5 px-2 rounded-xl text-[11px] border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-all font-medium flex items-center justify-center gap-1">
+              <span>יומן ומעקב</span>
+              <span id="badgeDueFollowUps" class="hidden text-[10px] font-bold text-amber-300"></span>
             </button>
           </div>
         </div>
@@ -170,11 +169,8 @@
         
         <!-- Subtle connecting node -->
         <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2">
-            <div class="w-2 h-2 rounded-full" style="background-color: var(--c-accent);"></div>
-            <span class="text-[11px] font-medium tracking-wide text-amber-300">מראה מתפתחת · שיקול הדעת שלך</span>
-          </div>
-          <span class="text-[10px] font-mono tracking-wider opacity-40">🔒 FROZEN BEFORE OUTCOME</span>
+          <span class="text-[11px] font-editorial font-semibold tracking-wider text-amber-300">מראה מתפתחת · שיקול הדעת שלך</span>
+          <span class="text-[9px] font-mono tracking-widest text-stone-400 opacity-60">FROZEN BEFORE OUTCOME</span>
         </div>
 
         <h2 id="dispTitle" class="font-editorial text-2xl font-bold leading-snug mb-2 opacity-95">
@@ -182,9 +178,10 @@
         </h2>
 
         <!-- Interactive Notice: Direct Inline Editing -->
-        <div class="flex items-center gap-2 px-3 py-2 rounded-xl border mb-4 text-[11px] font-light" style="background-color: rgba(212,175,55,0.06); border-color: rgba(212,175,55,0.25);">
-          <span>✨</span>
-          <span class="opacity-90">זה משקף אותך? <strong>כל שדה ניתן לעריכה ישירה ומיידית</strong> — ההחלטה היא שלך.</span>
+        <div class="px-3.5 py-2 rounded-xl border mb-4 text-[11px] font-light border-amber-500/20 bg-amber-500/[0.04]">
+          <span class="text-stone-300">זה משקף אותך? </span>
+          <strong class="font-medium text-amber-300">כל שדה ניתן לעריכה ישירה ומיידית</strong>
+          <span class="text-stone-400"> — ההחלטה היא שלך.</span>
         </div>
 
         <!-- 5 Human Dimensions (Live Editable Textareas) -->
@@ -193,8 +190,7 @@
           <!-- Dimension 1: Consideration (אמרת: מהמילים שלך) -->
           <div class="p-3.5 rounded-xl border backdrop-blur-sm transition-all focus-within:border-amber-400" style="background-color: var(--c-glass); border-color: var(--c-border);">
             <div class="flex items-center justify-between mb-1.5">
-              <span class="text-[11px] font-semibold text-amber-300/90 flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+              <span class="text-xs font-editorial font-semibold tracking-wide text-amber-300">
                 אתה שוקל:
               </span>
               <span class="text-[9px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/10 text-stone-300 font-mono">אמרת · מהמילים שלך</span>
@@ -211,8 +207,7 @@
           <!-- Dimension 2: Goals & Prices (הסקתי) -->
           <div class="p-3.5 rounded-xl border backdrop-blur-sm transition-all focus-within:border-amber-400" style="background-color: var(--c-glass); border-color: var(--c-border);">
             <div class="flex items-center justify-between mb-1.5">
-              <span class="text-[11px] font-semibold text-stone-200 flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-stone-400"></span>
+              <span class="text-xs font-editorial font-semibold tracking-wide text-stone-200">
                 מטרות ומחירים:
               </span>
               <span class="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 font-mono">הסקתי</span>
@@ -229,9 +224,8 @@
           <!-- Dimension 3: Hard Facts (אמרת) -->
           <div class="p-3.5 rounded-xl border backdrop-blur-sm transition-all focus-within:border-sky-400" style="background-color: var(--c-glass); border-color: var(--c-border);">
             <div class="flex items-center justify-between mb-1.5">
-              <span class="text-[11px] font-semibold text-sky-300/90 flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
-                🧱 עובדות קשיחות (נתונים מוצקים):
+              <span class="text-xs font-editorial font-semibold tracking-wide text-sky-300">
+                עובדות קשיחות (נתונים מוצקים):
               </span>
               <span class="text-[9px] px-2 py-0.5 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-300 font-mono">אמרת</span>
             </div>
@@ -247,9 +241,8 @@
           <!-- Dimension 4: Assumptions (1-5 ניתוח הנחות רלוונטיות) -->
           <div class="p-3.5 rounded-xl border-2 backdrop-blur-sm transition-all focus-within:border-amber-400 space-y-2.5" style="background-color: rgba(212,175,55,0.03); border-color: rgba(212,175,55,0.35);">
             <div class="flex items-center justify-between">
-              <span class="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                🎯 הנחות מוצא וציר (<span id="assumptionsCountBadge">1-5 הנחות</span>):
+              <span class="text-xs font-editorial font-bold tracking-wide text-amber-300">
+                הנחות מוצא וציר (<span id="assumptionsCountBadge">1-5 הנחות</span>):
               </span>
               <div class="flex items-center gap-1">
                 <span class="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-200 border border-amber-500/30 font-mono">הנחות נושאות</span>
@@ -285,9 +278,8 @@
           <!-- Dimension 5: Missing Information & Gaps (Always Open) -->
           <div class="p-3.5 rounded-xl border backdrop-blur-sm transition-all focus-within:border-sky-400 space-y-1.5" style="background-color: var(--c-glass); border-color: var(--c-border);">
             <div class="flex items-center justify-between mb-1">
-              <span class="text-[11px] font-semibold text-stone-200 flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
-                🔍 פערי מידע (מידע חסר ושאלות פתוחות להכרעה):
+              <span class="text-xs font-editorial font-semibold tracking-wide text-stone-300">
+                פערי מידע (מידע חסר ושאלות פתוחות להכרעה):
               </span>
               <span class="text-[9px] px-2 py-0.5 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-300 font-mono">הסקתי · פתוח תמיד</span>
             </div>
@@ -314,17 +306,14 @@
       <section id="stageIllumination" class="min-h-[660px] flex flex-col justify-start pt-6 text-right relative">
         
         <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-2">
-            <div class="w-2 h-2 rounded-full" style="background-color: var(--c-accent);"></div>
-            <span class="text-[11px] font-medium text-amber-300">מהלך מחשבה נוסף אחד</span>
-          </div>
-          <span class="text-[10px] uppercase font-mono tracking-wider opacity-50">SINGLE ADAPTIVE QUESTION</span>
+          <span class="text-[11px] font-editorial font-semibold tracking-wider text-amber-300">מהלך מחשבה נוסף אחד</span>
+          <span class="text-[9px] font-mono tracking-widest text-stone-400 opacity-60">SINGLE ADAPTIVE QUESTION</span>
         </div>
 
         <!-- Smart Silence Box (Shown for Quick Flow) -->
         <div id="smartSilenceBox" class="hidden p-5 sm:p-6 rounded-2xl border my-auto backdrop-blur-sm transition-all" style="background-color: rgba(56, 189, 248, 0.05); border-color: rgba(56, 189, 248, 0.35);">
           <div class="flex items-center justify-between mb-3">
-            <span class="px-2.5 py-0.5 rounded-full text-[10px] bg-sky-500/20 text-sky-300 font-bold border border-sky-400/30">⚡ שקט חכם • Smart Silence</span>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] bg-sky-500/20 text-sky-300 font-bold border border-sky-400/30">שקט חכם · Smart Silence</span>
             <span class="text-[10px] font-mono tracking-wider text-sky-400 opacity-80">QUICK FLOW</span>
           </div>
           <h3 class="text-sm font-bold text-sky-100 mb-1.5">השיקולים הוצגו — אין צורך בשאלת עיכוב</h3>
@@ -376,7 +365,7 @@
           <!-- Question 2: Historical Question (Activated conditionally only if needed) -->
           <div id="historicalQuestionBox" class="hidden mt-4 p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] text-right space-y-2">
             <div class="flex items-center justify-between">
-              <span class="text-[10px] font-bold text-amber-300">💡 שאלת עבר והקשר היסטורי</span>
+              <span class="text-[11px] font-editorial font-semibold text-amber-300">שאלת עבר והקשר היסטורי</span>
               <span id="dispHistoricalTag" class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-200 font-mono">הד מהעבר</span>
             </div>
             <p id="dispHistoricalQuestion" class="font-editorial text-sm font-medium text-amber-100/90 leading-relaxed italic">
@@ -428,9 +417,9 @@
                 id="btnVoiceAnswer" 
                 type="button"
                 onclick="toggleRefinementVoiceCapture()" 
-                class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] transition-all font-light shrink-0"
+                class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] transition-all font-light shrink-0 text-amber-200"
               >
-                <span id="voiceAnswerIcon">🎙️</span>
+                <span id="voiceAnswerIcon" class="hidden"></span>
                 <span id="voiceAnswerLabel">הקלט מענה</span>
               </button>
 
@@ -448,7 +437,7 @@
             <!-- Explicit Low-Friction Hatch: "מספיק לי לעכשיו" -->
             <div class="mt-2.5 text-center">
               <button 
-                type="button"
+                type="button" 
                 onclick="submitRefinementAnswer(true)" 
                 class="text-[11px] font-light opacity-60 hover:opacity-100 underline underline-offset-4 transition-opacity text-stone-400 hover:text-amber-200 py-0.5"
               >
@@ -473,11 +462,8 @@
         
         <div class="space-y-4">
           <div class="flex items-center justify-between mb-1">
-            <div class="flex items-center gap-2">
-              <div class="w-2 h-2 rounded-full" style="background-color: var(--c-accent);"></div>
-              <span class="text-[11px] font-medium text-amber-300">תמונת ההתחדדות (Before & After)</span>
-            </div>
-            <span class="text-[10px] font-mono tracking-wider opacity-40">INSIGHT FLASH</span>
+            <span class="text-[11px] font-editorial font-semibold tracking-wider text-amber-300">תמונת ההתחדדות (Before & After)</span>
+            <span class="text-[9px] font-mono tracking-widest text-stone-400 opacity-60">INSIGHT FLASH</span>
           </div>
 
           <div>
@@ -561,7 +547,7 @@
             class="w-full py-3.5 rounded-xl text-xs font-medium tracking-widest uppercase transition-all shadow-lg active:scale-[0.98] border"
             style="background-color: rgba(212,175,55,0.15); border-color: var(--c-accent);"
           >
-            שמור לזיכרון שיקול הדעת והפעל מעקב ✓
+            שמור לזיכרון שיקול הדעת והפעל מעקב
           </button>
           <p class="text-[10px] text-center mt-2.5 font-light opacity-50">
             מקפיא את תנאי החשיבה שלפני התוצאה ומפעיל אות מעקב בדיוק במועד שבחרת.
@@ -580,7 +566,6 @@
         <button onclick="closeDecisionProfileModal()" class="text-xs px-2.5 py-1 rounded-full border border-stone-700 opacity-60 hover:opacity-100 transition-opacity">✕ סגור</button>
         <div class="flex items-center gap-1.5">
           <span class="text-[10px] font-mono tracking-wider text-amber-300">EPISTEMIC META-PROFILE</span>
-          <div class="w-1.5 h-1.5 rounded-full" style="background-color: var(--c-accent);"></div>
         </div>
       </div>
 
@@ -590,14 +575,14 @@
           <p class="text-xs opacity-50 font-light mt-0.5">זיכרון אפיסטמי מצטבר וכיול אישי</p>
         </div>
         <button onclick="closeDecisionProfileModal(); openDecisionsJournal();" class="text-[11px] text-amber-300/90 hover:underline pt-1">
-          📋 פתח יומן החלטות
+          פתח יומן החלטות
         </button>
       </div>
 
       <!-- 1. מדד כיול הסתברותי (Brier Calibration) -->
       <div class="p-4 rounded-2xl border border-white/10 bg-white/[0.02] space-y-3">
         <div class="flex items-center justify-between">
-          <span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300">שכבה 8 • כיול הסתברותי</span>
+          <span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300">שכבה 8 · כיול הסתברותי</span>
           <span class="text-sm font-semibold text-stone-200">ציון כיול (Brier Score)</span>
         </div>
 
@@ -713,7 +698,7 @@
           <p class="text-xs opacity-50 font-light mt-0.5">כלל ההחלטות שהוקפאו, אותות המעקב והלכידות המקושרות.</p>
         </div>
         <button onclick="closeDecisionsJournal(); openDecisionProfileModal();" class="text-[11px] text-amber-300/90 hover:underline pt-1">
-          📊 פרופיל כיול
+          פרופיל כיול
         </button>
       </div>
 
@@ -733,7 +718,6 @@
         <button onclick="closeFollowUpModal()" class="text-xs px-2.5 py-1 rounded-full border border-stone-700 opacity-60 hover:opacity-100 transition-opacity">✕ סגור</button>
         <div class="flex items-center gap-1.5">
           <span class="text-[10px] font-mono tracking-wider text-amber-300">CONTINUOUS LEARNING LOOP</span>
-          <div class="w-2 h-2 rounded-full animate-ping bg-amber-400"></div>
         </div>
       </div>
 
@@ -747,10 +731,10 @@
       <div class="space-y-1.5">
         <span class="text-[11px] block font-light opacity-70">1. מבחן התוצאה (ב-5 שניות):</span>
         <div class="grid grid-cols-4 gap-1.5 text-center text-[10px]">
-          <button type="button" onclick="setFuQuickStatus('success')" id="btnFuStatusSuccess" class="py-2 px-1 rounded-lg border font-medium transition-all bg-emerald-500/10 border-emerald-500/30 text-emerald-300">✓ הצליח</button>
-          <button type="button" onclick="setFuQuickStatus('partial')" id="btnFuStatusPartial" class="py-2 px-1 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 transition-all font-medium">⚡ חלקית</button>
-          <button type="button" onclick="setFuQuickStatus('failed')" id="btnFuStatusFailed" class="py-2 px-1 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-300 transition-all">✕ לא</button>
-          <button type="button" onclick="setFuQuickStatus('unclear')" id="btnFuStatusUnclear" class="py-2 px-1 rounded-lg border border-stone-700 text-stone-400 opacity-60 transition-all">⏳ עוד לא</button>
+          <button type="button" onclick="setFuQuickStatus('success')" id="btnFuStatusSuccess" class="py-2 px-1 rounded-lg border font-medium transition-all bg-emerald-500/10 border-emerald-500/30 text-emerald-300">הצליח</button>
+          <button type="button" onclick="setFuQuickStatus('partial')" id="btnFuStatusPartial" class="py-2 px-1 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 transition-all font-medium">חלקית</button>
+          <button type="button" onclick="setFuQuickStatus('failed')" id="btnFuStatusFailed" class="py-2 px-1 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-300 transition-all">לא</button>
+          <button type="button" onclick="setFuQuickStatus('unclear')" id="btnFuStatusUnclear" class="py-2 px-1 rounded-lg border border-stone-700 text-stone-400 opacity-60 transition-all">עוד לא</button>
         </div>
       </div>
 
@@ -769,7 +753,7 @@
         <span class="text-[11px] font-medium text-stone-300 block">3. מה הגורם המרכזי שהשפיע על המציאות בפועל?</span>
         <input 
           id="inputFuReality" 
-          type="text"
+          type="text" 
           placeholder="משפט אחד קצר: למשל, פער בתיאום ציפיות, שינוי תקציב..."
           class="w-full bg-black/40 border rounded-xl px-3 py-2 text-xs text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-400/80 transition-all"
           style="border-color: var(--c-border);"
@@ -785,7 +769,7 @@
           class="w-full py-3 rounded-xl text-xs font-medium tracking-widest uppercase transition-all shadow-lg active:scale-[0.98] border text-stone-100" 
           style="background-color: rgba(212,175,55,0.2); border-color: var(--c-accent);"
         >
-          שמור למידה וסגור מעגל ✓
+          שמור למידה וסגור מעגל
         </button>
       </div>
 
@@ -800,7 +784,6 @@
         <button onclick="closeSwitchUserModal()" class="text-xs px-2.5 py-1 rounded-full border border-stone-700 opacity-60 hover:opacity-100 transition-opacity">✕ סגור</button>
         <div class="flex items-center gap-1.5">
           <span class="text-[10px] font-mono tracking-wider opacity-50">USER IDENTITY</span>
-          <div class="w-1.5 h-1.5 rounded-full" style="background-color: var(--c-accent);"></div>
         </div>
       </div>
 
@@ -841,7 +824,7 @@
           class="w-full py-2.5 rounded-xl text-xs font-medium tracking-widest uppercase transition-all shadow-lg active:scale-[0.98] border text-stone-100" 
           style="background-color: rgba(212,175,55,0.15); border-color: var(--c-accent);"
         >
-          אישור ומעבר למרחב ✓
+          אישור ומעבר למרחב
         </button>
       </div>
 
@@ -897,11 +880,11 @@
       const el = document.getElementById('cloudSyncStatus');
       if (el) {
         if (synced) {
-          el.innerHTML = label || '☁️ ענן מחובר';
-          el.className = 'text-[9px] font-light text-amber-300/80 flex items-center gap-0.5 transition-all';
+          el.innerHTML = label || 'ענן מחובר';
+          el.className = 'text-[10px] font-light text-amber-300/90 shrink-0 transition-all';
         } else {
-          el.innerHTML = label || '☁️ ענן מקומי';
-          el.className = 'text-[9px] font-light opacity-40 flex items-center gap-0.5 transition-all';
+          el.innerHTML = label || 'ענן מקומי';
+          el.className = 'text-[10px] font-light text-amber-300/50 shrink-0 transition-all';
         }
       }
     }
@@ -910,7 +893,7 @@
       if (!decision || !decision.id) return;
       if (!firestoreDb) return;
       try {
-        setCloudStatus(true, '☁️ מסנכרן...');
+        setCloudStatus(true, 'מסנכרן...');
         const payload = {
           ...decision,
           userId: currentUsername,
@@ -940,18 +923,18 @@
           }).catch(e => console.log('[Local file sync]:', e));
         } catch (e) {}
 
-        setCloudStatus(true, '☁️ נשמר בענן ✓');
-        setTimeout(() => setCloudStatus(true, '☁️ ענן מחובר'), 3000);
+        setCloudStatus(true, 'נשמר בענן');
+        setTimeout(() => setCloudStatus(true, 'ענן מחובר'), 3000);
       } catch (err) {
         console.warn('[ECHO Cloud]: Save error:', err);
-        setCloudStatus(false, '⚠️ שגיאת ענן');
+        setCloudStatus(false, 'שגיאת ענן');
       }
     }
 
     async function deleteDecisionFromCloud(decisionId) {
       if (!decisionId || !firestoreDb) return;
       try {
-        setCloudStatus(true, '☁️ מוחק מהענן...');
+        setCloudStatus(true, 'מוחק מהענן...');
         await firestoreDb
           .collection('users')
           .doc(currentUsername)
@@ -964,8 +947,8 @@
           .doc(decisionId)
           .delete();
 
-        setCloudStatus(true, '☁️ נמחק מהענן ✓');
-        setTimeout(() => setCloudStatus(true, '☁️ ענן מחובר'), 3000);
+        setCloudStatus(true, 'נמחק מהענן');
+        setTimeout(() => setCloudStatus(true, 'ענן מחובר'), 3000);
       } catch (err) {
         console.warn('[ECHO Cloud]: Delete error:', err);
       }
@@ -974,7 +957,7 @@
     async function syncWithCloud(username) {
       if (!firestoreDb) return;
       try {
-        setCloudStatus(true, '☁️ מושך מהענן...');
+        setCloudStatus(true, 'מושך מהענן...');
         const snapshot = await firestoreDb
           .collection('users')
           .doc(username)
@@ -1027,7 +1010,7 @@
           renderDecisionsJournal();
         }
 
-        setCloudStatus(true, '☁️ ענן מחובר');
+        setCloudStatus(true, 'ענן מחובר');
       } catch (err) {
         console.warn('[ECHO Cloud]: Sync error:', err);
         setCloudStatus(false);
@@ -1243,17 +1226,17 @@
       if (Array.isArray(val)) {
         const clean = val.filter(item => item && typeof item === 'string' && item.trim().length > 0);
         if (clean.length > 0) {
-          return clean.map(item => `<p>• ${item.replace(/^[•\-\*]\s*/, '').trim()}</p>`).join('');
+          return clean.map(item => `<p class="leading-relaxed mb-0.5">${item.replace(/^[•\-\*]\s*/, '').trim()}</p>`).join('');
         }
       }
       if (typeof val === 'string' && val.trim().length > 0) {
         const lines = val.split(/[\n;•]+/).map(s => s.trim()).filter(s => s.length > 0);
         if (lines.length > 0) {
-          return lines.map(line => `<p>• ${line.replace(/^[•\-\*]\s*/, '').trim()}</p>`).join('');
+          return lines.map(line => `<p class="leading-relaxed mb-0.5">${line.replace(/^[•\-\*]\s*/, '').trim()}</p>`).join('');
         }
-        return `<p>• ${val.trim()}</p>`;
+        return `<p class="leading-relaxed">${val.trim()}</p>`;
       }
-      return '<p class="italic">טרם נלכדו נתונים</p>';
+      return '<p class="italic opacity-50">טרם נלכדו נתונים</p>';
     }
 
     // ================= SECTION 4: PROCESS SUMMARY STATE =================
@@ -1293,8 +1276,7 @@
       container.innerHTML = currentAssumptionsList.map((assText, idx) => `
         <div class="p-2.5 rounded-lg bg-black/30 border border-amber-500/20 flex flex-col gap-1 transition-all focus-within:border-amber-400" id="assumptionCard-${idx}">
           <div class="flex items-center justify-between text-[9px] text-amber-300/70 font-mono">
-            <span class="flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-amber-400/80"></span>
+            <span class="font-editorial text-amber-300 font-medium tracking-wide">
               הנחה #${idx + 1}
             </span>
             ${currentAssumptionsList.length > 1 ? `
@@ -2809,11 +2791,11 @@ ${pastSummary}
             if (spoken && spoken.length >= 2) {
               const ansInput = document.getElementById('inputUserAnswer');
               if (ansInput) ansInput.value = spoken;
-              icon.innerText = '✓';
+              icon.innerText = '';
               label.innerText = 'המענה נלכד!';
               hint.innerText = 'המענה הקולי נלכד בהצלחה! לחץ על "המשך עם המענה" לניתוח.';
               setTimeout(() => {
-                icon.innerText = '🎙️';
+                icon.innerText = '';
                 label.innerText = 'הקלט מענה נוסף';
               }, 3000);
               return;
@@ -2829,21 +2811,21 @@ ${pastSummary}
                 ansInput.value = text;
               }
 
-              icon.innerText = '✓';
+              icon.innerText = '';
               label.innerText = 'המענה נלכד!';
               hint.innerText = 'המענה הקולי תומלל והוזן! לחץ על "המשך עם המענה" לניתוח.';
               setTimeout(() => {
-                icon.innerText = '🎙️';
+                icon.innerText = '';
                 label.innerText = 'הקלט מענה נוסף';
               }, 3000);
 
             } catch (e) {
               console.error('Refinement transcription error:', e);
-              icon.innerText = '✕';
+              icon.innerText = '';
               label.innerText = 'שגיאה בתמלול';
               hint.innerText = 'שגיאה בתמלול המענה: ' + (e.message || 'נסה שוב');
               setTimeout(() => {
-                icon.innerText = '🎙️';
+                icon.innerText = '';
                 label.innerText = 'הקלט מענה';
               }, 3000);
             }
@@ -2852,7 +2834,7 @@ ${pastSummary}
           refinementMediaRecorder.start();
 
           btn.classList.add('border-[#D4AF37]', 'bg-[rgba(212,175,55,0.15)]');
-          icon.innerText = '🔴';
+          icon.innerText = '';
           label.innerText = 'מקליט מענה... (גע לסיום)';
           hint.innerText = 'דבר בבירור: כיצד תשובתך מעצבת את הפעולה...';
         } catch (err) {
@@ -2875,14 +2857,14 @@ ${pastSummary}
           try { refinementSpeechRecognizer.stop(); } catch(e){}
         }
         btn.classList.remove('border-[#D4AF37]', 'bg-[rgba(212,175,55,0.15)]');
-        icon.innerText = '⏳';
+        icon.innerText = '';
         label.innerText = 'מתמלל דיבור...';
         hint.innerText = 'מעבד את המענה הקולי...';
 
         const durationSec = (Date.now() - refinementStartTime) / 1000;
         if (durationSec < 0.8) {
           hint.innerText = 'ההקלטה קצרה מדי (פחות משנייה)';
-          icon.innerText = '🎙️';
+          icon.innerText = '';
           label.innerText = 'הקלט מענה';
           if (refinementAudioStream) {
             try { refinementAudioStream.getTracks().forEach(t => t.stop()); } catch(e){}
@@ -3093,16 +3075,16 @@ ${pastSummary}
 
           criterionMediaRecorder.start();
           isRecordingCriterion = true;
-          icon.innerText = '⏹️';
+          icon.innerText = '';
           label.innerText = 'סיים הקלטה';
-          hint.innerText = '🎙️ מקליט קריטריון... דבר באופן חופשי';
+          hint.innerText = 'מקליט קריטריון... דבר באופן חופשי';
         } catch (err) {
           console.error('Criterion mic error:', err);
           hint.innerText = 'שגיאת מיקרופון: ' + (err.message || 'ודא הרשאה בדפדפן');
         }
       } else {
         if (criterionMediaRecorder && criterionMediaRecorder.state !== 'inactive') {
-          icon.innerText = '⏳';
+          icon.innerText = '';
           label.innerText = 'מתמלל...';
           hint.innerText = 'מעבד ומתמלל את הקריטריון ב-Gemini...';
 
@@ -3121,20 +3103,20 @@ ${pastSummary}
                 customInput.value = text;
               }
               selectCriterion('custom');
-              icon.innerText = '✓';
+              icon.innerText = '';
               label.innerText = 'נלכד!';
               hint.innerText = 'הקריטריון המותאם אישית תומלל ונבחר!';
               setTimeout(() => {
-                icon.innerText = '🎙️';
+                icon.innerText = '';
                 label.innerText = 'הקלט קריטריון';
               }, 3000);
             } catch (e) {
               console.error('Criterion transcription error:', e);
-              icon.innerText = '✕';
+              icon.innerText = '';
               label.innerText = 'שגיאה';
               hint.innerText = 'שגיאה בתמלול: ' + (e.message || 'נסה שוב');
               setTimeout(() => {
-                icon.innerText = '🎙️';
+                icon.innerText = '';
                 label.innerText = 'הקלט קריטריון';
               }, 3000);
             } finally {
@@ -3288,7 +3270,7 @@ ${pastSummary}
         renderDecisionsJournal();
       }
 
-      const statusLabels = { clarified: 'ביררתי ✓', pending: 'עדיין בתהליך ⏳', irrelevant: 'כבר לא רלוונטי ✕' };
+      const statusLabels = { clarified: 'ביררתי', pending: 'עדיין בתהליך', irrelevant: 'לא רלוונטי' };
       alert(`מעגל הלמידה נשמר בהצלחה וקושר להחלטה:\n"${dec.title}"\n\nסטטוס: ${statusLabels[currentFuQuickStatus] || currentFuQuickStatus}\nכל הכבוד על סגירת מעגל שיקול הדעת.`);
     }
 
@@ -3355,16 +3337,13 @@ ${pastSummary}
 
     function toggleDecisionDetails(decisionId) {
       const el = document.getElementById(`details-${decisionId}`);
-      const icon = document.getElementById(`detailsToggleIcon-${decisionId}`);
       const text = document.getElementById(`detailsToggleText-${decisionId}`);
       if (!el) return;
       if (el.classList.contains('hidden')) {
         el.classList.remove('hidden');
-        if (icon) icon.innerText = '▲';
         if (text) text.innerText = 'הסתר פירוט מעגל';
       } else {
         el.classList.add('hidden');
-        if (icon) icon.innerText = '▼';
         if (text) text.innerText = 'הצג את כל מעגל ההחלטה (עובדות, הנחות, חידוד)';
       }
     }
@@ -3427,12 +3406,12 @@ ${pastSummary}
           const lastFu = d.followUps[d.followUps.length - 1];
           const st = lastFu.quickStatus || (lastFu.verdict === 'met' ? 'clarified' : (lastFu.verdict === 'partial' ? 'pending' : 'irrelevant'));
           const stColor = st === 'clarified' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (st === 'pending' ? 'text-amber-300 border-amber-500/30 bg-amber-500/10' : 'text-stone-400 border-stone-600 bg-white/[0.02]');
-          const stText = st === 'clarified' ? '✓ ביררתי (הושלם)' : (st === 'pending' ? '⏳ עדיין בתהליך' : '✕ כבר לא רלוונטי');
+          const stText = st === 'clarified' ? 'ביררתי (הושלם)' : (st === 'pending' ? 'עדיין בתהליך' : 'לא רלוונטי');
           statusBadge = `<span class="px-2 py-0.5 rounded-full text-[9px] border ${stColor}">${stText}</span>`;
         } else if (isDue) {
-          statusBadge = `<span class="px-2 py-0.5 rounded-full text-[9px] border border-amber-400 bg-amber-400/20 text-amber-300 font-bold animate-pulse">⏰ הגיע מועד המעקב!</span>`;
+          statusBadge = `<span class="px-2 py-0.5 rounded-full text-[9px] border border-amber-400 bg-amber-400/20 text-amber-300 font-bold animate-pulse">הגיע מועד המעקב</span>`;
         } else {
-          statusBadge = `<span class="px-2 py-0.5 rounded-full text-[9px] border border-stone-700 bg-white/[0.02] opacity-60">⏳ בעוד ${daysLeft} ימים (${dueFormatted})</span>`;
+          statusBadge = `<span class="px-2 py-0.5 rounded-full text-[9px] border border-stone-700 bg-white/[0.02] opacity-60">בעוד ${daysLeft} ימים (${dueFormatted})</span>`;
         }
 
         const followUpsHtml = (d.followUps && d.followUps.length > 0) ? `
@@ -3440,7 +3419,7 @@ ${pastSummary}
             <span class="text-[10px] block opacity-70 font-medium">לכידות מעקב ולמידה רציפה (${d.followUps.length}):</span>
             ${d.followUps.map(fu => {
               const qStatus = fu.quickStatus || (fu.verdict === 'met' ? 'clarified' : 'pending');
-              const qBadge = qStatus === 'clarified' ? '<span class="text-emerald-400 font-medium">✓ ביררתי</span>' : (qStatus === 'pending' ? '<span class="text-amber-300 font-medium">⏳ עדיין לא</span>' : '<span class="text-stone-400">✕ כבר לא רלוונטי</span>');
+              const qBadge = qStatus === 'clarified' ? '<span class="text-emerald-400 font-medium">ביררתי</span>' : (qStatus === 'pending' ? '<span class="text-amber-300 font-medium">עדיין לא</span>' : '<span class="text-stone-400">לא רלוונטי</span>');
               return `
               <div class="p-3 rounded-xl bg-black/40 border border-stone-800 text-[11px] leading-relaxed space-y-1.5">
                 <div class="flex items-center justify-between text-[9px] opacity-60">
@@ -3465,7 +3444,6 @@ ${pastSummary}
             <div class="flex items-center justify-between gap-2 border-b border-stone-800/80 pb-2">
               <div class="flex items-center gap-2">
                 <button type="button" onclick="deleteDecision('${d.id}', event)" class="p-1 px-2 rounded-lg text-stone-500 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/30 transition-all text-xs flex items-center gap-1" title="מחק החלטה זו">
-                  <span>🗑️</span>
                   <span class="text-[10px]">מחק</span>
                 </button>
               </div>
@@ -3496,8 +3474,7 @@ ${pastSummary}
 
             <!-- Full Decision Details Toggle -->
             <button type="button" onclick="toggleDecisionDetails('${d.id}')" class="w-full py-1.5 px-3 rounded-lg text-[11px] border border-stone-800 bg-white/[0.02] text-stone-400 hover:text-amber-300 hover:border-amber-400/30 flex items-center justify-center gap-1.5 transition-all">
-              <span id="detailsToggleIcon-${d.id}">▼</span>
-              <span id="detailsToggleText-${d.id}">הצג 4 ממדי מראה והתערבות</span>
+              <span id="detailsToggleText-${d.id}">הצג ממדי מראה והתערבות</span>
             </button>
 
             <!-- Expandable Full Decision Record -->
@@ -3505,38 +3482,38 @@ ${pastSummary}
               
               <!-- Consideration -->
               <div class="p-2.5 rounded-lg bg-white/[0.02] border border-stone-800 text-[11px] text-stone-300 space-y-1">
-                <span class="text-[9px] block text-amber-300/80 font-medium">● אתה שוקל:</span>
+                <span class="text-[10px] font-editorial block text-amber-300 font-semibold">אתה שוקל:</span>
                 <p class="font-light">${escapeHtml(d.consideration || d.rawVerbatim || '—')}</p>
               </div>
 
               <!-- Goals & Prices -->
               <div class="p-2.5 rounded-lg bg-white/[0.02] border border-stone-800 text-[11px] text-stone-300 space-y-1">
-                <span class="text-[9px] block text-stone-400 font-medium">● להשיג ולשמור:</span>
+                <span class="text-[10px] font-editorial block text-stone-300 font-semibold">להשיג ולשמור:</span>
                 <p class="font-light">${escapeHtml(d.goalsPrices || '—')}</p>
               </div>
 
               <!-- Core Reliance -->
               <div class="p-2.5 rounded-lg bg-white/[0.02] border border-stone-800 text-[11px] text-stone-300 space-y-1">
-                <span class="text-[9px] block text-amber-200 font-medium">▲ אתה נשען על (הנחת ציר):</span>
+                <span class="text-[10px] font-editorial block text-amber-200 font-semibold">אתה נשען על (הנחת ציר):</span>
                 <p class="font-light">${escapeHtml(d.reliance || '—')}</p>
               </div>
 
               <!-- Unknowns -->
               <div class="p-2.5 rounded-lg bg-white/[0.02] border border-stone-800 text-[11px] text-stone-300 space-y-1">
-                <span class="text-[9px] block text-stone-400 font-medium">? עדיין לא ברור:</span>
+                <span class="text-[10px] font-editorial block text-sky-300 font-semibold">עדיין לא ברור:</span>
                 <p class="font-light">${escapeHtml(d.unknowns || '—')}</p>
               </div>
 
               <!-- Socratic Question -->
               <div class="p-2.5 rounded-lg bg-amber-400/[0.03] border border-amber-400/20 text-[11px] text-stone-200">
-                <span class="text-[9px] block text-amber-400/90 font-medium">💡 שאלת הארה:</span>
-                <p class="font-serif italic mt-0.5">${escapeHtml(d.question || '—')}</p>
+                <span class="text-[10px] font-editorial block text-amber-400 font-semibold">שאלת הארה:</span>
+                <p class="font-editorial italic mt-0.5">${escapeHtml(d.question || '—')}</p>
               </div>
 
               <!-- User's Refinement Answer (if any) -->
               ${userAns ? `
                 <div class="p-2.5 rounded-lg bg-white/[0.02] border border-stone-800 text-[11px] text-stone-300">
-                  <span class="text-[9px] block text-emerald-400/90 font-medium">✍️ מענה המשתמש:</span>
+                  <span class="text-[10px] font-editorial block text-emerald-400 font-semibold">מענה המשתמש:</span>
                   <p class="font-light mt-0.5">${escapeHtml(userAns)}</p>
                 </div>
               ` : ''}
@@ -3548,7 +3525,7 @@ ${pastSummary}
             <!-- Bottom Action: Follow-Up Reality Log Button -->
             <div class="pt-1 flex items-center justify-between gap-2">
               <button onclick="openFollowUpModalForDecision('${d.id}')" class="w-full py-2 rounded-xl text-[11px] border font-medium transition-all ${isDue && !hasFollowUps ? 'bg-amber-500/20 border-amber-400 text-amber-200' : 'bg-white/[0.03] border-stone-700 text-stone-300 hover:border-amber-400/50'}">
-                ${hasFollowUps ? '🔍 עדכן למידה רציפה' : (isDue ? '🔔 סגור מעגל מציאות כעת' : '📝 בדיקת מציאות וסגירת מעגל')}
+                ${hasFollowUps ? 'עדכן למידה רציפה' : (isDue ? 'סגור מעגל מציאות כעת' : 'בדיקת מציאות וסגירת מעגל')}
               </button>
             </div>
           </div>
@@ -3569,7 +3546,7 @@ ${pastSummary}
       const badge = document.getElementById('badgeDueFollowUps');
       if (badge) {
         if (duePending.length > 0) {
-          badge.innerText = duePending.length;
+          badge.innerText = `(${duePending.length})`;
           badge.classList.remove('hidden');
         } else {
           badge.classList.add('hidden');
@@ -3833,13 +3810,13 @@ ${pastSummary}
           console.warn('Storage update error:', e);
         }
 
-        if (hint) hint.innerText = '✨ פלאש ההתחדדות הוכן! ממשיך לסיכום ↓';
+        if (hint) hint.innerText = 'פלאש ההתחדדות הוכן! ממשיך לסיכום ↓';
         scrollToNext('stageContract');
 
       } catch (err) {
         console.error('[ECHO Refinement] Error in cloud synthesis:', err);
         if (hint) {
-          hint.innerText = '❌ שגיאת זיכוך בענן: ' + (err.message || 'תקלת רשת') + '. ממשיך לסיכום...';
+          hint.innerText = 'שגיאת זיכוך בענן: ' + (err.message || 'תקלת רשת') + '. ממשיך לסיכום...';
         }
         const fallbackSteps = ['בירור ממוקד של פערי המידע', 'קביעת תנאי יציאה או סף סיכון'];
         renderProposedSteps(fallbackSteps, [0], '');
