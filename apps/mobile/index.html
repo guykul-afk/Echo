@@ -255,47 +255,65 @@
           </div>
         </div>
 
-        <!-- Scroll down thread to Reliance -->
-        <div class="mt-auto flex flex-col items-center cursor-pointer opacity-70 hover:opacity-100 transition-opacity pt-4" onclick="scrollToNext('stageReliance')">
-          <span class="text-[11px] tracking-wider mb-2 font-light text-amber-200">על מה אתה נשען ↓</span>
+        <!-- Scroll down thread to Facts -->
+        <div class="mt-auto flex flex-col items-center cursor-pointer opacity-70 hover:opacity-100 transition-opacity pt-4" onclick="scrollToNext('stageFacts')">
+          <span class="text-[11px] tracking-wider mb-2 font-light text-amber-200">מה שידוע בבירור ↓</span>
           <div class="w-[1px] h-8 stream-thread"></div>
         </div>
       </section>
 
-      <!-- ================= PROGRESSIVE STAGE 2C: על מה אתה נשען (Facts vs Assumptions) ================= -->
-      <section id="stageReliance" class="snap-card min-h-[720px] flex flex-col justify-between pt-6 pb-4 text-right relative">
+      <!-- ================= PROGRESSIVE STAGE 3: עובדות מוצקות ================= -->
+      <section id="stageFacts" class="snap-card min-h-[720px] flex flex-col justify-between pt-6 pb-4 text-right relative">
         <div class="flex items-center justify-between mb-4">
-          <span class="text-xs font-editorial font-semibold tracking-widest text-amber-300">3 · על מה אתה נשען</span>
+          <span class="text-xs font-editorial font-semibold tracking-widest text-sky-300">3 · מה שידוע בבירור</span>
           <button type="button" onclick="scrollToNext('stageTension')" class="text-[10px] text-stone-400 hover:text-amber-200">↑ חזרה למתח</button>
         </div>
 
         <div class="my-auto space-y-4">
-          <!-- 1. Hard Facts -->
-          <div class="p-4 rounded-2xl border backdrop-blur-sm transition-all focus-within:border-sky-400" style="background-color: var(--c-glass); border-color: var(--c-border);">
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-xs font-editorial font-semibold tracking-wide text-sky-300">מה שידוע בבירור (עובדות):</span>
+          <p class="text-xs font-light text-stone-400">נתונים, התרחשויות קונקרטיות ומידע ודאי:</p>
+
+          <div class="p-5 rounded-2xl border backdrop-blur-sm transition-all focus-within:border-sky-400" style="background-color: var(--c-glass); border-color: rgba(56, 189, 248, 0.25);">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-editorial font-semibold text-sky-300">עובדות מוצקות:</span>
               <button type="button" id="btnVoiceFacts" onclick="toggleVoiceInputForElement('editFacts', 'btnVoiceFacts')" class="text-[10px] text-sky-300 hover:text-sky-200 flex items-center gap-1 border border-sky-500/25 bg-sky-500/10 px-2 py-0.5 rounded-lg">
                 <span>🎙️ עדכן בקול</span>
               </button>
             </div>
             <textarea 
               id="editFacts" 
-              rows="2" 
+              rows="4" 
               oninput="onDimensionEdited(this)"
               placeholder="נתונים, התרחשויות קונקרטיות ומידע ודאי..."
-              class="w-full bg-transparent border-0 p-0 text-xs text-right focus:outline-none font-light opacity-95 resize-none leading-relaxed overflow-hidden"
+              class="w-full bg-transparent border-0 p-0 text-base font-editorial text-stone-100 text-right focus:outline-none font-light opacity-95 resize-none leading-relaxed"
             ></textarea>
           </div>
+        </div>
 
-          <!-- 2. Underlying Assumptions -->
-          <div class="p-4 rounded-2xl border-2 backdrop-blur-sm transition-all focus-within:border-amber-400 space-y-2.5" style="background-color: rgba(212,175,55,0.03); border-color: rgba(212,175,55,0.35);">
+        <!-- Scroll down thread to Assumptions -->
+        <div class="mt-auto flex flex-col items-center cursor-pointer opacity-70 hover:opacity-100 transition-opacity pt-4" onclick="scrollToNext('stageAssumptions')">
+          <span class="text-[11px] tracking-wider mb-2 font-light text-amber-200">ההנחה המובילה ↓</span>
+          <div class="w-[1px] h-8 stream-thread"></div>
+        </div>
+      </section>
+
+      <!-- ================= PROGRESSIVE STAGE 4: ההנחה המובילה ================= -->
+      <section id="stageAssumptions" class="snap-card min-h-[720px] flex flex-col justify-between pt-6 pb-4 text-right relative">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-editorial font-semibold tracking-widest text-amber-300">4 · ההנחה המובילה</span>
+          <button type="button" onclick="scrollToNext('stageFacts')" class="text-[10px] text-stone-400 hover:text-amber-200">↑ חזרה לעובדות</button>
+        </div>
+
+        <div class="my-auto space-y-4">
+          <p class="text-xs font-light text-stone-400">על מה אתה מסתמך? השערות וציפיות לעתיד:</p>
+
+          <div class="p-5 rounded-2xl border-2 backdrop-blur-sm transition-all focus-within:border-amber-400 space-y-3" style="background-color: rgba(212,175,55,0.03); border-color: rgba(212,175,55,0.35);">
             <div class="flex items-center justify-between">
               <span class="text-xs font-editorial font-bold tracking-wide text-amber-300">
                 ההנחה שמובילה אותך (<span id="assumptionsCountBadge">1-5 הנחות</span>):
               </span>
             </div>
 
-            <!-- Dynamic 1-5 Assumptions List Container -->
+            <!-- Dynamic Assumptions List Container -->
             <div id="assumptionsContainer" class="space-y-2">
               <!-- Rendered dynamically by renderAssumptionsList() -->
             </div>
@@ -303,8 +321,8 @@
             <textarea id="editAssumptions" class="hidden" oninput="onDimensionEdited(this)"></textarea>
             <input type="hidden" id="editReliance" />
 
-            <div class="pt-1 flex flex-wrap items-center justify-between gap-2">
-              <button type="button" id="btnAddAssumption" onclick="addNewAssumptionField()" class="text-[10px] text-amber-300/80 hover:text-amber-200 flex items-center gap-1 border border-amber-500/25 bg-amber-500/10 px-2 py-1 rounded-lg transition-all active:scale-95">
+            <div class="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-white/5">
+              <button type="button" id="btnAddAssumption" onclick="addNewAssumptionField()" class="text-[10px] text-amber-300/80 hover:text-amber-200 flex items-center gap-1 border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 rounded-lg transition-all active:scale-95">
                 <span>+ הוסף הנחה</span>
               </button>
               <div class="flex items-center gap-1.5 text-[10px]">
@@ -318,10 +336,10 @@
             </div>
           </div>
 
-          <!-- 3. Missing Information / Questions -->
-          <div class="p-3.5 rounded-xl border backdrop-blur-sm transition-all focus-within:border-sky-400 space-y-1" style="background-color: var(--c-glass); border-color: var(--c-border);">
+          <!-- Missing Info Subdued Box -->
+          <div class="p-3.5 rounded-xl border backdrop-blur-sm transition-all focus-within:border-sky-400" style="background-color: var(--c-glass); border-color: var(--c-border);">
             <div class="flex items-center justify-between mb-1">
-              <span class="text-xs font-editorial font-semibold tracking-wide text-stone-300">מה שעדיין חסר לדעת:</span>
+              <span class="text-[11px] font-editorial text-stone-300">מה שעדיין חסר לדעת (שאלות פתוחות):</span>
             </div>
             <textarea 
               id="editMissingInfo" 
@@ -341,11 +359,11 @@
         </div>
       </section>
 
-      <!-- ================= SECTION 3: ADAPTIVE INTERVENTION (שאלה שתעשה סדר) ================= -->
+      <!-- ================= SECTION 5: ADAPTIVE INTERVENTION (שאלה שתעשה סדר) ================= -->
       <section id="stageIllumination" class="snap-card min-h-[720px] flex flex-col justify-between pt-6 pb-4 text-right relative">
         <div class="flex items-center justify-between mb-3">
-          <span class="text-xs font-editorial font-semibold tracking-widest text-amber-300">4 · שאלה שתעשה סדר</span>
-          <button type="button" onclick="scrollToNext('stageReliance')" class="text-[10px] text-stone-400 hover:text-amber-200">↑ חזרה להנחות</button>
+          <span class="text-xs font-editorial font-semibold tracking-widest text-amber-300">5 · שאלה שתעשה סדר</span>
+          <button type="button" onclick="scrollToNext('stageAssumptions')" class="text-[10px] text-stone-400 hover:text-amber-200">↑ חזרה להנחות</button>
         </div>
 
         <!-- Smart Silence Box (Shown for Quick Flow) -->
@@ -473,87 +491,81 @@
         </div>
       </section>
 
-        <!-- Scroll down thread -->
-        <div class="mt-auto flex flex-col items-center cursor-pointer opacity-50 hover:opacity-80 transition-opacity" onclick="scrollToNext('stageContract')">
-          <span class="text-[10px] tracking-wider mb-2 font-light">לסיכום ולפלאש ההתחדדות ↓</span>
-          <div class="w-[1px] h-8 stream-thread"></div>
-        </div>
-      </section>
-
-      <!-- ================= SECTION 4: BEFORE & AFTER FLASH + PROCESS SUMMARY ================= -->
+      <!-- ================= SECTION 6: SUMMARY (סיכום ההחלטה) ================= -->
       <section id="stageContract" class="snap-card min-h-[720px] flex flex-col justify-between pt-6 pb-6 text-right relative">
         
-        <div class="space-y-4">
+        <div class="space-y-5">
           <div class="flex items-center justify-between mb-1">
-            <span class="text-xs font-editorial font-semibold tracking-widest text-amber-300">5 · לפני ואחרי</span>
+            <span class="text-xs font-editorial font-semibold tracking-widest text-amber-300">6 · סיכום</span>
             <button type="button" onclick="scrollToNext('stageIllumination')" class="text-[10px] text-stone-400 hover:text-amber-200">↑ חזרה לשאלה</button>
           </div>
 
           <div>
-            <h3 class="font-editorial text-2xl font-bold mb-1 text-amber-100">החשיבה שהתחדדה</h3>
-            <p class="text-xs font-light opacity-60">מה השתנה בתפיסת הבעיה והצעד המעשי להמשך.</p>
+            <h3 class="font-editorial text-2xl sm:text-3xl font-bold mb-1 text-amber-100">סיכום ההחלטה</h3>
+            <p class="text-xs font-light opacity-60 text-stone-300">המסקנה המזוקקת והצעד המעשי שנקבע.</p>
           </div>
 
-          <!-- BEFORE & AFTER INSIGHT FLASH CARD -->
-          <div class="p-4 rounded-2xl border space-y-3 backdrop-blur-sm" style="background-color: var(--c-glass); border-color: rgba(212,175,55,0.35); box-shadow: 0 0 25px rgba(212,175,55,0.08);">
+          <!-- CARD 1: INSIGHT SUMMARY (נקודת מוצא מול מסקנה) -->
+          <div class="p-5 rounded-2xl border space-y-4 backdrop-blur-sm" style="background-color: var(--c-glass); border-color: rgba(212,175,55,0.3); box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
             
             <!-- Before -->
-            <div class="border-b border-white/5 pb-2.5">
-              <div class="flex items-center justify-between text-[10px] opacity-60 font-mono mb-1">
-                <span>קודם חשבת:</span>
-                <span class="opacity-50">לפני ההארה</span>
-              </div>
-              <p id="insightBefore" class="text-xs font-light text-stone-300 leading-relaxed italic">
+            <div class="space-y-1">
+              <span class="text-[10px] uppercase font-mono tracking-wider opacity-60 text-stone-400">נקודת המוצא:</span>
+              <p id="insightBefore" class="text-sm font-light text-stone-300 leading-relaxed italic">
                 טרם הוגדרה נקודת המוצא
               </p>
             </div>
 
+            <div class="h-[1px] bg-white/5 w-full"></div>
+
             <!-- Now -->
-            <div class="border-b border-white/5 pb-2.5">
-              <div class="flex items-center justify-between text-[10px] font-mono mb-1 text-emerald-400">
-                <span class="font-semibold">כעת התחדד:</span>
-                <span class="opacity-70">נקודת המפנה</span>
+            <div class="space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] uppercase font-mono tracking-wider font-semibold text-emerald-400">המסקנה כעת:</span>
+                <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-mono">מסקנה מזוקקת</span>
               </div>
-              <p id="insightNow" class="text-xs font-medium text-emerald-300 leading-relaxed">
-                התובנה שתחדד את הראייה שלך תופיע כאן
+              <p id="insightNow" class="text-sm font-medium text-emerald-300 leading-relaxed">
+                המסקנה שתחדד את הראייה שלך תופיע כאן
               </p>
-            </div>
-
-            <!-- System Proposed Action Alternatives (1-3 Alternatives + Custom Decision) -->
-            <div class="pt-1">
-              <div class="flex items-center justify-between text-[10px] font-mono mb-1 text-amber-300">
-                <span class="font-semibold">צעדים מוצעים (הצעת המערכת):</span>
-                <span class="opacity-80 text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 font-sans">הצעת המערכת · לא פעולה שנקבעה מראש</span>
-              </div>
-              <p class="text-[11px] font-light text-stone-300 mb-2">
-                ניתן לבחור חלופה אחת, כמה חלופות, את כולן או להזין החלטה אישית:
-              </p>
-
-              <!-- 1-3 Proposed Alternatives List (Checkboxes) -->
-              <div id="proposedStepsList" class="space-y-1.5">
-                <!-- Dynamically rendered alternatives with checkboxes -->
-              </div>
-
-              <!-- Custom User Decision Input -->
-              <div class="mt-2.5 pt-2 border-t border-white/5">
-                <label class="block text-[10px] text-amber-300/80 mb-1">או הזן החלטה / צעד מותאם אישית משלך:</label>
-                <input 
-                  type="text" 
-                  id="customUserStepInput" 
-                  placeholder="הקלד כאן החלטה או צעד משלך (אופציונלי)..." 
-                  class="w-full bg-white/[0.03] border border-amber-500/25 rounded-xl px-2.5 py-2 text-xs text-right text-stone-100 placeholder:opacity-40 focus:outline-none focus:border-amber-400 font-light"
-                  oninput="onCustomUserStepChange(this.value)"
-                />
-              </div>
-
-              <div id="insightChosenStep" class="hidden">הצעד הקונקרטי לביצוע</div>
             </div>
 
           </div>
 
-          <!-- Timeframe Selection: 3, 7, 14, 30 days -->
-          <div class="space-y-2 pt-2">
-            <span class="text-[11px] block font-medium opacity-80">מועד אות מעקב ובדיקת מציאות:</span>
+          <!-- CARD 2: ACTION STEP SELECTION (הצעד הבא שנבחר) -->
+          <div class="p-5 rounded-2xl border space-y-3 backdrop-blur-sm" style="background-color: var(--c-glass); border-color: var(--c-border);">
+            
+            <div class="flex items-center justify-between text-[11px] font-mono text-amber-300">
+              <span class="font-semibold">הצעד הבא שנבחר:</span>
+              <span class="opacity-80 text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 font-sans">הצעת המערכת · לא פעולה קבועה</span>
+            </div>
+            
+            <p class="text-[11px] font-light text-stone-300">
+              בחר חלופה אחת, כמה חלופות, או הגדר צעד משלך:
+            </p>
+
+            <!-- 1-3 Proposed Alternatives List (Checkboxes) -->
+            <div id="proposedStepsList" class="space-y-2 pt-1">
+              <!-- Dynamically rendered alternatives with checkboxes -->
+            </div>
+
+            <!-- Custom User Decision Input -->
+            <div class="pt-3 border-t border-white/5">
+              <label class="block text-[10px] text-amber-300/80 mb-1.5">או הזן החלטה / צעד מותאם אישית משלך:</label>
+              <input 
+                type="text" 
+                id="customUserStepInput" 
+                placeholder="הקלד כאן החלטה או צעד משלך (אופציונלי)..." 
+                class="w-full bg-white/[0.03] border border-amber-500/25 rounded-xl px-3 py-2.5 text-xs text-right text-stone-100 placeholder:opacity-40 focus:outline-none focus:border-amber-400 font-light"
+                oninput="onCustomUserStepChange(this.value)"
+              />
+            </div>
+
+            <div id="insightChosenStep" class="hidden">הצעד הקונקרטי לביצוע</div>
+          </div>
+
+          <!-- CARD 3: TIMEFRAME SELECTION -->
+          <div class="p-4 rounded-2xl border backdrop-blur-sm space-y-2.5" style="background-color: var(--c-glass); border-color: var(--c-border);">
+            <span class="text-[11px] block font-medium opacity-80 text-stone-300">מועד אות מעקב ובדיקת מציאות:</span>
             <div class="grid grid-cols-4 gap-2 text-center text-xs font-light">
               <button type="button" onclick="selectDays(3)" id="btnDay3" class="day-btn py-2.5 rounded-xl border transition-all" style="border-color: var(--c-border); opacity: 0.6;">3 ימים</button>
               <button type="button" onclick="selectDays(7)" id="btnDay7" class="day-btn py-2.5 rounded-xl border transition-all" style="border-color: var(--c-border); opacity: 0.6;">7 ימים</button>
@@ -2730,7 +2742,7 @@
         unknowns: unknowns,
         question: `"${question}"`,
         insightBefore: 'הנחת המוצא: שהערכות המצב הראשוניות יתממשו ללא שיבושים מפתיעים',
-        insightNow: 'התחדדות הצורך בבדיקה ממוקדת של הנחת הציר לפני התחייבות',
+        insightNow: 'בדיקה ממוקדת של הנחת הציר לפני התחייבות',
         insightChosenStep: 'בירור מעשי וממוקד של נתוני המפתח מול הגורמים הרלוונטיים',
         selectedDays: 14
       };
@@ -4005,7 +4017,7 @@ ${pastSummary}
                 <span class="text-stone-400">קודם: ${escapeHtml(d.insightBefore || d.reliance || '—')}</span>
               </div>
               <div class="text-[11px] text-emerald-300 font-medium pt-0.5">
-                <span>כעת התחדד:</span> ${escapeHtml(d.insightNow || 'בדיקת הנחת הציר')}
+                <span>המסקנה כעת:</span> ${escapeHtml(d.insightNow || 'בדיקת הנחת הציר')}
               </div>
               <div class="text-[10px] text-amber-200 font-medium pt-0.5">
                 <span>הצעת פעולה / צעד נבחר:</span> ${escapeHtml(d.insightChosenStep || 'בירור ממוקד')}
@@ -4280,7 +4292,7 @@ ${pastSummary}
           console.warn(e);
         }
 
-        if (hint) hint.innerText = 'נשמר בהצלחה! עובר לסיכום התחדדות ↓';
+        if (hint) hint.innerText = 'נשמר בהצלחה! עובר לסיכום ↓';
         scrollToNext('stageContract');
         return;
       }
@@ -4291,7 +4303,7 @@ ${pastSummary}
         btn.disabled = true;
         btn.classList.add('opacity-50', 'cursor-not-allowed');
       }
-      if (hint) hint.innerText = '⏳ מזקק את פלאש ההתחדדות לאור המענה שלך...';
+      if (hint) hint.innerText = '⏳ מכין את הסיכום לאור המענה שלך...';
 
       const prompt = `
 אתה מנוע הזיכוך וההתחדדות האפיסטמי של מערכת Echo (הד).
@@ -4396,7 +4408,7 @@ ${historicalContextPrompt}
           console.warn('Storage update error:', e);
         }
 
-        if (hint) hint.innerText = 'פלאש ההתחדדות הוכן! ממשיך לסיכום ↓';
+        if (hint) hint.innerText = 'הסיכום הוכן! ממשיך לסיכום ↓';
         scrollToNext('stageContract');
 
       } catch (err) {

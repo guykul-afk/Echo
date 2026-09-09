@@ -118,7 +118,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   };
 
   const handleProceedWithAnswer = (answerText?: string) => {
-    const finalAnswer = answerText || userAnswer || 'התחדדו השיקולים המרכזיים';
+    const finalAnswer = answerText || userAnswer || 'המסקנה המרכזית הוגדרה';
     const refined: RefinedInsight = {
       before: consideration,
       now: finalAnswer,
@@ -126,7 +126,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
     };
     setInsight(refined);
     onAnswerSubmit(finalAnswer, false);
-    scrollToStage(4); // Scroll to Before/After card
+    scrollToStage(5); // Scroll to Summary card
   };
 
   const handleSkip = () => {
@@ -137,7 +137,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
     };
     setInsight(refined);
     onAnswerSubmit('', true);
-    scrollToStage(4);
+    scrollToStage(5);
   };
 
   return (
@@ -214,53 +214,35 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         </View>
 
         <TouchableOpacity style={styles.bottomArrow} onPress={() => scrollToStage(2)}>
-          <Text style={styles.arrowText}>על מה אתה נשען ↓</Text>
+          <Text style={styles.arrowText}>מה שידוע בבירור ↓</Text>
         </TouchableOpacity>
       </View>
 
-      {/* ================= CARD 3: על מה אתה נשען ================= */}
+      {/* ================= CARD 3: מה שידוע בבירור (עובדות) ================= */}
       <View style={styles.cardSection}>
         <View style={styles.cardHeader}>
-          <Text style={styles.stageTag}>3 · על מה אתה נשען</Text>
+          <Text style={[styles.stageTag, { color: '#38BDF8' }]}>3 · מה שידוע בבירור</Text>
           <TouchableOpacity onPress={() => scrollToStage(1)}>
             <Text style={styles.backTip}>↑ חזרה למתח</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.centerContent}>
-          {/* עובדות קשיחות */}
-          <View style={styles.compactBlock}>
+          <Text style={styles.subPrompt}>נתונים, התרחשויות קונקרטיות ומידע מוצק:</Text>
+
+          <View style={[styles.editBox, { borderColor: 'rgba(56, 189, 248, 0.35)', backgroundColor: 'rgba(56, 189, 248, 0.03)' }]}>
             <View style={styles.editBoxHeader}>
-              <Text style={[styles.editLabel, { color: '#38BDF8' }]}>מה שידוע בבירור (עובדות):</Text>
+              <Text style={[styles.editLabel, { color: '#38BDF8', fontWeight: '600' }]}>עובדות מוצקות:</Text>
               <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('facts', val))}>
                 <Text style={[styles.micBtn, { color: '#38BDF8' }]}>🎙️ עדכן בקול</Text>
               </TouchableOpacity>
             </View>
             <TextInput
-              style={styles.compactInput}
+              style={[styles.largeInput, { minHeight: 90 }]}
               multiline
               value={facts}
               onChangeText={val => handleFieldChange('facts', val)}
-              placeholder="נתונים ועובדות מוצקות..."
-              placeholderTextColor={LuxuryTheme.text.tertiary}
-              textAlign="right"
-            />
-          </View>
-
-          {/* הנחה מובילה */}
-          <View style={[styles.compactBlock, { borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }]}>
-            <View style={styles.editBoxHeader}>
-              <Text style={[styles.editLabel, { color: LuxuryTheme.accent.gold }]}>ההנחה שמובילה אותך:</Text>
-              <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('assumptions', val))}>
-                <Text style={styles.micBtn}>🎙️ עדכן בקול</Text>
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.compactInput}
-              multiline
-              value={assumptions}
-              onChangeText={val => handleFieldChange('assumptions', val)}
-              placeholder="השערות וציפיות לגבי העתיד..."
+              placeholder="נתונים ועובדות מוצקות שאינם מוטלים בספק..."
               placeholderTextColor={LuxuryTheme.text.tertiary}
               textAlign="right"
             />
@@ -268,15 +250,51 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         </View>
 
         <TouchableOpacity style={styles.bottomArrow} onPress={() => scrollToStage(3)}>
+          <Text style={styles.arrowText}>ההנחה המובילה ↓</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ================= CARD 4: ההנחה המובילה ================= */}
+      <View style={styles.cardSection}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.stageTag}>4 · ההנחה המובילה</Text>
+          <TouchableOpacity onPress={() => scrollToStage(2)}>
+            <Text style={styles.backTip}>↑ חזרה לעובדות</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.centerContent}>
+          <Text style={styles.subPrompt}>על מה אתה מסתמך? השערות וציפיות לעתיד:</Text>
+
+          <View style={[styles.editBox, { borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }]}>
+            <View style={styles.editBoxHeader}>
+              <Text style={[styles.editLabel, { color: LuxuryTheme.accent.gold, fontWeight: '600' }]}>ההנחה שמובילה אותך:</Text>
+              <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('assumptions', val))}>
+                <Text style={styles.micBtn}>🎙️ עדכן בקול</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={[styles.largeInput, { minHeight: 90 }]}
+              multiline
+              value={assumptions}
+              onChangeText={val => handleFieldChange('assumptions', val)}
+              placeholder="השערות, ציפיות ותרחישים שאתה מניח שיתממשו..."
+              placeholderTextColor={LuxuryTheme.text.tertiary}
+              textAlign="right"
+            />
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.bottomArrow} onPress={() => scrollToStage(4)}>
           <Text style={styles.arrowText}>שאלה שתעשה סדר ↓</Text>
         </TouchableOpacity>
       </View>
 
-      {/* ================= CARD 4: שאלה שתעשה סדר ================= */}
+      {/* ================= CARD 5: שאלה שתעשה סדר ================= */}
       <View style={styles.cardSection}>
         <View style={styles.cardHeader}>
-          <Text style={styles.stageTag}>4 · שאלה שתעשה סדר</Text>
-          <TouchableOpacity onPress={() => scrollToStage(2)}>
+          <Text style={styles.stageTag}>5 · שאלה שתעשה סדר</Text>
+          <TouchableOpacity onPress={() => scrollToStage(3)}>
             <Text style={styles.backTip}>↑ חזרה להנחות</Text>
           </TouchableOpacity>
         </View>
@@ -329,31 +347,34 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.bottomArrow} onPress={() => scrollToStage(4)}>
-          <Text style={styles.arrowText}>לפני ואחרי ↓</Text>
+        <TouchableOpacity style={styles.bottomArrow} onPress={() => scrollToStage(5)}>
+          <Text style={styles.arrowText}>לסיכום ↓</Text>
         </TouchableOpacity>
       </View>
 
-      {/* ================= CARD 5: לפני ואחרי ================= */}
+      {/* ================= CARD 6: סיכום ================= */}
       <View style={styles.cardSection}>
         <View style={styles.cardHeader}>
-          <Text style={styles.stageTag}>5 · לפני ואחרי</Text>
-          <TouchableOpacity onPress={() => scrollToStage(3)}>
+          <Text style={styles.stageTag}>6 · סיכום</Text>
+          <TouchableOpacity onPress={() => scrollToStage(4)}>
             <Text style={styles.backTip}>↑ חזרה לשאלה</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.centerContent}>
+          <Text style={styles.heroHeadline}>סיכום ההחלטה</Text>
+          <Text style={styles.subPrompt}>המסקנה המזוקקת והצעד המעשי שנקבע:</Text>
+
           <View style={styles.insightBox}>
             <View style={styles.insightRow}>
-              <Text style={styles.insightLabel}>קודם חשבת:</Text>
+              <Text style={styles.insightLabel}>נקודת המוצא:</Text>
               <Text style={styles.insightVal}>{insight?.before || consideration}</Text>
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.insightRow}>
-              <Text style={[styles.insightLabel, { color: LuxuryTheme.accent.emeraldSuccess }]}>כעת התחדד:</Text>
+              <Text style={[styles.insightLabel, { color: LuxuryTheme.accent.emeraldSuccess }]}>המסקנה כעת:</Text>
               <Text style={[styles.insightVal, { color: LuxuryTheme.accent.emeraldSuccess, fontWeight: '600' }]}>
                 {insight?.now || userAnswer || 'הבנת את גורם המפתח להכרעה'}
               </Text>
