@@ -21,49 +21,89 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
 }) => {
   const [quickStatus, setQuickStatus] = useState<QuickLoopStatus>('clarified');
   const [whatHappened, setWhatHappened] = useState('');
-  const [assumptionClarification, setAssumptionClarification] = useState('');
-  const [processReflection, setProcessReflection] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+
+  const handleToggleVoice = () => {
+    const SpeechRec = typeof window !== 'undefined' && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+    if (!SpeechRec) {
+      alert('הקלטה קולית נתמכת בדפדפן כרום או ספארי במכשיר.');
+      return;
+    }
+
+    if (isRecording) {
+      setIsRecording(false);
+      return;
+    }
+
+    try {
+      const rec = new SpeechRec();
+      rec.lang = 'he-IL';
+      rec.continuous = true;
+      rec.interimResults = true;
+
+      rec.onresult = (e: any) => {
+        let full = '';
+        for (let i = 0; i < e.results.length; ++i) {
+          full += e.results[i][0].transcript + ' ';
+        }
+        setWhatHappened(full.trim());
+      };
+
+      rec.onerror = () => setIsRecording(false);
+      rec.onend = () => setIsRecording(false);
+
+      rec.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.warn('Voice error:', err);
+    }
+  };
 
   const handleSubmit = () => {
     onSubmitOutcome({
-      whatHappened: whatHappened || 'עודכן סטטוס התקדמות',
-      assumptionClarification,
-      processReflection,
+      whatHappened: whatHappened || 'עודכן סטטוס',
+      assumptionClarification: '',
+      processReflection: '',
       quickStatus
     });
   };
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
-      <Text style={styles.heading}>סגירת מעגל: התקדמות בהבנה ולמידה</Text>
-      <Text style={styles.caseSub}>{caseTitle}</Text>
+      {/* Header */}
+      <View style={styles.headerRow}>
+        <Text style={styles.tag}>סגירת מעגל</Text>
+        <Text style={styles.heading}>איך זה נגמר?</Text>
+        <Text style={styles.caseSub}>{caseTitle}</Text>
+      </View>
 
-      {/* Reminder Box */}
+      {/* Reminder Card */}
       {nextStepChosen && (
         <View style={styles.reminderBox}>
-          <Text style={styles.reminderLabel}>הצעד שהגדרת לעצמך לבירור:</Text>
+          <Text style={styles.reminderLabel}>הצעד שהגדרת לעצמך:</Text>
           <Text style={styles.reminderText}>"{nextStepChosen}"</Text>
         </View>
       )}
 
-      {/* Quick Status Selection */}
+      {/* Quick Status 4-Chips */}
       <View style={styles.section}>
-        <Text style={styles.label}>הספקת לברר?</Text>
-        <View style={styles.evalRow}>
+        <Text style={styles.label}>מה הסטטוס בפועל?</Text>
+        <View style={styles.evalGrid}>
           {(
             [
-              ['clarified', 'ביררתי', LuxuryTheme.accent.emeraldSuccess],
-              ['not_yet', 'עדיין לא', LuxuryTheme.accent.amberWarning],
-              ['irrelevant', 'כבר לא רלוונטי', LuxuryTheme.text.tertiary]
+              ['clarified', 'הסתדר מעולה ✓', LuxuryTheme.accent.emeraldSuccess],
+              ['succeeded_as_expected', 'התברר אחרת ⚡', LuxuryTheme.accent.amberWarning],
+              ['not_yet', 'עדיין פתוח ⏳', '#38BDF8'],
+              ['irrelevant', 'ירד מהפרק ✕', LuxuryTheme.text.tertiary]
             ] as const
           ).map(([val, label, color]) => (
             <TouchableOpacity
               key={val}
               style={[
                 styles.evalChip,
-                quickStatus === val && { borderColor: color, backgroundColor: 'rgba(255,255,255,0.06)' }
+                quickStatus === val && { borderColor: color, backgroundColor: 'rgba(212,175,55,0.08)' }
               ]}
-              onPress={() => setQuickStatus(val)}
+              onPress={() => setQuickStatus(val as QuickLoopStatus)}
             >
               <Text style={[styles.evalChipText, quickStatus === val && { color, fontWeight: '700' }]}>
                 {label}
@@ -73,13 +113,21 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
         </View>
       </View>
 
-      {/* Axis 1: What happened in reality */}
+      {/* Audio-First Voice Button */}
       <View style={styles.section}>
-        <Text style={styles.label}>1. מה קרה בפועל? (נתונים ועובדות):</Text>
+        <TouchableOpacity
+          style={[styles.voiceBtn, isRecording && styles.voiceBtnRecording]}
+          onPress={handleToggleVoice}
+        >
+          <Text style={styles.voiceBtnText}>
+            {isRecording ? '● מקשיב... לחץ לסיום' : '🎙️ הקלט בקצרה מה קרה (5 שניות)'}
+          </Text>
+        </TouchableOpacity>
+
         <TextInput
           style={styles.textInput}
           multiline
-          placeholder="למשל: ביררתי עם המנהל והוא הסכים ליום בית קבוע..."
+          placeholder="או כתוב במשפט קצר: מה קרה בפועל?"
           placeholderTextColor={LuxuryTheme.text.tertiary}
           value={whatHappened}
           onChangeText={setWhatHappened}
@@ -87,39 +135,12 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
         />
       </View>
 
-      {/* Axis 2: What was clarified about assumptions */}
-      <View style={styles.section}>
-        <Text style={styles.label}>2. מה התברר לגבי ההנחה שעליה נשענת?</Text>
-        <TextInput
-          style={styles.textInput}
-          multiline
-          placeholder="למשל: החשש מזמינות תובענית היה מוגזם ביחס למציאות..."
-          placeholderTextColor={LuxuryTheme.text.tertiary}
-          value={assumptionClarification}
-          onChangeText={setAssumptionClarification}
-          textAlign="right"
-        />
-      </View>
-
-      {/* Axis 3: Process reflection */}
-      <View style={styles.section}>
-        <Text style={styles.label}>3. בהתחשב במה שיכולת לדעת אז, מה היית משנה באופן הבחינה?</Text>
-        <TextInput
-          style={styles.textInput}
-          multiline
-          placeholder="למשל: היה נכון לשאול כבר בריאיון הראשון..."
-          placeholderTextColor={LuxuryTheme.text.tertiary}
-          value={processReflection}
-          onChangeText={setProcessReflection}
-          textAlign="right"
-        />
-      </View>
-
+      {/* 1-Tap Save */}
       <TouchableOpacity
         style={styles.saveButton}
         onPress={handleSubmit}
       >
-        <Text style={styles.saveButtonText}>עדכן זיכרון אישי וסגור סבב למידה ←</Text>
+        <Text style={styles.saveButtonText}>שמור והמשך ←</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -131,91 +152,128 @@ const styles = StyleSheet.create({
     backgroundColor: LuxuryTheme.background.base
   },
   container: {
-    padding: 20
+    padding: 24,
+    justifyContent: 'center',
+    minHeight: '100%'
+  },
+  headerRow: {
+    marginBottom: 20
+  },
+  tag: {
+    color: LuxuryTheme.accent.gold,
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 1,
+    textAlign: 'right',
+    marginBottom: 6
   },
   heading: {
     color: LuxuryTheme.text.primary,
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: '700',
-    textAlign: 'right'
+    textAlign: 'right',
+    fontFamily: 'serif'
   },
   caseSub: {
     color: LuxuryTheme.text.tertiary,
     fontSize: 13,
-    marginTop: 4,
-    marginBottom: 16,
+    marginTop: 6,
     textAlign: 'right'
   },
   reminderBox: {
-    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    backgroundColor: 'rgba(212, 175, 55, 0.05)',
     borderRightWidth: 3,
-    borderRightColor: LuxuryTheme.accent.auraGlow,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16
+    borderRightColor: LuxuryTheme.accent.gold,
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 20
   },
   reminderLabel: {
-    color: LuxuryTheme.accent.auraGlow,
+    color: LuxuryTheme.accent.gold,
     fontSize: 11,
     fontWeight: '600',
-    textAlign: 'right'
+    textAlign: 'right',
+    marginBottom: 4
   },
   reminderText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 13,
-    marginTop: 2,
+    color: LuxuryTheme.text.secondary,
+    fontSize: 14,
+    fontStyle: 'italic',
     textAlign: 'right'
   },
   section: {
-    marginBottom: 14
+    marginBottom: 20
   },
   label: {
     color: LuxuryTheme.text.secondary,
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'right',
-    marginBottom: 6
-  },
-  textInput: {
-    backgroundColor: LuxuryTheme.background.surface,
-    borderWidth: 1,
-    borderColor: LuxuryTheme.background.border,
-    borderRadius: 10,
-    padding: 12,
-    color: LuxuryTheme.text.primary,
     fontSize: 13,
-    minHeight: 65,
-    textAlignVertical: 'top'
+    fontWeight: '500',
+    marginBottom: 10,
+    textAlign: 'right'
   },
-  evalRow: {
+  evalGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: 8
   },
   evalChip: {
-    flex: 1,
-    backgroundColor: LuxuryTheme.background.surface,
+    width: '48%',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: LuxuryTheme.background.border,
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center'
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   evalChipText: {
     color: LuxuryTheme.text.secondary,
-    fontSize: 12
+    fontSize: 13
+  },
+  voiceBtn: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.35)',
+    backgroundColor: 'rgba(212, 175, 55, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12
+  },
+  voiceBtnRecording: {
+    borderColor: '#F43F5E',
+    backgroundColor: 'rgba(244, 63, 94, 0.15)'
+  },
+  voiceBtnText: {
+    color: LuxuryTheme.accent.gold,
+    fontSize: 13,
+    fontWeight: '600'
+  },
+  textInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 14,
+    color: LuxuryTheme.text.primary,
+    fontSize: 14,
+    minHeight: 60,
+    textAlignVertical: 'top'
   },
   saveButton: {
-    backgroundColor: LuxuryTheme.accent.auraGlow,
-    borderRadius: 12,
-    paddingVertical: 14,
+    backgroundColor: 'rgba(212, 175, 55, 0.25)',
+    borderColor: LuxuryTheme.accent.gold,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 30
+    marginTop: 10
   },
   saveButtonText: {
     color: LuxuryTheme.text.primary,
-    fontSize: 14,
-    fontWeight: '600'
+    fontSize: 15,
+    fontWeight: '700'
   }
 });

@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { LuxuryTheme } from '../theme/colors.js';
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
+
+const SCREEN_HEIGHT = 700;
 
 interface DecisionRoomScreenProps {
   decisionCase: DecisionCase;
@@ -28,49 +30,62 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   onMirrorUpdate,
   onMirrorFeedback
 }) => {
-  // 5 Human Dimensions local state for direct live editing in the expanded map
+  const scrollRef = useRef<any>(null);
+
+  // 5 Dimensions state
   const [consideration, setConsideration] = useState(decisionCase.dimConsideration || decisionCase.title);
   const [goalsPrices, setGoalsPrices] = useState(decisionCase.dimGoalsPrices || '');
   const [facts, setFacts] = useState(decisionCase.dimFacts || decisionCase.dimReliance || '');
   const [assumptions, setAssumptions] = useState(decisionCase.dimAssumptions || '');
   const [missingInfo, setMissingInfo] = useState(decisionCase.dimMissingInfo || decisionCase.dimUnknowns || '');
 
-  // First 20 Seconds state
-  const centralTension = decisionCase.centralTension || 'פשטות ורציפות מול תלות גבוהה או אילוצים מתחרים';
-  const keyHinge = decisionCase.keyHinge || decisionCase.dimMissingInfo || 'בדיקת ההנחה המרכזית שמובילה את ההכרעה';
-  const [mirrorFeedback, setMirrorFeedback] = useState<'accurate' | 'inaccurate' | null>(decisionCase.mirrorFeedback || null);
-  const [showThinkingMap, setShowThinkingMap] = useState(false);
-  const [showPastDetails, setShowPastDetails] = useState(false);
-
-  const effectiveQuestion = bespokeQuestion?.questionText || illuminationQuestion;
+  const centralTension = decisionCase.centralTension || goalsPrices || 'השגת המטרה מול מחירים ואילוצים';
+  const effectiveQuestion = bespokeQuestion?.questionText || illuminationQuestion || 'מהו הנתון היחיד שיכריע עבורך?';
   const isSmartSilence = bespokeQuestion ? bespokeQuestion.shouldIntervene === false : false;
-  const shouldIntervene = bespokeQuestion ? bespokeQuestion.shouldIntervene !== false : Boolean(effectiveQuestion);
 
   const [userAnswer, setUserAnswer] = useState('');
-  const [userHistoricalAnswer, setUserHistoricalAnswer] = useState('');
-  const [showRawText, setShowRawText] = useState(false);
-  const [activeTab, setActiveTab] = useState<'mirror' | 'insight'>('mirror');
+  const [isVoiceRecording, setIsVoiceRecording] = useState(false);
   const [insight, setInsight] = useState<RefinedInsight | null>(initialRefinedInsight || null);
 
-  const handleWidgetSelect = (optionText: string) => {
-    setUserAnswer(optionText);
-    const refined: RefinedInsight = {
-      before: consideration,
-      now: optionText,
-      chosenStep: optionText.slice(0, 80)
-    };
-    setInsight(refined);
-    setActiveTab('insight');
-    onAnswerSubmit(optionText, false);
+  const scrollToStage = (index: number) => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ y: index * (SCREEN_HEIGHT - 80), animated: true });
+    }
   };
 
-  const handleFeedbackClick = (feedback: 'accurate' | 'inaccurate') => {
-    setMirrorFeedback(feedback);
-    if (onMirrorFeedback) {
-      onMirrorFeedback(feedback);
+  const startVoiceInput = (setter: (val: string) => void) => {
+    const SpeechRec = typeof window !== 'undefined' && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+    if (!SpeechRec) {
+      alert('הקלטה קולית נתמכת בדפדפן כרום או ספארי.');
+      return;
     }
-    if (feedback === 'inaccurate') {
-      setShowThinkingMap(true);
+
+    if (isVoiceRecording) {
+      setIsVoiceRecording(false);
+      return;
+    }
+
+    try {
+      const rec = new SpeechRec();
+      rec.lang = 'he-IL';
+      rec.continuous = true;
+      rec.interimResults = true;
+
+      rec.onresult = (e: any) => {
+        let full = '';
+        for (let i = 0; i < e.results.length; ++i) {
+          full += e.results[i][0].transcript + ' ';
+        }
+        setter(full.trim());
+      };
+
+      rec.onerror = () => setIsVoiceRecording(false);
+      rec.onend = () => setIsVoiceRecording(false);
+
+      rec.start();
+      setIsVoiceRecording(true);
+    } catch (err) {
+      console.warn('Voice error:', err);
     }
   };
 
@@ -95,26 +110,23 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         assumptions: nextAssumptions,
         missingInfo: nextMissingInfo,
         centralTension,
-        keyHinge,
+        keyHinge: nextMissingInfo,
         reliance: `${nextFacts} | ${nextAssumptions}`,
         unknowns: nextMissingInfo
       });
     }
   };
 
-  const handleProceedWithAnswer = () => {
-    let combined = userAnswer || 'התחדדו השיקולים המרכזיים';
-    if (userHistoricalAnswer.trim()) {
-      combined += ` (מענה לעבר: ${userHistoricalAnswer.trim()})`;
-    }
+  const handleProceedWithAnswer = (answerText?: string) => {
+    const finalAnswer = answerText || userAnswer || 'התחדדו השיקולים המרכזיים';
     const refined: RefinedInsight = {
       before: consideration,
-      now: combined,
-      chosenStep: userAnswer.slice(0, 80) || 'בירור מוקדם לפני הכרעה'
+      now: finalAnswer,
+      chosenStep: finalAnswer.slice(0, 80) || 'בירור מוקדם לפני הכרעה'
     };
     setInsight(refined);
-    setActiveTab('insight');
-    onAnswerSubmit(combined, false);
+    onAnswerSubmit(finalAnswer, false);
+    scrollToStage(4); // Scroll to Before/After card
   };
 
   const handleSkip = () => {
@@ -124,377 +136,249 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
       chosenStep: 'שמירה והמשך מעקב'
     };
     setInsight(refined);
-    setActiveTab('insight');
     onAnswerSubmit('', true);
+    scrollToStage(4);
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Frozen Timestamp Badge */}
-      <TouchableOpacity
-        style={styles.frozenBadge}
-        activeOpacity={0.7}
-        onPress={() => setShowRawText(!showRawText)}
-      >
-        <Text style={styles.frozenText}>
-          🔒 מצב חשיבה ראשוני הוקפא @ {new Date(decisionCase.frozenAt).toLocaleTimeString('he-IL')} (הקש לצפייה במקור)
-        </Text>
-      </TouchableOpacity>
-
-      {/* Friction Flow Mode Badge (Adaptive Friction) */}
-      <View style={styles.frictionHeaderBadge}>
-        <Text style={styles.frictionHeaderBadgeText}>
-          {decisionCase.frictionLevel === 'quick' && '⚡ מסלול מהיר (Quick Flow) • מראה בלבד'}
-          {decisionCase.frictionLevel === 'deep' && '🔍 מסלול עמוק (Deep Flow) • Pre-mortem ופערי מידע'}
-          {(!decisionCase.frictionLevel || decisionCase.frictionLevel === 'focused') && '🎯 מסלול ממוקד (Focused Flow) • שאלת הארה אחת'}
-        </Text>
-      </View>
-
-      {showRawText && (
-        <View style={styles.rawCard}>
-          <Text style={styles.rawTitle}>הניסוח המקורי המדויק (ללא שינוי):</Text>
-          <Text style={styles.rawContent}>{decisionCase.rawCaptureText}</Text>
-        </View>
-      )}
-
-      {/* --- THE FIRST 20 SECONDS CARD (סעיף 27 בביקורת) --- */}
-      <View style={styles.first20Card}>
-        <View style={styles.first20HeaderRow}>
-          <Text style={styles.first20Tag}>20 שניות לבהירות</Text>
-          <Text style={styles.first20Title}>כך אני מבין את ההחלטה</Text>
+    <ScrollView 
+      ref={scrollRef}
+      style={styles.container}
+      pagingEnabled
+      showsVerticalScrollIndicator={false}
+    >
+      {/* ================= CARD 1: הדילמה ================= */}
+      <View style={styles.cardSection}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.stageTag}>1 · הדילמה שלך</Text>
+          <Text style={styles.scrollTip}>גלול מטה או מעלה בכל עת</Text>
         </View>
 
-        {/* אתה מנסה להחליט אם... */}
-        <Text style={styles.decisionOneLiner}>
-          {consideration}
-        </Text>
-
-        {/* המתח המרכזי */}
-        <View style={styles.tensionBox}>
-          <Text style={styles.subHeadingLabel}>המתח המרכזי</Text>
-          <Text style={styles.tensionText}>{centralTension}</Text>
-        </View>
-
-        {/* נראה שההכרעה תלויה בעיקר ב... */}
-        <View style={styles.hingeBox}>
-          <Text style={styles.subHeadingLabel}>נראה שההכרעה תלויה בעיקר ב...</Text>
-          <Text style={styles.hingeText}>{keyHinge}</Text>
-        </View>
-
-        {/* כפתורי משוב מיידיים: מדויק / לא בדיוק */}
-        <View style={styles.feedbackRow}>
-          <TouchableOpacity
-            style={[
-              styles.feedbackBtn,
-              mirrorFeedback === 'accurate' && styles.feedbackBtnActiveAccurate
-            ]}
-            onPress={() => handleFeedbackClick('accurate')}
-          >
-            <Text style={[
-              styles.feedbackBtnText,
-              mirrorFeedback === 'accurate' && styles.feedbackBtnTextActive
-            ]}>
-              מדויק ✓
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.feedbackBtn,
-              mirrorFeedback === 'inaccurate' && styles.feedbackBtnActiveInaccurate
-            ]}
-            onPress={() => handleFeedbackClick('inaccurate')}
-          >
-            <Text style={[
-              styles.feedbackBtnText,
-              mirrorFeedback === 'inaccurate' && styles.feedbackBtnTextActive
-            ]}>
-              לא בדיוק ✎
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* כפתור מעבר למפת החשיבה המורחבת */}
-        <TouchableOpacity
-          style={styles.toggleMapBtn}
-          onPress={() => setShowThinkingMap(!showThinkingMap)}
-        >
-          <Text style={styles.toggleMapBtnText}>
-            {showThinkingMap ? 'הסתר את מפת החשיבה ▲' : 'ראה את מפת החשיבה המלאה (3 קבוצות) ▼'}
+        <View style={styles.centerContent}>
+          <Text style={styles.heroHeadline}>
+            {consideration}
           </Text>
+
+          <View style={styles.editBox}>
+            <View style={styles.editBoxHeader}>
+              <Text style={styles.editLabel}>הניסוח שלך:</Text>
+              <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('consideration', val))}>
+                <Text style={styles.micBtn}>🎙️ עדכן בקול</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.largeInput}
+              multiline
+              value={consideration}
+              onChangeText={val => handleFieldChange('consideration', val)}
+              textAlign="right"
+            />
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.bottomArrow} onPress={() => scrollToStage(1)}>
+          <Text style={styles.arrowText}>המתח המרכזי ↓</Text>
         </TouchableOpacity>
       </View>
 
-      {/* --- שילוב הזיכרון במסך הראשון (סעיף 28 בביקורת - רק אם קיים ערך גבוה) --- */}
-      {similarCaseAnalogy && (
-        <View style={styles.memoryPillCard}>
-          <View style={styles.memoryPillHeader}>
-            <Text style={styles.memoryPillTag}>רלוונטי מהעבר</Text>
-            <Text style={styles.memoryPillTitle}>החלטה קודמת שלך בנושא דומה</Text>
-          </View>
-          <Text style={styles.memoryPillBody}>{similarCaseAnalogy.reason}</Text>
-
-          <TouchableOpacity
-            style={styles.memoryPillAction}
-            onPress={() => setShowPastDetails(!showPastDetails)}
-          >
-            <Text style={styles.memoryPillActionText}>
-              {showPastDetails ? 'הסתר פרטים ▲' : 'ראה מה קרה שם ←'}
-            </Text>
+      {/* ================= CARD 2: המתח המרכזי ================= */}
+      <View style={styles.cardSection}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.stageTag}>2 · המתח המרכזי</Text>
+          <TouchableOpacity onPress={() => scrollToStage(0)}>
+            <Text style={styles.backTip}>↑ חזרה לדילמה</Text>
           </TouchableOpacity>
-
-          {showPastDetails && (
-            <View style={styles.pastDetailsContent}>
-              <Text style={styles.pastDetailsTitle}>{similarCaseAnalogy.title}</Text>
-              <Text style={styles.pastDetailsStrength}>עוצמת התאמה מבנית: {similarCaseAnalogy.strength}</Text>
-            </View>
-          )}
         </View>
-      )}
 
-      {/* --- המסך המורחב: 3 קבוצות, לא 5 תיבות (סעיף 29 בביקורת) --- */}
-      {showThinkingMap && (
-        <View style={styles.expandedMapContainer}>
-          <Text style={styles.expandedMapHeader}>מפת החשיבה המפורטת (ניתנת לעריכה)</Text>
+        <View style={styles.centerContent}>
+          <Text style={styles.subPrompt}>מה עומד מול מה? ערכים, מטרות ומחירים:</Text>
+          <Text style={styles.editorialQuote}>{centralTension}</Text>
 
-          {/* קבוצה 1: מה חשוב לך */}
-          <View style={styles.groupCard}>
-            <Text style={[styles.groupTitle, { color: LuxuryTheme.epistemicRoles.goal }]}>
-              1. מה חשוב לך להשיג או לשמור
-            </Text>
-            <Text style={styles.groupDesc}>ערכים, עקרונות ומחירים שאתה חושש לשלם</Text>
+          <View style={styles.editBox}>
+            <View style={styles.editBoxHeader}>
+              <Text style={styles.editLabel}>מטרות ומחירים שחשובים לך:</Text>
+              <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('goalsPrices', val))}>
+                <Text style={styles.micBtn}>🎙️ עדכן בקול</Text>
+              </TouchableOpacity>
+            </View>
             <TextInput
-              style={styles.editableInput}
+              style={styles.largeInput}
               multiline
               value={goalsPrices}
               onChangeText={val => handleFieldChange('goalsPrices', val)}
-              textAlign="right"
-            />
-          </View>
-
-          {/* קבוצה 2: על מה אתה נשען כרגע */}
-          <View style={[styles.groupCard, styles.relianceGroupCard]}>
-            <Text style={[styles.groupTitle, { color: '#38BDF8' }]}>
-              2. על מה אתה נשען כרגע
-            </Text>
-            <Text style={styles.groupDesc}>הפרדה קרה בין דברים שאמרת כעובדות לבין השערות</Text>
-
-            {/* תת-סעיף: אמרת (עובדות קשיחות) */}
-            <View style={styles.subGroupBlock}>
-              <Text style={styles.subGroupTag}>● אמרת (עובדות קשיחות)</Text>
-              <TextInput
-                style={styles.editableInput}
-                multiline
-                value={facts}
-                onChangeText={val => handleFieldChange('facts', val)}
-                textAlign="right"
-              />
-            </View>
-
-            {/* תת-סעיף: נראה שאתה מניח (הנחות לעתיד) */}
-            <View style={[styles.subGroupBlock, styles.assumptionSubBlock]}>
-              <Text style={[styles.subGroupTag, { color: LuxuryTheme.epistemicRoles.assumption }]}>
-                ▲ נראה שאתה מניח (השערות וציפיות)
-              </Text>
-              <TextInput
-                style={styles.editableInput}
-                multiline
-                value={assumptions}
-                onChangeText={val => handleFieldChange('assumptions', val)}
-                textAlign="right"
-              />
-            </View>
-          </View>
-
-          {/* קבוצה 3: מה עדיין יכול לשנות את הבחירה */}
-          <View style={styles.groupCard}>
-            <Text style={[styles.groupTitle, { color: LuxuryTheme.epistemicRoles.unknown }]}>
-              3. מה עדיין יכול לשנות את הבחירה
-            </Text>
-            <Text style={styles.groupDesc}>פערי מידע מרכזיים ושאלות שטרם בוררו</Text>
-            <TextInput
-              style={styles.editableInput}
-              multiline
-              value={missingInfo}
-              onChangeText={val => handleFieldChange('missingInfo', val)}
+              placeholder="מה חשוב לך להשיג, ועל מה אתה לא מוכן לוותר..."
+              placeholderTextColor={LuxuryTheme.text.tertiary}
               textAlign="right"
             />
           </View>
         </View>
-      )}
 
-      {/* --- שקט חכם (Smart Silence) כאשר ערך ההתערבות נמוך או במצב מהיר --- */}
-      {isSmartSilence && activeTab === 'mirror' && (
-        <View style={styles.smartSilenceCard}>
-          <View style={styles.smartSilenceBadge}>
-            <Text style={styles.smartSilenceBadgeText}>שקט חכם • Smart Silence</Text>
-          </View>
-          <Text style={styles.smartSilenceBody}>
-            {bespokeQuestion?.smartSilenceMessage || 'נראה שכבר הפרדת היטב בין מה שאתה יודע לבין מה שאתה מניח. אין לי כרגע שאלה ששווה לעכב אותך בגללה.'}
-          </Text>
-          <TouchableOpacity
-            style={styles.smartSilenceBtn}
-            onPress={handleSkip}
-          >
-            <Text style={styles.smartSilenceBtnText}>שמור והמשך ללא התערבות ←</Text>
+        <TouchableOpacity style={styles.bottomArrow} onPress={() => scrollToStage(2)}>
+          <Text style={styles.arrowText}>על מה אתה נשען ↓</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ================= CARD 3: על מה אתה נשען ================= */}
+      <View style={styles.cardSection}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.stageTag}>3 · על מה אתה נשען</Text>
+          <TouchableOpacity onPress={() => scrollToStage(1)}>
+            <Text style={styles.backTip}>↑ חזרה למתח</Text>
           </TouchableOpacity>
         </View>
-      )}
 
-      {/* --- שאלות הארה והתערבות (2 שאלות: דילמה נוכחית + עבר מותנה) --- */}
-      {shouldIntervene && effectiveQuestion && activeTab === 'mirror' && (
-        <View style={styles.illuminationHero}>
-          {/* שאלה 1: שאלת הארה לדילמה הנוכחית (מדויקת למלל הנוכחי) */}
-          <View style={styles.illuminationHeaderRow}>
-            <View style={styles.illuminationBadge}>
-              <Text style={styles.illuminationBadgeText}>1. שאלת חידוד לדילמה הנוכחית</Text>
+        <View style={styles.centerContent}>
+          {/* עובדות קשיחות */}
+          <View style={styles.compactBlock}>
+            <View style={styles.editBoxHeader}>
+              <Text style={[styles.editLabel, { color: '#38BDF8' }]}>מה שידוע בבירור (עובדות):</Text>
+              <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('facts', val))}>
+                <Text style={[styles.micBtn, { color: '#38BDF8' }]}>🎙️ עדכן בקול</Text>
+              </TouchableOpacity>
             </View>
-            {typeof bespokeQuestion?.expectedReflectionValue === 'number' && (
-              <View style={styles.ervBadge}>
-                <Text style={styles.ervBadgeText}>
-                  ערך השהייה משוער: {Math.round(bespokeQuestion.expectedReflectionValue * 100)}%
-                </Text>
-              </View>
-            )}
+            <TextInput
+              style={styles.compactInput}
+              multiline
+              value={facts}
+              onChangeText={val => handleFieldChange('facts', val)}
+              placeholder="נתונים ועובדות מוצקות..."
+              placeholderTextColor={LuxuryTheme.text.tertiary}
+              textAlign="right"
+            />
           </View>
 
-          <Text style={styles.illuminationQuestionText}>"{effectiveQuestion}"</Text>
-
-          {/* ווידג'ט מענה מותאם בלחיצה אחת לשאלה 1 */}
-          {bespokeQuestion?.responseWidget && bespokeQuestion.responseWidget !== 'text' && (
-            <View style={styles.widgetSection}>
-              <Text style={styles.widgetHeader}>
-                {bespokeQuestion.responseWidget === 'priority' && 'בחר את העדיפות המובילה בלחיצה אחת:'}
-                {bespokeQuestion.responseWidget === 'confirmation' && 'אישור מהיר בלחיצה אחת:'}
-                {bespokeQuestion.responseWidget === 'classification' && 'סווג את מקור הביטחון שלך:'}
-              </Text>
-              <View style={styles.widgetOptionsContainer}>
-                {(bespokeQuestion.responseOptions && bespokeQuestion.responseOptions.length > 0
-                  ? bespokeQuestion.responseOptions
-                  : (bespokeQuestion.responseWidget === 'confirmation'
-                      ? ['כן, זה מדויק', 'לא, הכיוון שונה']
-                      : bespokeQuestion.responseWidget === 'classification'
-                        ? ['נתונים מוצקים בשטח', 'ניסיון עבר אישי', 'תחושת בטן']
-                        : ['פשטות ומהירות', 'עמידות לטווח ארוך'])
-                ).map((option, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    style={styles.widgetOptionBtn}
-                    onPress={() => handleWidgetSelect(option)}
-                  >
-                    <Text style={styles.widgetOptionBtnText}>{option}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <Text style={styles.widgetOrText}>— או נסח מענה מפורט משלך —</Text>
+          {/* הנחה מובילה */}
+          <View style={[styles.compactBlock, { borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }]}>
+            <View style={styles.editBoxHeader}>
+              <Text style={[styles.editLabel, { color: LuxuryTheme.accent.gold }]}>ההנחה שמובילה אותך:</Text>
+              <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('assumptions', val))}>
+                <Text style={styles.micBtn}>🎙️ עדכן בקול</Text>
+              </TouchableOpacity>
             </View>
-          )}
+            <TextInput
+              style={styles.compactInput}
+              multiline
+              value={assumptions}
+              onChangeText={val => handleFieldChange('assumptions', val)}
+              placeholder="השערות וציפיות לגבי העתיד..."
+              placeholderTextColor={LuxuryTheme.text.tertiary}
+              textAlign="right"
+            />
+          </View>
+        </View>
 
+        <TouchableOpacity style={styles.bottomArrow} onPress={() => scrollToStage(3)}>
+          <Text style={styles.arrowText}>שאלה שתעשה סדר ↓</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ================= CARD 4: שאלה שתעשה סדר ================= */}
+      <View style={styles.cardSection}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.stageTag}>4 · שאלה שתעשה סדר</Text>
+          <TouchableOpacity onPress={() => scrollToStage(2)}>
+            <Text style={styles.backTip}>↑ חזרה להנחות</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.centerContent}>
+          <Text style={styles.questionText}>
+            "{effectiveQuestion}"
+          </Text>
+
+          {/* Audio-First Voice Button */}
+          <TouchableOpacity
+            style={[styles.bigVoiceBtn, isVoiceRecording && styles.bigVoiceBtnRecording]}
+            onPress={() => startVoiceInput(setUserAnswer)}
+          >
+            <Text style={styles.bigVoiceBtnText}>
+              {isVoiceRecording ? '● מקשיב... לחץ לסיום' : '🎙️ הקלט תשובה בקול (דיבור חופשי)'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* 1-Tap Quick Chips */}
+          <View style={styles.chipsRow}>
+            {['נתונים מוצקים', 'ניסיון עבר', 'תחושת בטן', 'לא בטוח'].map(chip => (
+              <TouchableOpacity 
+                key={chip} 
+                style={styles.chipBtn}
+                onPress={() => handleProceedWithAnswer(chip)}
+              >
+                <Text style={styles.chipText}>{chip}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Manual Input Fallback */}
           <TextInput
             style={styles.answerInput}
             multiline
-            placeholder="מענה קצר או כיוון בירור לדילמה הנוכחית..."
+            placeholder="או הקלד תשובה ידנית..."
             placeholderTextColor={LuxuryTheme.text.tertiary}
             value={userAnswer}
             onChangeText={setUserAnswer}
             textAlign="right"
           />
 
-          {/* שאלה 2: שאלת עבר מותנית (מופעלת אך ורק אם זוהה צורך אמיתי) */}
-          {historicalQuestion && historicalQuestion.shouldIntervene !== false && (
-            <View style={styles.historicalCard}>
-              <View style={styles.historicalHeaderRow}>
-                <View style={styles.historicalBadge}>
-                  <Text style={styles.historicalBadgeText}>2. שאלת עבר והקשר היסטורי</Text>
-                </View>
-                {historicalQuestion.triggerReason && (
-                  <View style={styles.historicalReasonBadge}>
-                    <Text style={styles.historicalReasonText}>{historicalQuestion.triggerReason}</Text>
-                  </View>
-                )}
-              </View>
+          <TouchableOpacity style={styles.continueBtn} onPress={() => handleProceedWithAnswer()}>
+            <Text style={styles.continueBtnText}>המשך עם המענה ←</Text>
+          </TouchableOpacity>
 
-              <Text style={styles.historicalQuestionText}>"{historicalQuestion.questionText}"</Text>
-
-              {historicalQuestion.responseWidget === 'confirmation' && (
-                <View style={styles.widgetOptionsContainer}>
-                  {(historicalQuestion.responseOptions || ['כן, רלוונטי', 'לא, הנסיבות שונות']).map((opt, idx) => (
-                    <TouchableOpacity
-                      key={idx}
-                      style={[
-                        styles.widgetOptionBtn,
-                        userHistoricalAnswer === opt && styles.historicalOptionBtnActive
-                      ]}
-                      onPress={() => setUserHistoricalAnswer(opt)}
-                    >
-                      <Text style={styles.widgetOptionBtnText}>{opt}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-
-              <TextInput
-                style={[styles.answerInput, { minHeight: 48, marginBottom: 0, marginTop: 8 }]}
-                placeholder="התייחסות ללקח מהעבר (אופציונלי)..."
-                placeholderTextColor={LuxuryTheme.text.tertiary}
-                value={userHistoricalAnswer}
-                onChangeText={setUserHistoricalAnswer}
-                textAlign="right"
-              />
-            </View>
-          )}
-
-          <View style={styles.actionRow}>
-            <TouchableOpacity
-              style={[styles.proceedButton, !userAnswer.trim() && styles.proceedButtonDisabled]}
-              disabled={!userAnswer.trim()}
-              onPress={handleProceedWithAnswer}
-            >
-              <Text style={styles.proceedButtonText}>המשך עם התשובה ←</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.skipButton}
-              onPress={handleSkip}
-            >
-              <Text style={styles.skipButtonText}>מספיק לי לעכשיו — שמור והמשך</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      {/* --- חיווי התחדדות Before / After (מחושב ע"י ה-Delta Engine) --- */}
-      {activeTab === 'insight' && insight && (
-        <View style={styles.insightCard}>
-          <View style={styles.insightBadge}>
-            <Text style={styles.insightBadgeText}>✨ מה התחדד בחשיבה</Text>
-          </View>
-
-          <View style={styles.insightRow}>
-            <Text style={styles.insightLabel}>קודם:</Text>
-            <Text style={styles.insightContent}>{insight.before}</Text>
-          </View>
-
-          <View style={styles.insightRow}>
-            <Text style={[styles.insightLabel, { color: LuxuryTheme.accent.emeraldSuccess }]}>כעת התחדד:</Text>
-            <Text style={[styles.insightContent, { fontWeight: '600' }]}>{insight.now}</Text>
-          </View>
-
-          <View style={styles.insightRow}>
-            <Text style={[styles.insightLabel, { color: LuxuryTheme.accent.auraGlow }]}>הצעד שבחרת:</Text>
-            <Text style={[styles.insightContent, { color: LuxuryTheme.text.primary, fontWeight: '700' }]}>
-              {insight.chosenStep}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.finishButton}
-            onPress={() => onAnswerSubmit(userAnswer, true)}
-          >
-            <Text style={styles.finishButtonText}>שמור לזיכרון שיקול הדעת ←</Text>
+          <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
+            <Text style={styles.skipBtnText}>מספיק לי לעכשיו — המשך ללא מענה</Text>
           </TouchableOpacity>
         </View>
-      )}
+
+        <TouchableOpacity style={styles.bottomArrow} onPress={() => scrollToStage(4)}>
+          <Text style={styles.arrowText}>לפני ואחרי ↓</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ================= CARD 5: לפני ואחרי ================= */}
+      <View style={styles.cardSection}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.stageTag}>5 · לפני ואחרי</Text>
+          <TouchableOpacity onPress={() => scrollToStage(3)}>
+            <Text style={styles.backTip}>↑ חזרה לשאלה</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.centerContent}>
+          <View style={styles.insightBox}>
+            <View style={styles.insightRow}>
+              <Text style={styles.insightLabel}>קודם חשבת:</Text>
+              <Text style={styles.insightVal}>{insight?.before || consideration}</Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.insightRow}>
+              <Text style={[styles.insightLabel, { color: LuxuryTheme.accent.emeraldSuccess }]}>כעת התחדד:</Text>
+              <Text style={[styles.insightVal, { color: LuxuryTheme.accent.emeraldSuccess, fontWeight: '600' }]}>
+                {insight?.now || userAnswer || 'הבנת את גורם המפתח להכרעה'}
+              </Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.insightRow}>
+              <Text style={[styles.insightLabel, { color: LuxuryTheme.accent.gold }]}>הצעד שנבחר:</Text>
+              <Text style={[styles.insightVal, { color: LuxuryTheme.accent.gold, fontWeight: '700' }]}>
+                {insight?.chosenStep || 'בירור מוקדם לפני הכרעה'}
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.saveDecisionBtn}
+            onPress={handleSkip}
+          >
+            <Text style={styles.saveDecisionBtnText}>שמור בזיכרון ההחלטות ←</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ height: 40 }} />
+      </View>
     </ScrollView>
   );
 };
@@ -504,553 +388,223 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: LuxuryTheme.background.base
   },
-  content: {
-    paddingHorizontal: 16,
-    paddingVertical: 20
+  cardSection: {
+    height: SCREEN_HEIGHT - 80,
+    padding: 24,
+    justifyContent: 'space-between'
   },
-  frozenBadge: {
-    alignSelf: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderColor: LuxuryTheme.background.border,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginBottom: 16
-  },
-  frozenText: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 12,
-    fontWeight: '500'
-  },
-  rawCard: {
-    backgroundColor: LuxuryTheme.background.surface,
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: LuxuryTheme.background.border
-  },
-  rawTitle: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 11,
-    marginBottom: 4,
-    textAlign: 'right'
-  },
-  rawContent: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 13,
-    lineHeight: 18,
-    textAlign: 'right'
-  },
-  first20Card: {
-    backgroundColor: LuxuryTheme.background.surfaceElevated,
-    borderRadius: 18,
-    padding: 18,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    marginBottom: 18
-  },
-  first20HeaderRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10
-  },
-  first20Tag: {
-    color: LuxuryTheme.accent.auraGlow,
-    fontSize: 11,
-    fontWeight: '700',
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6
-  },
-  first20Title: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 13,
-    fontWeight: '600'
-  },
-  decisionOneLiner: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 25,
-    textAlign: 'right',
-    marginBottom: 16
-  },
-  tensionBox: {
-    backgroundColor: 'rgba(245, 158, 11, 0.08)',
-    borderColor: 'rgba(245, 158, 11, 0.25)',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12
-  },
-  hingeBox: {
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
-    borderColor: 'rgba(56, 189, 248, 0.25)',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16
-  },
-  subHeadingLabel: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 11,
-    fontWeight: '700',
-    textAlign: 'right',
-    marginBottom: 4
-  },
-  tensionText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
-    textAlign: 'right'
-  },
-  hingeText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
-    textAlign: 'right'
-  },
-  feedbackRow: {
+  cardHeader: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14
-  },
-  feedbackBtn: {
-    flex: 1,
-    backgroundColor: LuxuryTheme.background.surface,
-    borderColor: LuxuryTheme.background.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 9,
-    alignItems: 'center'
-  },
-  feedbackBtnActiveAccurate: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-    borderColor: LuxuryTheme.accent.emeraldSuccess
-  },
-  feedbackBtnActiveInaccurate: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    borderColor: 'rgba(239, 68, 68, 0.6)'
-  },
-  feedbackBtnText: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 13,
-    fontWeight: '600'
-  },
-  feedbackBtnTextActive: {
-    color: LuxuryTheme.text.primary,
-    fontWeight: '700'
-  },
-  toggleMapBtn: {
-    alignItems: 'center',
-    paddingVertical: 8
-  },
-  toggleMapBtnText: {
-    color: LuxuryTheme.accent.auraGlow,
-    fontSize: 12,
-    fontWeight: '600'
-  },
-  memoryPillCard: {
-    backgroundColor: 'rgba(139, 92, 246, 0.08)',
-    borderColor: 'rgba(139, 92, 246, 0.3)',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 18
-  },
-  memoryPillHeader: {
-    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6
+    marginBottom: 10
   },
-  memoryPillTag: {
-    color: '#A78BFA',
-    fontSize: 10,
-    fontWeight: '700',
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4
-  },
-  memoryPillTitle: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 12,
-    fontWeight: '600'
-  },
-  memoryPillBody: {
-    color: LuxuryTheme.text.primary,
+  stageTag: {
+    color: LuxuryTheme.accent.gold,
     fontSize: 13,
-    lineHeight: 18,
+    fontWeight: '700',
+    letterSpacing: 1
+  },
+  scrollTip: {
+    color: LuxuryTheme.text.tertiary,
+    fontSize: 11
+  },
+  backTip: {
+    color: LuxuryTheme.text.tertiary,
+    fontSize: 11
+  },
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 16
+  },
+  heroHeadline: {
+    color: LuxuryTheme.text.primary,
+    fontSize: 26,
+    fontWeight: '700',
+    lineHeight: 34,
     textAlign: 'right',
-    marginBottom: 8
+    fontFamily: 'serif'
   },
-  memoryPillAction: {
-    alignSelf: 'flex-start'
-  },
-  memoryPillActionText: {
-    color: '#C4B5FD',
-    fontSize: 12,
-    fontWeight: '600'
-  },
-  pastDetailsContent: {
-    marginTop: 10,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)'
-  },
-  pastDetailsTitle: {
-    color: LuxuryTheme.text.primary,
+  subPrompt: {
+    color: LuxuryTheme.text.tertiary,
     fontSize: 13,
-    fontWeight: '700',
     textAlign: 'right'
   },
-  pastDetailsStrength: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 11,
+  editorialQuote: {
+    color: LuxuryTheme.accent.gold,
+    fontSize: 20,
+    fontStyle: 'italic',
+    lineHeight: 28,
     textAlign: 'right',
-    marginTop: 2
+    fontFamily: 'serif'
   },
-  expandedMapContainer: {
-    marginBottom: 20
-  },
-  expandedMapHeader: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'right',
+  questionText: {
+    color: LuxuryTheme.accent.gold,
+    fontSize: 22,
+    fontWeight: '600',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    lineHeight: 30,
+    fontFamily: 'serif',
     marginBottom: 12
   },
-  groupCard: {
-    backgroundColor: LuxuryTheme.background.surface,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: LuxuryTheme.background.border
-  },
-  relianceGroupCard: {
-    backgroundColor: 'rgba(15, 23, 42, 0.6)'
-  },
-  groupTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'right',
-    marginBottom: 2
-  },
-  groupDesc: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 11,
-    textAlign: 'right',
-    marginBottom: 8
-  },
-  subGroupBlock: {
+  editBox: {
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: 10,
-    padding: 10,
-    marginTop: 8
-  },
-  assumptionSubBlock: {
-    backgroundColor: 'rgba(245, 158, 11, 0.04)',
-    borderColor: 'rgba(245, 158, 11, 0.2)',
-    borderWidth: 1
-  },
-  subGroupTag: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 12,
-    fontWeight: '700',
-    textAlign: 'right',
-    marginBottom: 4
-  },
-  editableInput: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'right',
-    padding: 0
-  },
-  illuminationHero: {
-    backgroundColor: LuxuryTheme.background.surfaceElevated,
-    borderRadius: 20,
-    padding: 18,
-    borderWidth: 1.5,
-    borderColor: 'rgba(99, 102, 241, 0.4)',
-    marginBottom: 20
-  },
-  illuminationBadge: {
-    alignSelf: 'flex-end',
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-    marginBottom: 10
-  },
-  illuminationBadgeText: {
-    color: LuxuryTheme.accent.auraGlow,
-    fontSize: 11,
-    fontWeight: '700'
-  },
-  illuminationQuestionText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 17,
-    fontWeight: '600',
-    lineHeight: 25,
-    textAlign: 'right',
-    marginBottom: 14
-  },
-  historicalCard: {
-    backgroundColor: 'rgba(245, 158, 11, 0.05)',
-    borderColor: 'rgba(245, 158, 11, 0.25)',
+    borderRadius: 16,
     borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 16,
-    marginTop: 4
+    borderColor: 'rgba(212, 175, 55, 0.2)',
+    padding: 14
   },
-  historicalHeaderRow: {
-    flexDirection: 'row-reverse',
+  editBoxHeader: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8
   },
-  historicalBadge: {
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8
+  editLabel: {
+    color: LuxuryTheme.text.secondary,
+    fontSize: 12
   },
-  historicalBadgeText: {
-    color: '#F59E0B',
+  micBtn: {
+    color: LuxuryTheme.accent.gold,
     fontSize: 11,
+    fontWeight: '600'
+  },
+  largeInput: {
+    color: LuxuryTheme.text.primary,
+    fontSize: 16,
+    lineHeight: 24,
+    minHeight: 60,
+    textAlignVertical: 'top'
+  },
+  compactBlock: {
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 12
+  },
+  compactInput: {
+    color: LuxuryTheme.text.primary,
+    fontSize: 13,
+    minHeight: 40,
+    textAlignVertical: 'top'
+  },
+  bigVoiceBtn: {
+    backgroundColor: 'rgba(212, 175, 55, 0.15)',
+    borderColor: LuxuryTheme.accent.gold,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  bigVoiceBtnRecording: {
+    borderColor: '#F43F5E',
+    backgroundColor: 'rgba(244, 63, 94, 0.2)'
+  },
+  bigVoiceBtnText: {
+    color: LuxuryTheme.accent.gold,
+    fontSize: 14,
     fontWeight: '700'
   },
-  historicalReasonBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'center'
   },
-  historicalReasonText: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 10
+  chipBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.25)',
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12
   },
-  historicalQuestionText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 15,
-    fontWeight: '500',
-    lineHeight: 22,
-    textAlign: 'right',
-    marginBottom: 10
-  },
-  historicalOptionBtnActive: {
-    borderColor: '#F59E0B',
-    backgroundColor: 'rgba(245, 158, 11, 0.12)'
+  chipText: {
+    color: LuxuryTheme.text.secondary,
+    fontSize: 12
   },
   answerInput: {
-    backgroundColor: LuxuryTheme.background.base,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
     borderWidth: 1,
-    borderColor: LuxuryTheme.background.border,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 12,
     padding: 12,
     color: LuxuryTheme.text.primary,
-    fontSize: 14,
-    minHeight: 70,
-    textAlignVertical: 'top',
-    marginBottom: 14
+    fontSize: 13,
+    minHeight: 50,
+    textAlignVertical: 'top'
   },
-  actionRow: {
-    gap: 10
-  },
-  proceedButton: {
-    backgroundColor: LuxuryTheme.accent.auraGlow,
-    paddingVertical: 13,
-    borderRadius: 12,
+  continueBtn: {
+    backgroundColor: 'rgba(212, 175, 55, 0.2)',
+    borderWidth: 1,
+    borderColor: LuxuryTheme.accent.gold,
+    borderRadius: 14,
+    paddingVertical: 14,
     alignItems: 'center'
   },
-  proceedButtonDisabled: {
-    opacity: 0.4
-  },
-  proceedButtonText: {
+  continueBtnText: {
     color: LuxuryTheme.text.primary,
     fontSize: 14,
     fontWeight: '600'
   },
-  skipButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    paddingVertical: 11,
-    borderRadius: 12,
-    alignItems: 'center'
+  skipBtn: {
+    alignItems: 'center',
+    paddingVertical: 4
   },
-  skipButtonText: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 13
-  },
-  insightCard: {
-    backgroundColor: 'rgba(16, 185, 129, 0.06)',
-    borderColor: 'rgba(16, 185, 129, 0.35)',
-    borderWidth: 1.5,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 24
-  },
-  insightBadge: {
-    alignSelf: 'flex-end',
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-    marginBottom: 14
-  },
-  insightBadgeText: {
-    color: LuxuryTheme.accent.emeraldSuccess,
+  skipBtnText: {
+    color: LuxuryTheme.text.tertiary,
     fontSize: 12,
-    fontWeight: '700'
+    textDecorationLine: 'underline'
+  },
+  insightBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.3)',
+    borderRadius: 16,
+    padding: 16,
+    gap: 12
   },
   insightRow: {
-    marginBottom: 12
+    gap: 4
   },
   insightLabel: {
     color: LuxuryTheme.text.tertiary,
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'right',
-    marginBottom: 2
+    fontSize: 11
   },
-  insightContent: {
-    color: LuxuryTheme.text.primary,
+  insightVal: {
+    color: LuxuryTheme.text.secondary,
     fontSize: 14,
-    lineHeight: 20,
     textAlign: 'right'
   },
-  finishButton: {
-    backgroundColor: LuxuryTheme.accent.emeraldSuccess,
-    paddingVertical: 13,
-    borderRadius: 12,
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)'
+  },
+  saveDecisionBtn: {
+    backgroundColor: 'rgba(212, 175, 55, 0.25)',
+    borderWidth: 1,
+    borderColor: LuxuryTheme.accent.gold,
+    borderRadius: 16,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 8
+    marginTop: 12
   },
-  finishButtonText: {
+  saveDecisionBtnText: {
     color: LuxuryTheme.text.primary,
-    fontSize: 14,
-    fontWeight: '600'
-  },
-  smartSilenceCard: {
-    backgroundColor: 'rgba(56, 189, 248, 0.06)',
-    borderColor: 'rgba(56, 189, 248, 0.3)',
-    borderWidth: 1.5,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20
-  },
-  smartSilenceBadge: {
-    alignSelf: 'flex-end',
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-    marginBottom: 10
-  },
-  smartSilenceBadgeText: {
-    color: '#38BDF8',
-    fontSize: 11,
+    fontSize: 15,
     fontWeight: '700'
   },
-  smartSilenceBody: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'right',
-    marginBottom: 16
-  },
-  smartSilenceBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center'
-  },
-  smartSilenceBtnText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 14,
-    fontWeight: '600'
-  },
-  illuminationHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  bottomArrow: {
     alignItems: 'center',
-    marginBottom: 10
+    paddingVertical: 8
   },
-  ervBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8
-  },
-  ervBadgeText: {
-    color: LuxuryTheme.accent.emeraldSuccess,
-    fontSize: 11,
-    fontWeight: '600'
-  },
-  widgetSection: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 14
-  },
-  widgetHeader: {
-    color: LuxuryTheme.text.secondary,
+  arrowText: {
+    color: LuxuryTheme.accent.gold,
     fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'right',
-    marginBottom: 10
-  },
-  widgetOptionsContainer: {
-    gap: 8
-  },
-  widgetOptionBtn: {
-    backgroundColor: 'rgba(99, 102, 241, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.35)',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    alignItems: 'center'
-  },
-  widgetOptionBtnText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 14,
-    fontWeight: '600'
-  },
-  widgetOrText: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 11,
-    textAlign: 'center',
-    marginTop: 10
-  },
-  frictionHeaderBadge: {
-    alignSelf: 'center',
-    backgroundColor: 'rgba(212, 175, 55, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.25)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    marginBottom: 12
-  },
-  frictionHeaderBadgeText: {
-    color: '#FDE68A',
-    fontSize: 11,
-    fontWeight: '600'
+    fontWeight: '500'
   }
 });
