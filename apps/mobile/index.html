@@ -110,7 +110,7 @@
           <!-- Row 1: Active User, Switch, Key, Cloud (Pure System Typography) -->
           <div class="flex items-center justify-between gap-1.5 text-xs">
             <div class="flex items-center gap-1.5 flex-wrap">
-              <span id="currentUserNameDisplay" class="text-xs font-semibold tracking-wider" style="color: var(--c-accent);">@guy_founder</span>
+              <span id="currentUserNameDisplay" onclick="promptSwitchUser()" class="text-xs font-semibold tracking-wider cursor-pointer hover:opacity-80 transition-opacity" style="color: var(--c-accent);" title="לחץ לשינוי שם או החלפת משתמש">@guy_founder</span>
               <button onclick="promptSwitchUser()" class="px-2 py-0.5 rounded-full text-[10px] border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] transition-all font-light" style="color: var(--c-text);">
                 החלף
               </button>
