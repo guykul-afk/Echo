@@ -221,7 +221,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
       {/* ================= CARD 3: מה שידוע בבירור (עובדות) ================= */}
       <View style={styles.cardSection}>
         <View style={styles.cardHeader}>
-          <Text style={[styles.stageTag, { color: '#38BDF8' }]}>3 · מה שידוע בבירור</Text>
+          <Text style={styles.stageTag}>3 · מה שידוע בבירור</Text>
           <TouchableOpacity onPress={() => scrollToStage(1)}>
             <Text style={styles.backTip}>↑ חזרה למתח</Text>
           </TouchableOpacity>
@@ -230,11 +230,11 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         <View style={styles.centerContent}>
           <Text style={styles.subPrompt}>נתונים, התרחשויות קונקרטיות ומידע מוצק:</Text>
 
-          <View style={[styles.editBox, { borderColor: 'rgba(56, 189, 248, 0.35)', backgroundColor: 'rgba(56, 189, 248, 0.03)' }]}>
+          <View style={[styles.editBox, { borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }]}>
             <View style={styles.editBoxHeader}>
-              <Text style={[styles.editLabel, { color: '#38BDF8', fontWeight: '600' }]}>עובדות מוצקות:</Text>
+              <Text style={[styles.editLabel, { color: LuxuryTheme.accent.gold, fontWeight: '600' }]}>עובדות מוצקות:</Text>
               <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('facts', val))}>
-                <Text style={[styles.micBtn, { color: '#38BDF8' }]}>🎙️ עדכן בקול</Text>
+                <Text style={styles.micBtn}>🎙️ עדכן בקול</Text>
               </TouchableOpacity>
             </View>
             <TextInput
@@ -286,14 +286,14 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         </View>
 
         <TouchableOpacity style={styles.bottomArrow} onPress={() => scrollToStage(4)}>
-          <Text style={styles.arrowText}>שאלה שתעשה סדר ↓</Text>
+          <Text style={styles.arrowText}>שאלת חידוד ↓</Text>
         </TouchableOpacity>
       </View>
 
-      {/* ================= CARD 5: שאלה שתעשה סדר ================= */}
+      {/* ================= CARD 5: שאלת חידוד ================= */}
       <View style={styles.cardSection}>
         <View style={styles.cardHeader}>
-          <Text style={styles.stageTag}>5 · שאלה שתעשה סדר</Text>
+          <Text style={styles.stageTag}>5 · שאלת חידוד</Text>
           <TouchableOpacity onPress={() => scrollToStage(3)}>
             <Text style={styles.backTip}>↑ חזרה להנחות</Text>
           </TouchableOpacity>
@@ -313,19 +313,6 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
               {isVoiceRecording ? '● מקשיב... לחץ לסיום' : '🎙️ הקלט תשובה בקול (דיבור חופשי)'}
             </Text>
           </TouchableOpacity>
-
-          {/* 1-Tap Quick Chips */}
-          <View style={styles.chipsRow}>
-            {['נתונים מוצקים', 'ניסיון עבר', 'תחושת בטן', 'לא בטוח'].map(chip => (
-              <TouchableOpacity 
-                key={chip} 
-                style={styles.chipBtn}
-                onPress={() => handleProceedWithAnswer(chip)}
-              >
-                <Text style={styles.chipText}>{chip}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
 
           {/* Manual Input Fallback */}
           <TextInput
@@ -357,7 +344,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         <View style={styles.cardHeader}>
           <Text style={styles.stageTag}>6 · סיכום</Text>
           <TouchableOpacity onPress={() => scrollToStage(4)}>
-            <Text style={styles.backTip}>↑ חזרה לשאלה</Text>
+            <Text style={styles.backTip}>↑ חזרה לשאלת חידוד</Text>
           </TouchableOpacity>
         </View>
 
@@ -374,8 +361,8 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
             <View style={styles.divider} />
 
             <View style={styles.insightRow}>
-              <Text style={[styles.insightLabel, { color: LuxuryTheme.accent.emeraldSuccess }]}>המסקנה כעת:</Text>
-              <Text style={[styles.insightVal, { color: LuxuryTheme.accent.emeraldSuccess, fontWeight: '600' }]}>
+              <Text style={[styles.insightLabel, { color: LuxuryTheme.accent.gold }]}>המסקנה כעת:</Text>
+              <Text style={[styles.insightVal, { color: LuxuryTheme.accent.gold, fontWeight: '600' }]}>
                 {insight?.now || userAnswer || 'הבנת את גורם המפתח להכרעה'}
               </Text>
             </View>

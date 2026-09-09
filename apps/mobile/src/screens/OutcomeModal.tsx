@@ -91,9 +91,9 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
         <View style={styles.evalGrid}>
           {(
             [
-              ['clarified', 'הסתדר מעולה ✓', LuxuryTheme.accent.emeraldSuccess],
-              ['succeeded_as_expected', 'התברר אחרת ⚡', LuxuryTheme.accent.amberWarning],
-              ['not_yet', 'עדיין פתוח ⏳', '#38BDF8'],
+              ['clarified', 'הסתדר מעולה ✓', LuxuryTheme.accent.gold],
+              ['succeeded_as_expected', 'התברר אחרת ⚡', LuxuryTheme.accent.gold],
+              ['not_yet', 'עדיין פתוח ⏳', LuxuryTheme.accent.gold],
               ['irrelevant', 'ירד מהפרק ✕', LuxuryTheme.text.tertiary]
             ] as const
           ).map(([val, label, color]) => (
