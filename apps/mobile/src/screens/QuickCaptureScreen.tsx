@@ -92,11 +92,6 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        {onOpenProfile && (
-          <TouchableOpacity style={styles.profileBtn} onPress={onOpenProfile}>
-            <Text style={styles.profileBtnText}>🪞 פרופיל שיקול דעת</Text>
-          </TouchableOpacity>
-        )}
         <Text style={styles.title}>echo</Text>
         <Text style={styles.subtitle}>הזיכרון הלומד של שיקול הדעת</Text>
       </View>

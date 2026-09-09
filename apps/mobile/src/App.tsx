@@ -175,7 +175,6 @@ export const App: React.FC = () => {
         {step === 'capture' && (
           <QuickCaptureScreen
             onCaptureSubmit={handleCaptureSubmit}
-            onOpenProfile={() => setStep('profile')}
             isLoading={isLoading}
           />
         )}

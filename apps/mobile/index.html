@@ -121,13 +121,10 @@
             <span id="cloudSyncStatus" class="text-[10px] font-light opacity-70 shrink-0" style="color: var(--c-text);" title="Firebase Cloud Firestore">ענן מחובר</span>
           </div>
 
-          <!-- Row 2: Calibration Profile & Decision Journal (Pure System Typography) -->
-          <div class="flex items-center justify-between gap-2 pt-1.5 border-t" style="border-color: var(--c-border);">
-            <button onclick="openDecisionProfileModal()" class="flex-1 py-1.5 px-3 rounded-xl text-[11px] border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-all font-medium flex items-center justify-center" style="color: var(--c-text);">
-              <span>כיול</span>
-            </button>
-            <button onclick="openDecisionsJournal()" class="flex-1 py-1.5 px-3 rounded-xl text-[11px] border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-all font-medium flex items-center justify-center gap-1" style="color: var(--c-text);">
-              <span>יומן</span>
+          <!-- Row 2: Decision Journal (Pure System Typography) -->
+          <div class="pt-1.5 border-t" style="border-color: var(--c-border);">
+            <button onclick="openDecisionsJournal()" class="w-full py-1.5 px-3 rounded-xl text-[11px] border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-all font-medium flex items-center justify-center gap-1.5" style="color: var(--c-text);">
+              <span>יומן החלטות</span>
               <span id="badgeDueFollowUps" class="hidden text-[10px] font-bold" style="color: var(--c-accent);"></span>
             </button>
           </div>
@@ -566,128 +563,6 @@
     </div>
   </div>
 
-  <!-- ================= MODAL: DECISION PROFILE & EPISTEMIC CALIBRATION ================= -->
-  <div id="modalDecisionProfile" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md">
-    <div class="w-full max-w-[440px] sm:max-w-[480px] rounded-3xl border p-5 space-y-4 text-right overflow-y-auto max-h-[88vh] shadow-2xl custom-scroll" style="background-color: var(--c-void); border-color: var(--c-border);">
-      
-      <div class="flex items-center justify-between">
-        <button onclick="closeDecisionProfileModal()" class="text-xs px-2.5 py-1 rounded-full border border-stone-700 opacity-60 hover:opacity-100 transition-opacity">✕ סגור</button>
-        <div class="flex items-center gap-1.5">
-          <span class="text-[10px] font-mono tracking-wider text-amber-300">EPISTEMIC META-PROFILE</span>
-        </div>
-      </div>
-
-      <div class="flex justify-between items-start">
-        <div>
-          <h3 class="font-editorial text-xl font-bold">פרופיל שיקול דעת</h3>
-          <p class="text-xs opacity-50 font-light mt-0.5">זיכרון אפיסטמי מצטבר וכיול אישי</p>
-        </div>
-        <button onclick="closeDecisionProfileModal(); openDecisionsJournal();" class="text-[11px] text-amber-300/90 hover:underline pt-1">
-          פתח יומן החלטות
-        </button>
-      </div>
-
-      <!-- 1. מדד כיול הסתברותי (Brier Calibration) -->
-      <div class="p-4 rounded-2xl border space-y-3" style="border-color: var(--c-border); background: var(--c-glass);">
-        <div class="flex items-center justify-between">
-          <span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border" style="border-color: var(--c-border); background: rgba(212, 175, 55, 0.1); color: var(--c-accent);">שכבה 8 · כיול הסתברותי</span>
-          <span class="text-sm font-semibold" style="color: var(--c-text);">ציון כיול (Brier Score)</span>
-        </div>
-
-        <div class="flex items-center justify-between gap-4">
-          <div class="text-3xl font-bold font-mono" id="profileBrierScore" style="color: var(--c-accent);">0.14</div>
-          <div class="text-right text-xs space-y-1">
-            <div class="font-semibold" id="profileBrierLabel" style="color: var(--c-accent);">רמת כיול גבוהה ומדויקת</div>
-            <p class="text-[10px] opacity-60 leading-tight" style="color: var(--c-text);">
-              הפער הממוצע בין מידת הביטחון שלך לבין תוצאות המציאות בפועל (0 = מושלם, 1 = שגיאה מלאה).
-            </p>
-          </div>
-        </div>
-
-        <div class="w-full rounded-full h-2 overflow-hidden" style="background: rgba(255, 255, 255, 0.08);">
-          <div id="profileBrierBar" class="h-2 rounded-full transition-all duration-500" style="width: 86%; background-color: var(--c-accent);"></div>
-        </div>
-      </div>
-
-      <!-- 2. מרשם שבירות הנחות (Assumption Fragility Registry) -->
-      <div class="p-4 rounded-2xl border space-y-3" style="border-color: var(--c-border); background: var(--c-glass);">
-        <div class="flex items-center justify-between">
-          <span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border" style="border-color: var(--c-border); background: rgba(212, 175, 55, 0.1); color: var(--c-accent);">מרשם הנחות שבירות</span>
-          <span class="text-sm font-semibold" style="color: var(--c-text);">שבירות לפי קטגוריות</span>
-        </div>
-        <p class="text-[11px] opacity-60 font-light" style="color: var(--c-text);">
-          היכן הנחות העבודה שלך נטו להתברר כשגויות או כפגיעות ביותר בדיעבד:
-        </p>
-
-        <div class="space-y-3 pt-1">
-          <!-- Item 1 -->
-          <div class="space-y-1">
-            <div class="flex justify-between text-xs font-light">
-              <span style="color: var(--c-text);">זמני ביצוע, רכש ולוגיסטיקה</span>
-              <span class="font-mono font-medium opacity-80" style="color: var(--c-text);">64% שבירות</span>
-            </div>
-            <p class="text-[10px] opacity-50" style="color: var(--c-text);">פקטור תת-הערכה אופייני: משימות נמשכו בפועל פי 2.4 מהצפוי.</p>
-            <div class="w-full rounded-full h-1.5 overflow-hidden" style="background: rgba(255, 255, 255, 0.08);">
-              <div class="h-1.5 rounded-full opacity-60" style="width: 64%; background-color: var(--c-accent);"></div>
-            </div>
-          </div>
-
-          <!-- Item 2 -->
-          <div class="space-y-1">
-            <div class="flex justify-between text-xs font-light">
-              <span style="color: var(--c-text);">יישור קו ותלות בגורמי חוץ</span>
-              <span class="font-mono font-medium opacity-80" style="color: var(--c-text);">42% שבירות</span>
-            </div>
-            <p class="text-[10px] opacity-50" style="color: var(--c-text);">הנחה על עבודה עם ספק יחיד יצרה חיכוך תפעולי ב-3 מתוך 7 מקרים.</p>
-            <div class="w-full rounded-full h-1.5 overflow-hidden" style="background: rgba(255, 255, 255, 0.08);">
-              <div class="h-1.5 rounded-full opacity-60" style="width: 42%; background-color: var(--c-accent);"></div>
-            </div>
-          </div>
-
-          <!-- Item 3 -->
-          <div class="space-y-1">
-            <div class="flex justify-between text-xs font-light">
-              <span style="color: var(--c-text);">ביקוש לקוחות ומוכנות לשלם</span>
-              <span class="font-mono font-medium" style="color: var(--c-accent);">21% שבירות</span>
-            </div>
-            <p class="text-[10px] opacity-50" style="color: var(--c-text);">רמת דיוק גבוהה — בדיקות מקדימות בשבועיים אימתו את הביקוש ביעילות.</p>
-            <div class="w-full rounded-full h-1.5 overflow-hidden" style="background: rgba(255, 255, 255, 0.08);">
-              <div class="h-1.5 rounded-full" style="width: 21%; background-color: var(--c-accent);"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 3. מבנה תיק ההחלטות (Decision Architecture & Portfolio) -->
-      <div class="p-4 rounded-2xl border space-y-3" style="border-color: var(--c-border); background: var(--c-glass);">
-        <div class="flex items-center justify-between">
-          <span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border border-white/10 bg-white/[0.04] opacity-70" style="color: var(--c-text);">חתימת החלטות</span>
-          <span class="text-sm font-semibold" style="color: var(--c-text);">מבנה תיק ההחלטות</span>
-        </div>
-
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-center">
-          <div class="p-2.5 rounded-xl border border-white/5" style="background: rgba(0, 0, 0, 0.3);">
-            <div class="text-xl font-bold font-mono" id="profileTotalDecisions" style="color: var(--c-accent);">26</div>
-            <div class="text-[9px] opacity-60 mt-0.5" style="color: var(--c-text);">החלטות מתועדות</div>
-          </div>
-          <div class="p-2.5 rounded-xl border border-white/5" style="background: rgba(0, 0, 0, 0.3);">
-            <div class="text-xl font-bold font-mono" id="profileClosedLoops" style="color: var(--c-accent);">13</div>
-            <div class="text-[9px] opacity-60 mt-0.5" style="color: var(--c-text);">מעגלים שנחתמו</div>
-          </div>
-          <div class="p-2.5 rounded-xl border border-white/5" style="background: rgba(0, 0, 0, 0.3);">
-            <div class="text-xl font-bold font-mono opacity-80" id="profileReversibility" style="color: var(--c-text);">72%</div>
-            <div class="text-[9px] opacity-60 mt-0.5" style="color: var(--c-text);">הפיכות חלקית/מלאה</div>
-          </div>
-          <div class="p-2.5 rounded-xl border border-white/5" style="background: rgba(0, 0, 0, 0.3);">
-            <div class="text-xl font-bold font-mono" id="profileCommitSlope" style="color: var(--c-accent);">0.71</div>
-            <div class="text-[9px] opacity-60 mt-0.5" style="color: var(--c-text);">שיפוע התחייבות</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
   <!-- ================= MODAL: DECISIONS JOURNAL & FOLLOW-UP CENTER ================= -->
   <div id="modalDecisionsJournal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md">
     <div class="w-full max-w-[440px] sm:max-w-[480px] rounded-3xl border p-5 space-y-4 text-right overflow-y-auto max-h-[88vh] shadow-2xl custom-scroll" style="background-color: var(--c-void); border-color: var(--c-border);">
@@ -705,9 +580,6 @@
           <h3 class="font-editorial text-xl font-bold">מעקב החלטות ושיקול דעת</h3>
           <p class="text-xs opacity-50 font-light mt-0.5">כלל ההחלטות שהוקפאו, אותות המעקב והלכידות המקושרות.</p>
         </div>
-        <button onclick="closeDecisionsJournal(); openDecisionProfileModal();" class="text-[11px] text-amber-300/90 hover:underline pt-1">
-          פרופיל כיול
-        </button>
       </div>
 
       <!-- Decision Cards Container -->
@@ -1137,16 +1009,9 @@
       const merged = Array.from(map.values()).sort((a, b) => (a.frozenAt || 0) - (b.frozenAt || 0));
       localStorage.setItem(key, JSON.stringify(merged));
 
-      if (merged.length > 0) {
-        const latest = merged[merged.length - 1];
-        applyDecisionToUI(latest);
-        // Unlock scroll thread so user can explore their deliberation room
-        setScrollLock(false);
-      } else {
-        // Zero decisions: clean empty canvas with no other user's data
-        resetToEmptyState();
-        setScrollLock(true);
-      }
+      updateJournalBadges(merged.length);
+      updateTopBarStatus(`ענן מחובר (${merged.length} החלטות)`, false);
+      checkAndPromptDueFollowUps();
 
       // Sync any local-only records up to Firestore if SDK is ready
       if (firestoreDb) {
@@ -1869,31 +1734,24 @@
             if (valid.length !== cases.length) {
               localStorage.setItem(key, JSON.stringify(valid));
             }
-            if (valid.length > 0) {
-              const latest = valid[valid.length - 1];
-              applyDecisionToUI(latest);
-              setScrollLock(false);
-              updateJournalBadges(valid.length);
-              updateTopBarStatus(`ענן מחובר (${valid.length} החלטות)`, false);
-            } else {
-              resetToEmptyState();
-              updateJournalBadges(0);
-              updateTopBarStatus('ענן מחובר (0 החלטות)', false);
-            }
+            updateJournalBadges(valid.length);
+            updateTopBarStatus(`ענן מחובר (${valid.length} החלטות)`, false);
           } else {
-            resetToEmptyState();
             updateJournalBadges(0);
             updateTopBarStatus('ענן מחובר (0 החלטות)', false);
           }
         } catch (e) {
           console.error(e);
-          resetToEmptyState();
+          updateJournalBadges(0);
+          updateTopBarStatus('ענן מחובר (0 החלטות)', false);
         }
       } else {
-        resetToEmptyState();
         updateJournalBadges(0);
         updateTopBarStatus('ענן מחובר (0 החלטות)', false);
       }
+
+      // Always start fresh for a new capture on open
+      resetSystemForNewCapture();
 
       // Sync with Cloud Firestore in background
       syncWithCloud(currentUsername);
@@ -3722,44 +3580,6 @@ ${pastSummary}
       const statusLabels = { clarified: 'ביררתי', pending: 'עדיין בתהליך', irrelevant: 'לא רלוונטי' };
       alert(`מעגל הלמידה נשמר בהצלחה וקושר להחלטה:\n"${dec.title}"\n\nסטטוס: ${statusLabels[currentFuQuickStatus] || currentFuQuickStatus}\nכל הכבוד על סגירת מעגל שיקול הדעת.`);
     }
-    // ================= DECISION PROFILE MODAL (EPISTEMIC META-PROFILE) =================
-    function openDecisionProfileModal() {
-      closeTechnicalHeader();
-      try {
-        const key = getUserStorageKey();
-        const raw = localStorage.getItem(key) || '[]';
-        const decisions = JSON.parse(raw).filter(d => !isMockOrLegacy(d));
-
-        const total = decisions.length;
-        const closed = decisions.filter(d => d.status === 'evaluated' || d.followUpStatus === 'evaluated' || d.evaluatedAt).length;
-
-        const totalEl = document.getElementById('profileTotalDecisions');
-        const closedEl = document.getElementById('profileClosedLoops');
-        const revEl = document.getElementById('profileReversibility');
-        const commitEl = document.getElementById('profileCommitSlope');
-
-        if (totalEl) totalEl.innerText = total > 0 ? String(total) : '26';
-        if (closedEl) closedEl.innerText = total > 0 ? String(closed) : '13';
-
-        if (total > 0) {
-          const type2Count = decisions.filter(d => d.type === 'Type 2' || (d.reversibility && d.reversibility.includes('הפיכה'))).length;
-          const revPct = total > 0 ? Math.round((type2Count / total) * 100) : 72;
-          if (revEl) revEl.innerText = `${revPct > 0 ? revPct : 70}%`;
-          if (commitEl) commitEl.innerText = '0.71';
-        }
-      } catch (err) {
-        console.warn('Profile stats calculation:', err);
-      }
-
-      const modal = document.getElementById('modalDecisionProfile');
-      if (modal) modal.classList.remove('hidden');
-    }
-
-    function closeDecisionProfileModal() {
-      const modal = document.getElementById('modalDecisionProfile');
-      if (modal) modal.classList.add('hidden');
-    }
-
     // ================= DECISION JOURNAL MODAL & NOTIFICATIONS =================
     function openDecisionsJournal() {
       closeTechnicalHeader();
@@ -4515,8 +4335,14 @@ ${historicalContextPrompt}
       resetSystemForNewCapture();
     }
 
-    // Initialize lock, Firebase cloud connection & sync history
+    // Prevent browser from restoring old scroll positions on refresh
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+
+    // Initialize lock, clean capture state & Firebase cloud
     setScrollLock(true);
+    resetSystemForNewCapture();
     initFirebaseCloud();
     updateUserDisplay();
 
@@ -4531,9 +4357,19 @@ ${historicalContextPrompt}
         openSwitchUserModal(true);
       }, 100);
     }
+    
+    // Ensure viewport is locked at the very top for fresh capture
+    const stream = document.getElementById('scrollStream');
+    if (stream) {
+      stream.scrollTop = 0;
+      stream.scrollTo({ top: 0, behavior: 'instant' });
+    }
     setTimeout(() => {
-      const stream = document.getElementById('scrollStream');
-      if (stream) stream.scrollTop = 0;
+      const s = document.getElementById('scrollStream');
+      if (s) {
+        s.scrollTop = 0;
+        s.scrollTo({ top: 0, behavior: 'instant' });
+      }
     }, 50);
   </script>
 </body>
