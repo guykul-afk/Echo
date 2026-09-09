@@ -1035,16 +1035,16 @@
     <div class="w-full max-w-[360px] rounded-3xl border p-5 space-y-4 text-right shadow-2xl custom-scroll" style="background-color: var(--c-void); border-color: var(--c-border);">
       
       <div class="flex items-center justify-between">
-        <button onclick="closeSwitchUserModal()" class="text-xs px-2.5 py-1 rounded-full border border-stone-700 opacity-60 hover:opacity-100 transition-opacity">✕ סגור</button>
+        <button id="btnCloseSwitchUser" onclick="closeSwitchUserModal()" class="text-xs px-2.5 py-1 rounded-full border border-stone-700 opacity-60 hover:opacity-100 transition-opacity">✕ סגור</button>
         <div class="flex items-center gap-1.5">
           <span class="text-[10px] font-mono tracking-wider opacity-50">USER IDENTITY</span>
         </div>
       </div>
 
       <div>
-        <h3 class="font-editorial text-xl font-bold">החלפת משתמש / מרחב חדש</h3>
-        <p class="text-xs opacity-50 font-light mt-1 leading-relaxed">
-          כל משתמש מקבל מרחב החלטות מבודד בענן ובמכשיר. הקלדת שם חדש תפתח מרחב נקי חדש לחלוטין.
+        <h3 id="modalSwitchUserTitle" class="font-editorial text-xl font-bold">כניסה למרחב אישי</h3>
+        <p id="modalSwitchUserDesc" class="text-xs opacity-50 font-light mt-1 leading-relaxed">
+          לכל משתמש מרחב שיקול דעת פרטי ומבודד לחלוטין. אנא התחבר או הזן את שמך כדי להתחיל.
         </p>
       </div>
 
@@ -1408,22 +1408,25 @@
     }
 
     // ================= USER IDENTITY & MULTI-TENANCY =================
-    let currentUsername = localStorage.getItem('echo_username') || 'guy_founder';
+    let currentUsername = localStorage.getItem('echo_username') || '';
     updateUserDisplay();
-    addKnownUser(currentUsername);
+    if (currentUsername) {
+      addKnownUser(currentUsername);
+    }
 
     function getKnownUsers() {
       try {
         const raw = localStorage.getItem('echo_known_users');
-        const list = raw ? JSON.parse(raw) : ['guy_founder'];
-        if (!list.includes(currentUsername)) list.push(currentUsername);
+        const list = raw ? JSON.parse(raw) : [];
+        if (currentUsername && !list.includes(currentUsername)) list.push(currentUsername);
         return list;
       } catch (e) {
-        return ['guy_founder'];
+        return [];
       }
     }
 
     function addKnownUser(username) {
+      if (!username) return;
       try {
         const list = getKnownUsers();
         if (!list.includes(username)) {
@@ -1435,18 +1438,41 @@
       }
     }
 
-    function openSwitchUserModal() {
+    function openSwitchUserModal(isFirstTime = false) {
       closeTechnicalHeader();
       const modal = document.getElementById('modalSwitchUser');
       const input = document.getElementById('inputSwitchUserName');
       const chips = document.getElementById('recentUsersChips');
-      
+      const recentSection = document.getElementById('recentUsersSection');
+      const closeBtn = document.getElementById('btnCloseSwitchUser');
+      const titleEl = document.getElementById('modalSwitchUserTitle');
+      const descEl = document.getElementById('modalSwitchUserDesc');
+
+      const isFirstLaunch = !currentUsername || isFirstTime;
+
+      if (closeBtn) {
+        closeBtn.style.display = isFirstLaunch ? 'none' : 'inline-block';
+      }
+
+      if (titleEl) {
+        titleEl.innerText = isFirstLaunch ? 'כניסה למרחב אישי' : 'החלפת משתמש / מרחב חדש';
+      }
+      if (descEl) {
+        descEl.innerText = isFirstLaunch 
+          ? 'לכל משתמש מרחב שיקול דעת פרטי ומבודד לחלוטין. אנא התחבר או הזן את שמך כדי להתחיל.'
+          : 'כל משתמש מקבל מרחב החלטות מבודד בענן ובמכשיר. הקלדת שם חדש תפתח מרחב נקי חדש לחלוטין.';
+      }
+
       if (input) {
-        input.value = currentUsername;
+        input.value = currentUsername || '';
+      }
+
+      const users = getKnownUsers();
+      if (recentSection) {
+        recentSection.style.display = users.length > 0 ? 'block' : 'none';
       }
 
       if (chips) {
-        const users = getKnownUsers();
         chips.innerHTML = users.map(u => `
           <button 
             type="button" 
@@ -1463,6 +1489,12 @@
     }
 
     function closeSwitchUserModal() {
+      if (!currentUsername) {
+        alert('חובה להזין שם משתמש או להתחבר כדי להיכנס למערכת.');
+        const input = document.getElementById('inputSwitchUserName');
+        if (input) input.focus();
+        return;
+      }
       const modal = document.getElementById('modalSwitchUser');
       if (modal) modal.classList.add('hidden');
     }
@@ -1606,7 +1638,7 @@
     });
 
     function updateUserDisplay() {
-      const formatted = '@' + currentUsername;
+      const formatted = currentUsername ? '@' + currentUsername : 'לא מחובר';
       const navDisplay = document.getElementById('currentUserNameDisplay');
       const badgeDisplay = document.getElementById('badgeUserTag');
       if (navDisplay) navDisplay.innerText = formatted;
@@ -4635,7 +4667,19 @@ ${historicalContextPrompt}
     // Initialize lock, Firebase cloud connection & sync history
     setScrollLock(true);
     initFirebaseCloud();
-    loadUserDecisionHistory();
+    updateUserDisplay();
+
+    if (currentUsername) {
+      loadUserDecisionHistory();
+    } else {
+      resetToEmptyState();
+      updateJournalBadges(0);
+      updateTopBarStatus('ממתין להזדהות', false);
+      // First time on new device: open onboarding modal immediately
+      setTimeout(() => {
+        openSwitchUserModal(true);
+      }, 100);
+    }
     setTimeout(() => {
       const stream = document.getElementById('scrollStream');
       if (stream) stream.scrollTop = 0;
