@@ -112,7 +112,7 @@
             <div class="flex items-center gap-1.5 flex-wrap">
               <span id="currentUserNameDisplay" onclick="promptSwitchUser()" class="text-xs font-semibold tracking-wider cursor-pointer hover:opacity-80 transition-opacity" style="color: var(--c-accent);" title="לחץ לשינוי שם או החלפת משתמש">@guy_founder</span>
               <button onclick="promptSwitchUser()" class="px-2 py-0.5 rounded-full text-[10px] border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] transition-all font-light" style="color: var(--c-text);">
-                החלף
+                שנה שם / החלף
               </button>
               <button onclick="promptConfigureApiKey()" title="הגדר מפתח Gemini API (אופציונלי)" class="px-2 py-0.5 rounded-full text-[10px] border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] transition-all font-light" style="color: var(--c-text);">
                 מפתח
@@ -808,7 +808,7 @@
             type="text" 
             placeholder="לדוגמה: גיא, דנה, user_123..." 
             class="w-full bg-transparent text-xs text-stone-100 placeholder-stone-600 focus:outline-none"
-            onkeydown="if(event.key === 'Enter') confirmSwitchUser()"
+            onkeydown="if(event.key === 'Enter') handleUserModalSubmit()"
           />
         </div>
       </div>
@@ -823,12 +823,23 @@
 
       <!-- Action Buttons -->
       <div class="pt-2 space-y-2">
+        <!-- Button 1: Rename current user keeping all data -->
         <button 
-          onclick="confirmSwitchUser()" 
-          class="w-full py-2.5 rounded-xl text-xs font-medium tracking-widest uppercase transition-all shadow-lg active:scale-[0.98] border text-stone-100" 
-          style="background-color: rgba(212,175,55,0.15); border-color: var(--c-accent);"
+          id="btnRenameCurrentUser"
+          onclick="renameCurrentUser()" 
+          class="w-full py-2.5 rounded-xl text-xs font-semibold tracking-wider transition-all shadow-lg active:scale-[0.98] border text-amber-200" 
+          style="background-color: rgba(212,175,55,0.22); border-color: var(--c-accent);"
         >
-          אישור ומעבר למרחב
+          ✓ עדכן את שמי (העבר את כל המידע לשם החדש)
+        </button>
+
+        <!-- Button 2: Switch to another user or first time launch -->
+        <button 
+          id="btnSwitchOrCreateUser"
+          onclick="confirmSwitchUser()" 
+          class="w-full py-2 rounded-xl text-[11px] font-medium transition-all active:scale-[0.98] border border-stone-700 bg-white/[0.03] text-stone-300 hover:border-stone-500"
+        >
+          החלף מרחב / פתח משתמש חדש (נקי)
         </button>
 
         <!-- Social Sign-In (Google / Apple) -->
@@ -1188,6 +1199,14 @@
       }
     }
 
+    function handleUserModalSubmit() {
+      if (currentUsername) {
+        renameCurrentUser();
+      } else {
+        confirmSwitchUser();
+      }
+    }
+
     function openSwitchUserModal(isFirstTime = false) {
       closeTechnicalHeader();
       const modal = document.getElementById('modalSwitchUser');
@@ -1197,6 +1216,8 @@
       const closeBtn = document.getElementById('btnCloseSwitchUser');
       const titleEl = document.getElementById('modalSwitchUserTitle');
       const descEl = document.getElementById('modalSwitchUserDesc');
+      const btnRename = document.getElementById('btnRenameCurrentUser');
+      const btnSwitch = document.getElementById('btnSwitchOrCreateUser');
 
       const isFirstLaunch = !currentUsername || isFirstTime;
 
@@ -1205,12 +1226,30 @@
       }
 
       if (titleEl) {
-        titleEl.innerText = isFirstLaunch ? 'כניסה למרחב אישי' : 'החלפת משתמש / מרחב חדש';
+        titleEl.innerText = isFirstLaunch ? 'כניסה למרחב אישי' : 'הגדרות שם משתמש ומרחב';
       }
       if (descEl) {
-        descEl.innerText = isFirstLaunch 
-          ? 'לכל משתמש מרחב שיקול דעת פרטי ומבודד לחלוטין. אנא התחבר או הזן את שמך כדי להתחיל.'
-          : 'כל משתמש מקבל מרחב החלטות מבודד בענן ובמכשיר. הקלדת שם חדש תפתח מרחב נקי חדש לחלוטין.';
+        descEl.innerHTML = isFirstLaunch 
+          ? 'לכל משתמש מרחב שיקול דעת פרטי ומבודד לחלוטין. אנא הזן את שמך כדי להתחיל.'
+          : `שם נוכחי: <b class="text-amber-300 font-mono">@${currentUsername}</b>.<br/>כדי לשנות את שמך ושכל המידע שלך ימשיך איתך, הקלד את השם החדש ולחץ <b>עדכן שם</b>.`;
+      }
+
+      if (btnRename) {
+        btnRename.style.display = isFirstLaunch ? 'none' : 'block';
+      }
+
+      if (btnSwitch) {
+        if (isFirstLaunch) {
+          btnSwitch.innerText = 'אישור וכניסה למרחב';
+          btnSwitch.className = 'w-full py-2.5 rounded-xl text-xs font-semibold tracking-wider uppercase transition-all shadow-lg active:scale-[0.98] border text-stone-100';
+          btnSwitch.style.backgroundColor = 'rgba(212,175,55,0.2)';
+          btnSwitch.style.borderColor = 'var(--c-accent)';
+        } else {
+          btnSwitch.innerText = 'החלף מרחב / פתח משתמש חדש (נקי)';
+          btnSwitch.className = 'w-full py-2 rounded-xl text-[11px] font-medium transition-all active:scale-[0.98] border border-stone-700 bg-white/[0.03] text-stone-300 hover:border-stone-500';
+          btnSwitch.style.backgroundColor = '';
+          btnSwitch.style.borderColor = '';
+        }
       }
 
       if (input) {
@@ -1253,6 +1292,116 @@
       const input = document.getElementById('inputSwitchUserName');
       if (input) input.value = username;
       confirmSwitchUser();
+    }
+
+    async function renameCurrentUser() {
+      const input = document.getElementById('inputSwitchUserName');
+      let rawVal = input ? input.value.trim() : '';
+      if (!rawVal) {
+        alert('אנא הזן שם משתמש');
+        if (input) input.focus();
+        return;
+      }
+
+      // Clean leading @ and sanitize spaces/slashes
+      rawVal = rawVal.replace(/^@+/, '').trim().replace(/[\s\/\\#\?]/g, '_');
+      if (!rawVal) return;
+
+      const oldUsername = currentUsername;
+
+      // If no current user yet, simply log in
+      if (!oldUsername) {
+        return confirmSwitchUser();
+      }
+
+      // If same name, just close modal
+      if (rawVal === oldUsername) {
+        closeSwitchUserModal();
+        return;
+      }
+
+      const newUsername = rawVal;
+      updateTopBarStatus('מעדכן שם ומעביר נתונים...', true);
+
+      // 1. Fetch all decisions belonging to oldUsername
+      const oldKey = `echo_decisions_${oldUsername}`;
+      const newKey = `echo_decisions_${newUsername}`;
+      let decisions = [];
+      try {
+        const raw = localStorage.getItem(oldKey);
+        if (raw) decisions = JSON.parse(raw);
+      } catch (e) {
+        decisions = [];
+      }
+
+      // If local array is empty but memory has cases, fallback to memory
+      if (decisions.length === 0 && Array.isArray(window.currentDecisionCaseHistory) && window.currentDecisionCaseHistory.length > 0) {
+        decisions = window.currentDecisionCaseHistory;
+      }
+
+      decisions = decisions.filter(d => !isMockOrLegacy(d));
+
+      // Re-tag every decision with new user ID
+      const now = Date.now();
+      const updatedDecisions = decisions.map(d => ({
+        ...d,
+        userId: newUsername,
+        lastSyncedAt: now
+      }));
+
+      // 2. Save in localStorage under new user key
+      localStorage.setItem(newKey, JSON.stringify(updatedDecisions));
+
+      // 3. Migrate user calibration profile if exists
+      try {
+        const oldProfile = localStorage.getItem(`echo_decision_profile_${oldUsername}`);
+        if (oldProfile) {
+          localStorage.setItem(`echo_decision_profile_${newUsername}`, oldProfile);
+        }
+      } catch (e) {}
+
+      // 4. Update known users list
+      try {
+        let known = getKnownUsers();
+        // Preserve guy_founder in list as origin if needed, otherwise replace
+        if (oldUsername === 'guy_founder') {
+          if (!known.includes('guy_founder')) known.push('guy_founder');
+          if (!known.includes(newUsername)) known.push(newUsername);
+        } else {
+          known = known.map(u => u === oldUsername ? newUsername : u);
+          if (!known.includes(newUsername)) known.push(newUsername);
+        }
+        localStorage.setItem('echo_known_users', JSON.stringify(known));
+      } catch (e) {}
+
+      // 5. Update active username state
+      currentUsername = newUsername;
+      localStorage.setItem('echo_username', currentUsername);
+
+      // Update UI components
+      updateUserDisplay();
+      closeSwitchUserModal();
+
+      // 6. Migrate decisions to Cloud Firestore under users/{newUsername}/decisions
+      if (firestoreDb && updatedDecisions.length > 0) {
+        for (const d of updatedDecisions) {
+          try {
+            await firestoreDb
+              .collection('users')
+              .doc(newUsername)
+              .collection('decisions')
+              .doc(d.id)
+              .set(d, { merge: true });
+          } catch (cloudErr) {
+            console.warn('[ECHO Cloud Rename Transfer]:', cloudErr);
+          }
+        }
+      }
+
+      // 7. Refresh UI with transferred decisions
+      loadUserDecisionHistory();
+
+      alert(`שם המשתמש עודכן בהצלחה ל-@${newUsername}!\nכל ${updatedDecisions.length} ההחלטות והנתונים שלך נשמרו וממשיכים איתך.`);
     }
 
     function confirmSwitchUser() {
@@ -3850,6 +3999,7 @@ ${pastSummary}
         } else {
           badge.classList.add('hidden');
         }
+      }
     }
 
     let isRefiningAnswer = false;
