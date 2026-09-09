@@ -1,12 +1,18 @@
 import {
   createDecisionCaseHandler,
-  TriFactorRetrievalService
+  TriFactorRetrievalService,
+  recordMirrorFeedbackHandler,
+  submitDeliberationAnswerHandler,
+  finalizeEvaluationContractHandler,
+  recordOutcomeHandler,
+  DecisionService
 } from '@echo/backend';
 import { MockIsolatedDatabase } from '../helpers/test-context.js';
 
 export async function testMultiTenancyIsolation(): Promise<boolean> {
   console.log('--- [E2E TEST 2] Running Zero-Trust Multi-Tenancy Isolation Test ---');
   const db = new MockIsolatedDatabase();
+  const decisionService = new DecisionService();
 
   const userA = 'user_noam_founder';
   const userB = 'user_dana_investor';
@@ -15,7 +21,8 @@ export async function testMultiTenancyIsolation(): Promise<boolean> {
   console.log('Step 1: User A creates a confidential case...');
   const resA = await createDecisionCaseHandler(
     { rawText: 'סודי: שוקלים פיטורי סמנכ"ל טכנולוגיות בעקבות אי עמידה ביעדים' },
-    { auth: { uid: userA } }
+    { auth: { uid: userA } },
+    decisionService
   );
 
   db.getUserStore(userA).cases.set(resA.caseId, resA.decisionCase);
@@ -26,7 +33,8 @@ export async function testMultiTenancyIsolation(): Promise<boolean> {
   console.log('\nStep 2: User B creates an independent case...');
   const resB = await createDecisionCaseHandler(
     { rawText: 'השקעה של 2 מיליון דולר בסטארטאפ בינה מלאכותית בשלב סיד' },
-    { auth: { uid: userB } }
+    { auth: { uid: userB } },
+    decisionService
   );
 
   db.getUserStore(userB).cases.set(resB.caseId, resB.decisionCase);
@@ -49,12 +57,85 @@ export async function testMultiTenancyIsolation(): Promise<boolean> {
     throw new Error('SECURITY VIOLATION: User B was able to access User A data!');
   }
 
+  // 3.1 Verify Backend Function Cross-User Mutation Blocking (User B attempts to modify User A's case)
+  console.log('\nStep 3.1: Testing Cross-User Function Calls (User B attempting actions on User A case)...');
+  
+  // Test 3.1.1: Record mirror feedback
+  let feedbackBlocked = false;
+  try {
+    await recordMirrorFeedbackHandler(
+      { caseId: resA.caseId, feedback: 'accurate' },
+      { auth: { uid: userB } },
+      decisionService
+    );
+  } catch (err: any) {
+    if (err.message.includes('PERMISSION_DENIED')) {
+      feedbackBlocked = true;
+      console.log(`✓ RecordMirrorFeedback blocked across users: "${err.message}"`);
+    }
+  }
+  if (!feedbackBlocked) {
+    throw new Error('SECURITY VIOLATION: User B was able to modify User A mirror feedback!');
+  }
+
+  // Test 3.1.2: Submit deliberation answer
+  let deliberationBlocked = false;
+  try {
+    await submitDeliberationAnswerHandler(
+      { caseId: resA.caseId, answerText: 'התערבות לא מורשית' },
+      { auth: { uid: userB } },
+      decisionService
+    );
+  } catch (err: any) {
+    if (err.message.includes('PERMISSION_DENIED')) {
+      deliberationBlocked = true;
+      console.log(`✓ SubmitDeliberationAnswer blocked across users: "${err.message}"`);
+    }
+  }
+  if (!deliberationBlocked) {
+    throw new Error('SECURITY VIOLATION: User B was able to answer User A deliberation!');
+  }
+
+  // Test 3.1.3: Finalize contract
+  let contractBlocked = false;
+  try {
+    await finalizeEvaluationContractHandler(
+      { caseId: resA.caseId, selectedOptionId: 'opt-1', targetCriteria: 'קריטריון זדוני', checkHorizonDays: 10 },
+      { auth: { uid: userB } },
+      decisionService
+    );
+  } catch (err: any) {
+    if (err.message.includes('PERMISSION_DENIED')) {
+      contractBlocked = true;
+      console.log(`✓ FinalizeEvaluationContract blocked across users: "${err.message}"`);
+    }
+  }
+  if (!contractBlocked) {
+    throw new Error('SECURITY VIOLATION: User B was able to lock contract on User A case!');
+  }
+
+  // Test 3.1.4: Record outcome
+  let outcomeBlocked = false;
+  try {
+    await recordOutcomeHandler(
+      { caseId: resA.caseId, whatHappened: 'תוצאה של תוקף' },
+      { auth: { uid: userB } },
+      decisionService
+    );
+  } catch (err: any) {
+    if (err.message.includes('PERMISSION_DENIED')) {
+      outcomeBlocked = true;
+      console.log(`✓ RecordOutcome blocked across users: "${err.message}"`);
+    }
+  }
+  if (!outcomeBlocked) {
+    throw new Error('SECURITY VIOLATION: User B was able to record outcome on User A case!');
+  }
+
   // 4. Verify Tri-Factor Retrieval Isolation
   console.log('\nStep 4: Testing Tri-Factor Structural Analogy Isolation...');
 
-  // User A's signature and candidate comparison
   const candidateSigA = resA.signature;
-
   const matchA = TriFactorRetrievalService.calculateRelevance(
     resA.signature,
     candidateSigA

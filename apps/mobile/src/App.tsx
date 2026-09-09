@@ -22,6 +22,7 @@ export const App: React.FC = () => {
   const [historicalQuestion, setHistoricalQuestion] = useState<IlluminationQuestion | undefined>(undefined);
   const [refinedInsight, setRefinedInsight] = useState<RefinedInsight | undefined>(undefined);
   const [chosenNextStep, setChosenNextStep] = useState<string>('');
+  const [currentUserId, setCurrentUserId] = useState<string>('guy_founder');
 
   // 1. Handle Quick Capture
   const handleCaptureSubmit = (rawText: string, frictionLevel: 'quick' | 'focused' | 'deep' = 'focused') => {
@@ -35,8 +36,8 @@ export const App: React.FC = () => {
       const firstLine = rawText.split('\n')[0].trim();
       const title = firstLine.slice(0, 50) + (firstLine.length > 50 ? '...' : '');
       const mockCase: DecisionCase = {
-        id: 'dc-001',
-        userId: 'user-noam',
+        id: `dc-${now}`,
+        userId: currentUserId,
         title: title || 'דילמת שיקול דעת',
         status: 'deliberating',
         family: 'general_deliberation',

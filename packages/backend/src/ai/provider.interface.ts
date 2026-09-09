@@ -59,7 +59,8 @@ export interface IAiProvider {
     humanDimensions: FiveHumanDimensions,
     illuminationQuestion: string,
     userAnswer: string,
-    isSkip: boolean
+    isSkip: boolean,
+    historicalQuestion?: string
   ): Promise<DeltaAnalysisResult>;
   generateStructuralEmbedding(signature: ExtractedSignatureDTO, context: Record<string, any>): Promise<number[]>;
   generateSemanticEmbedding(text: string): Promise<number[]>;

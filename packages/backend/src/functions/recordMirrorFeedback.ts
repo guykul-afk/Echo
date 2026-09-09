@@ -27,7 +27,7 @@ export async function recordMirrorFeedbackHandler(
     throw new Error("INVALID_ARGUMENT: feedback must be either 'accurate' or 'inaccurate'.");
   }
 
-  const updatedCase = await decisionService.recordMirrorFeedback(data.caseId, data.feedback);
+  const updatedCase = await decisionService.recordMirrorFeedback(data.caseId, data.feedback, context.auth.uid);
 
   return {
     success: true,

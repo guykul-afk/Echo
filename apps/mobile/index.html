@@ -19,8 +19,9 @@
   <meta name="application-name" content="echo">
 
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
-  <!-- Firebase SDKs for Real-time Cloud Persistence -->
+  <!-- Firebase SDKs for Real-time Cloud Persistence & Auth -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="env-config.js?v=20260907_4"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -74,11 +75,12 @@
 
     <!-- Collapsible Technical Top Header Bar (Hidden by default, toggled via small arrow) -->
     <div class="w-full shrink-0 z-30 flex flex-col items-center">
-      <!-- Minimalist Small Arrow Button (Matches Spec / Screenshot) -->
+      <!-- Minimalist Small Arrow Button (Matches Spec / Clean Top Bar) -->
       <button 
         id="btnToggleTechHeader"
         onclick="toggleTechnicalHeader()" 
-        class="pt-3 pb-1 px-4 flex items-center justify-center text-[#D4AF37] opacity-60 hover:opacity-100 transition-all focus:outline-none cursor-pointer group select-none active:scale-90"
+        class="pt-3 pb-1 px-4 flex items-center justify-center opacity-60 hover:opacity-100 transition-all focus:outline-none cursor-pointer group select-none active:scale-90"
+        style="color: var(--c-accent);"
         title="פתיחת/סגירת תפריט טכני והגדרות"
         aria-label="תפריט טכני"
       >
@@ -89,29 +91,33 @@
 
       <!-- Expandable Technical Drawer Panel -->
       <div id="technicalDrawer" class="w-full px-4 overflow-hidden transition-all duration-300 ease-in-out max-h-0 opacity-0 pointer-events-none">
-        <div class="mb-2 py-2 px-3 rounded-2xl bg-white/[0.03] border border-amber-500/20 backdrop-blur-md flex flex-col gap-2 shadow-xl">
-          <!-- Row 1: Active User, Switch, Key, Cloud (Pure Amber Text) -->
+        <div class="mb-2 py-2 px-3 rounded-2xl bg-white/[0.03] border backdrop-blur-md flex flex-col gap-2 shadow-xl" style="border-color: var(--c-border);">
+          <!-- Row 1: Active User, Switch, Key, Cloud (Pure System Typography) -->
           <div class="flex items-center justify-between gap-1.5 text-xs">
             <div class="flex items-center gap-1.5 flex-wrap">
-              <span id="currentUserNameDisplay" class="text-xs font-semibold tracking-wider text-amber-300">@guy_founder</span>
-              <button onclick="promptSwitchUser()" class="px-2 py-0.5 rounded-full text-[10px] border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-all font-light">
+              <span id="currentUserNameDisplay" class="text-xs font-semibold tracking-wider" style="color: var(--c-accent);">@guy_founder</span>
+              <button onclick="promptSwitchUser()" class="px-2 py-0.5 rounded-full text-[10px] border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] transition-all font-light" style="color: var(--c-text);">
                 החלף
               </button>
-              <button onclick="promptConfigureApiKey()" title="הגדר מפתח Gemini API (אופציונלי)" class="px-2 py-0.5 rounded-full text-[10px] border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-all font-light">
+              <button onclick="promptConfigureApiKey()" title="הגדר מפתח Gemini API (אופציונלי)" class="px-2 py-0.5 rounded-full text-[10px] border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] transition-all font-light" style="color: var(--c-text);">
                 מפתח
               </button>
             </div>
-            <span id="cloudSyncStatus" class="text-[10px] font-light text-amber-300/80 shrink-0" title="Firebase Cloud Firestore">ענן מחובר</span>
+            <span id="cloudSyncStatus" class="text-[10px] font-light opacity-70 shrink-0" style="color: var(--c-text);" title="Firebase Cloud Firestore">ענן מחובר</span>
           </div>
 
-          <!-- Row 2: Calibration Profile & Decision Journal (Pure Amber Text) -->
-          <div class="flex items-center justify-between gap-1.5 pt-1.5 border-t border-amber-500/15">
-            <button onclick="openDecisionProfileModal()" class="flex-1 py-1.5 px-2 rounded-xl text-[11px] border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-all font-medium flex items-center justify-center">
-              <span>פרופיל כיול</span>
+          <!-- Row 2: Echoes Tab, Calibration Profile & Decision Journal (Pure System Typography) -->
+          <div class="flex items-center justify-between gap-1.5 pt-1.5 border-t" style="border-color: var(--c-border);">
+            <button onclick="openEchoesTabModal()" class="flex-1 py-1.5 px-2 rounded-xl text-[11px] border font-semibold flex items-center justify-center gap-1 transition-all active:scale-95" style="border-color: var(--c-border); background: rgba(212, 175, 55, 0.12); color: var(--c-accent);">
+              <span>🪞 הדים</span>
+              <span id="btnDirectEchoesTabBadge" class="text-[9px] font-mono px-1 py-0.2 rounded-full" style="background: rgba(212, 175, 55, 0.2); color: var(--c-accent);">(1/3)</span>
             </button>
-            <button onclick="openDecisionsJournal()" class="flex-1 py-1.5 px-2 rounded-xl text-[11px] border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-all font-medium flex items-center justify-center gap-1">
-              <span>יומן ומעקב</span>
-              <span id="badgeDueFollowUps" class="hidden text-[10px] font-bold text-amber-300"></span>
+            <button onclick="openDecisionProfileModal()" class="flex-1 py-1.5 px-2 rounded-xl text-[11px] border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-all font-medium flex items-center justify-center" style="color: var(--c-text);">
+              <span>כיול</span>
+            </button>
+            <button onclick="openDecisionsJournal()" class="flex-1 py-1.5 px-2 rounded-xl text-[11px] border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-all font-medium flex items-center justify-center gap-1" style="color: var(--c-text);">
+              <span>יומן</span>
+              <span id="badgeDueFollowUps" class="hidden text-[10px] font-bold" style="color: var(--c-accent);"></span>
             </button>
           </div>
         </div>
@@ -187,7 +193,7 @@
           <span class="text-[9px] font-mono tracking-widest text-stone-400 opacity-60">FROZEN BEFORE OUTCOME</span>
         </div>
 
-        <h2 id="dispTitle" class="font-editorial text-2xl font-bold leading-snug mb-2 opacity-95">
+        <h2 id="dispTitle" class="font-editorial text-xl sm:text-2xl font-bold leading-relaxed mb-3 opacity-95 break-words">
           ממתין ללכידת שיקול דעת ראשונה
         </h2>
 
@@ -572,6 +578,222 @@
     </div>
   </div>
 
+  <!-- ================= MODAL: ECHOES & REFLECTIONS TAB (השתקפויות והדים) ================= -->
+  <div id="modalEchoesTab" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md">
+    <div class="w-full max-w-[440px] sm:max-w-[480px] rounded-3xl border p-5 space-y-4 text-right overflow-y-auto max-h-[88vh] shadow-2xl custom-scroll" style="background-color: var(--c-void); border-color: var(--c-border);">
+      
+      <!-- Modal Top Bar -->
+      <div class="flex items-center justify-between">
+        <button onclick="closeEchoesTabModal()" class="text-xs px-2.5 py-1 rounded-full border border-white/10 opacity-60 hover:opacity-100 transition-opacity" style="color: var(--c-text);">✕ סגור</button>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[10px] font-mono tracking-wider" style="color: var(--c-accent);">LONG-TERM REFLECTIONS</span>
+        </div>
+      </div>
+
+      <!-- Title & Subtitle -->
+      <div class="flex justify-between items-start">
+        <div>
+          <h3 class="font-editorial text-2xl font-bold" style="color: var(--c-accent);">השתקפויות והדים</h3>
+          <p class="text-xs opacity-60 font-light mt-0.5" style="color: var(--c-text);">המראה ארוכת הטווח של שיקול הדעת האנושי</p>
+        </div>
+        <div class="flex items-center gap-1 text-[10px] font-mono border px-2 py-0.5 rounded-full" style="border-color: var(--c-border); background: rgba(212, 175, 55, 0.1); color: var(--c-accent);">
+          <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background-color: var(--c-accent);"></span>
+          <span>פעיל</span>
+        </div>
+      </div>
+
+      <!-- Sync Banner (כל 3 לכידות / סגירות) -->
+      <div class="p-3.5 rounded-2xl border space-y-2" style="border-color: var(--c-border); background: rgba(212, 175, 55, 0.04);">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold" style="color: var(--c-accent);">סנכרון מחזור ההד הבא</span>
+          <span class="text-[10px] opacity-60" style="color: var(--c-text);">מתעדכן כל 3 אירועים</span>
+        </div>
+        <p class="text-[11px] opacity-70 leading-relaxed font-light" style="color: var(--c-text);">
+          פרופיל ההחלטות מכייל את עצמו אוטומטית מתוך היסטוריית הרשומות בכל 3 לכידות או 3 סגירות מעגל:
+        </p>
+        <div class="flex items-center justify-around py-2 rounded-xl border text-center" style="background: rgba(0, 0, 0, 0.4); border-color: var(--c-border);">
+          <div>
+            <div class="text-base font-bold font-mono" id="echoesCapturesProgress" style="color: var(--c-accent);">2/3</div>
+            <div class="text-[10px] opacity-60" style="color: var(--c-text);">לכידות במחזור</div>
+          </div>
+          <div class="w-[1px] h-6 bg-white/10"></div>
+          <div>
+            <div class="text-base font-bold font-mono" id="echoesClosuresProgress" style="color: var(--c-accent);">1/3</div>
+            <div class="text-[10px] opacity-60" style="color: var(--c-text);">סגירות מעגל</div>
+          </div>
+        </div>
+        <div class="text-center pt-0.5">
+          <span class="text-[10px] font-light" style="color: var(--c-accent);">💡 עוד פעולה אחת לחישוב מחדש של ההד שלך</span>
+        </div>
+      </div>
+
+      <!-- 1. כרטיסיית מלכודת הדיכוטומיה והדרך השלישית -->
+      <div class="p-4 rounded-2xl border space-y-3" style="border-color: var(--c-border); background: var(--c-glass);">
+        <div class="flex items-center justify-between">
+          <span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border" style="border-color: var(--c-border); background: rgba(212, 175, 55, 0.1); color: var(--c-accent);">דפוס קוגניטיבי מובהק</span>
+          <span class="text-sm font-semibold" style="color: var(--c-text);">מלכוד הדיכוטומיה והדרך השלישית</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 py-2 px-3 rounded-xl border text-center" style="background: rgba(0, 0, 0, 0.3); border-color: var(--c-border);">
+          <div>
+            <div class="text-2xl font-bold font-mono opacity-80" style="color: var(--c-text);">80%</div>
+            <div class="text-[10px] opacity-60" style="color: var(--c-text);">ניסוח "או-או" ראשוני</div>
+          </div>
+          <div class="border-r" style="border-color: var(--c-border);">
+            <div class="text-2xl font-bold font-mono" style="color: var(--c-accent);">75%</div>
+            <div class="text-[10px] opacity-60" style="color: var(--c-text);">חילוץ דרך שלישית בהכרעה</div>
+          </div>
+        </div>
+
+        <p class="text-[11px] opacity-70 font-light leading-relaxed" style="color: var(--c-text);">
+          ברוב המקרים אתה מתחיל מקונפליקט קוטבי נוקשה (A או B). אולם לאחר שיקוף המראה, אתה מצטיין במציאת סינתזה יצירתית המפרקת את הקיטוב.
+        </p>
+
+        <!-- Accordion Toggle Examples -->
+        <button onclick="toggleEchoesExamples()" class="w-full py-1.5 px-3 rounded-lg border text-[11px] hover:bg-white/[0.06] transition-all flex items-center justify-center gap-1" style="border-color: var(--c-border); background: rgba(212, 175, 55, 0.08); color: var(--c-accent);">
+          <span id="echoesExamplesToggleText">▼ ראה דוגמאות ממעגלי ההחלטה שלך</span>
+        </button>
+
+        <div id="echoesExamplesBox" class="hidden space-y-2 pt-1">
+          <div class="p-2.5 rounded-xl border text-xs space-y-1" style="background: rgba(0, 0, 0, 0.4); border-color: var(--c-border);">
+            <div class="font-semibold" style="color: var(--c-accent);">דילמת בית הספר (נווה):</div>
+            <div class="text-[10px] opacity-60" style="color: var(--c-text);">• דיכוטומיה ראשונית: רמה לימודית בפרטי מול מענה חברתי באזורי.</div>
+            <div class="text-[10px] font-medium" style="color: var(--c-accent);">← הדרך השלישית: הישארות בבית הספר הפרטי + רישום לצופים ולחוגים.</div>
+          </div>
+          <div class="p-2.5 rounded-xl border text-xs space-y-1" style="background: rgba(0, 0, 0, 0.4); border-color: var(--c-border);">
+            <div class="font-semibold" style="color: var(--c-accent);">אימוני ספורט (איתן):</div>
+            <div class="text-[10px] opacity-60" style="color: var(--c-text);">• דיכוטומיה ראשונית: כפיית טיפוס מול פרישה שמקנה הרגלי ויתור.</div>
+            <div class="text-[10px] font-medium" style="color: var(--c-accent);">← הדרך השלישית: פיילוט מותנה לשחייה עד תחילת השנה ללא פרישה מוקדמת.</div>
+          </div>
+          <div class="p-2.5 rounded-xl border text-xs space-y-1" style="background: rgba(0, 0, 0, 0.4); border-color: var(--c-border);">
+            <div class="font-semibold" style="color: var(--c-accent);">תמחור דירות (קיטרוני וסלומון):</div>
+            <div class="text-[10px] opacity-60" style="color: var(--c-text);">• דיכוטומיה ראשונית: הורדת 150 אלף ₪ גורפת מול אי-ודאות תזרימית.</div>
+            <div class="text-[10px] font-medium" style="color: var(--c-accent);">← הדרך השלישית: מבצע מתוחם בזמן ל-2 דירות בלבד לשמירה על שאר הפרויקט.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. כרטיסיית דיוק הנחות היסוד -->
+      <div class="p-4 rounded-2xl border space-y-3" style="border-color: var(--c-border); background: var(--c-glass);">
+        <div class="flex items-center justify-between">
+          <span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border" style="border-color: var(--c-border); background: rgba(212, 175, 55, 0.1); color: var(--c-accent);">כיול הנחות עבודה</span>
+          <span class="text-sm font-semibold" style="color: var(--c-text);">התממשות הנחות מול המציאות</span>
+        </div>
+
+        <p class="text-[11px] opacity-60 font-light" style="color: var(--c-text);">
+          שיעור הדיוק של הנחות היסוד שהקפאת בזמן אמת, בפילוח לפי תחומי פעילות:
+        </p>
+
+        <div class="space-y-3 pt-1">
+          <!-- Item 1 -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs font-light">
+              <span style="color: var(--c-text);">הנדסה, עלויות ביצוע ורכש נדל"ן</span>
+              <span class="font-mono font-bold" style="color: var(--c-accent);">88% דיוק</span>
+            </div>
+            <p class="text-[10px] opacity-50" style="color: var(--c-text);">הערכות מקצועיות יציבות; ספי הסיכון שקבעת מול קבלני שלד וספקים מדויקים.</p>
+            <div class="w-full rounded-full h-1.5 overflow-hidden" style="background: rgba(255, 255, 255, 0.08);">
+              <div class="h-1.5 rounded-full" style="width: 88%; background-color: var(--c-accent);"></div>
+            </div>
+          </div>
+
+          <!-- Item 2 -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs font-light">
+              <span style="color: var(--c-text);">גורם אנושי, יחסי עבודה ושותפים</span>
+              <span class="font-mono font-bold opacity-80" style="color: var(--c-text);">58% דיוק</span>
+            </div>
+            <p class="text-[10px] opacity-50" style="color: var(--c-text);">פער עקבי בהערכת תגובות רגשיות או נכונות דיירים ועובדים לשתף פעולה.</p>
+            <div class="w-full rounded-full h-1.5 overflow-hidden" style="background: rgba(255, 255, 255, 0.08);">
+              <div class="h-1.5 rounded-full opacity-60" style="width: 58%; background-color: var(--c-accent);"></div>
+            </div>
+          </div>
+
+          <!-- Item 3 -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs font-light">
+              <span style="color: var(--c-text);">סנטימנט שוק וקצב התאוששות</span>
+              <span class="font-mono font-bold" style="color: var(--c-accent);">72% דיוק</span>
+            </div>
+            <p class="text-[10px] opacity-50" style="color: var(--c-text);">נטייה שמרנית המגדרת תרחישי קיצון בצורה אפקטיבית מול השוק.</p>
+            <div class="w-full rounded-full h-1.5 overflow-hidden" style="background: rgba(255, 255, 255, 0.08);">
+              <div class="h-1.5 rounded-full opacity-80" style="width: 72%; background-color: var(--c-accent);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. כרטיסיית מאזן תעוזה ושמרנות -->
+      <div class="p-4 rounded-2xl border space-y-3" style="border-color: var(--c-border); background: var(--c-glass);">
+        <div class="flex items-center justify-between">
+          <span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border" style="border-color: var(--c-border); background: rgba(212, 175, 55, 0.1); color: var(--c-accent);">פער סומטי מול פיננסי</span>
+          <span class="text-sm font-semibold" style="color: var(--c-text);">מאזן תעוזה ושמרנות</span>
+        </div>
+
+        <p class="text-[11px] opacity-60 font-light" style="color: var(--c-text);">
+          המערכת מזהה פיצול חד בין ניהול סיכוני כסף לבין סיכוני בריאות וגוף:
+        </p>
+
+        <div class="space-y-2 pt-1">
+          <div class="p-3 rounded-xl border space-y-1" style="background: rgba(0, 0, 0, 0.4); border-color: var(--c-border);">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold" style="color: var(--c-text);">💼 החלטות ממון ועסקים</span>
+              <span class="text-[10px] font-bold" style="color: var(--c-accent);">🛡️ שמרנות קיצונית</span>
+            </div>
+            <p class="text-[10px] opacity-60 leading-relaxed" style="color: var(--c-text);">
+              היצמדות קשיחה לדו"ח אפס, דאגה מתמדת לתזרים, פיצול ספקים לגיבוי ושנאת קטסטרופה (Extremistan Aversion).
+            </p>
+          </div>
+
+          <div class="p-3 rounded-xl border space-y-1" style="background: rgba(0, 0, 0, 0.4); border-color: var(--c-border);">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold" style="color: var(--c-text);">🏄‍♂️ גוף, ספורט ובריאות</span>
+              <span class="text-[10px] font-bold opacity-80" style="color: var(--c-accent);">⚡ תעוזה ונטילת סיכון</span>
+            </div>
+            <p class="text-[10px] opacity-60 leading-relaxed" style="color: var(--c-text);">
+              גלישה בכנרת תחת אזהרת זיהום, חזרה לריצה מול פציעת גב, בחירת גלשן רמה מעליך ודחיית סמנים סומטיים.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. כרטיסיית בריאות סגירת המעגלים -->
+      <div class="p-4 rounded-2xl border space-y-3" style="border-color: var(--c-border); background: var(--c-glass);">
+        <div class="flex items-center justify-between">
+          <span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border" style="border-color: var(--c-border); background: rgba(212, 175, 55, 0.1); color: var(--c-accent);">לולאת למידה</span>
+          <span class="text-sm font-semibold" style="color: var(--c-text);">בריאות סגירת המעגלים</span>
+        </div>
+
+        <div class="grid grid-cols-4 gap-1.5 text-center">
+          <div class="p-2 rounded-xl border" style="background: rgba(0, 0, 0, 0.3); border-color: var(--c-border);">
+            <div class="text-lg font-bold font-mono" style="color: var(--c-accent);">35</div>
+            <div class="text-[9px] opacity-60" style="color: var(--c-text);">מתועדות</div>
+          </div>
+          <div class="p-2 rounded-xl border" style="background: rgba(0, 0, 0, 0.3); border-color: var(--c-border);">
+            <div class="text-lg font-bold font-mono opacity-80" style="color: var(--c-text);">26</div>
+            <div class="text-[9px] opacity-60" style="color: var(--c-text);">נחתמו</div>
+          </div>
+          <div class="p-2 rounded-xl border" style="background: rgba(0, 0, 0, 0.3); border-color: var(--c-border);">
+            <div class="text-lg font-bold font-mono" style="color: var(--c-accent);">8</div>
+            <div class="text-[9px] opacity-60" style="color: var(--c-text);">נסגרו</div>
+          </div>
+          <div class="p-2 rounded-xl border" style="background: rgba(0, 0, 0, 0.3); border-color: var(--c-border);">
+            <div class="text-lg font-bold font-mono opacity-60" style="color: var(--c-text);">18</div>
+            <div class="text-[9px] opacity-60" style="color: var(--c-text);">פתוחים</div>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl border text-xs space-y-1" style="border-color: var(--c-border); background: rgba(212, 175, 55, 0.05);">
+          <div class="font-semibold" style="color: var(--c-accent);">⚠️ תובנה על חלונות הזמן שלך:</div>
+          <p class="text-[10px] leading-relaxed font-light opacity-80" style="color: var(--c-text);">
+            קבעת חלונות ביקורת קצרים (3–7 ימים) גם עבור תהליכים מורכבים (חינוך, מחירי נדל"ן). מומלץ להאריך ל-30–60 יום לקבלת משוב יציב מהמציאות.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ================= MODAL: DECISION PROFILE & EPISTEMIC CALIBRATION ================= -->
   <div id="modalDecisionProfile" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md">
     <div class="w-full max-w-[440px] sm:max-w-[480px] rounded-3xl border p-5 space-y-4 text-right overflow-y-auto max-h-[88vh] shadow-2xl custom-scroll" style="background-color: var(--c-void); border-color: var(--c-border);">
@@ -594,34 +816,34 @@
       </div>
 
       <!-- 1. מדד כיול הסתברותי (Brier Calibration) -->
-      <div class="p-4 rounded-2xl border border-white/10 bg-white/[0.02] space-y-3">
+      <div class="p-4 rounded-2xl border space-y-3" style="border-color: var(--c-border); background: var(--c-glass);">
         <div class="flex items-center justify-between">
-          <span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300">שכבה 8 · כיול הסתברותי</span>
-          <span class="text-sm font-semibold text-stone-200">ציון כיול (Brier Score)</span>
+          <span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border" style="border-color: var(--c-border); background: rgba(212, 175, 55, 0.1); color: var(--c-accent);">שכבה 8 · כיול הסתברותי</span>
+          <span class="text-sm font-semibold" style="color: var(--c-text);">ציון כיול (Brier Score)</span>
         </div>
 
         <div class="flex items-center justify-between gap-4">
-          <div class="text-3xl font-bold font-mono text-amber-300" id="profileBrierScore">0.14</div>
+          <div class="text-3xl font-bold font-mono" id="profileBrierScore" style="color: var(--c-accent);">0.14</div>
           <div class="text-right text-xs space-y-1">
-            <div class="font-semibold text-emerald-400" id="profileBrierLabel">רמת כיול גבוהה ומדויקת</div>
-            <p class="text-[10px] opacity-60 leading-tight">
+            <div class="font-semibold" id="profileBrierLabel" style="color: var(--c-accent);">רמת כיול גבוהה ומדויקת</div>
+            <p class="text-[10px] opacity-60 leading-tight" style="color: var(--c-text);">
               הפער הממוצע בין מידת הביטחון שלך לבין תוצאות המציאות בפועל (0 = מושלם, 1 = שגיאה מלאה).
             </p>
           </div>
         </div>
 
-        <div class="w-full bg-stone-800/80 rounded-full h-2 overflow-hidden">
+        <div class="w-full rounded-full h-2 overflow-hidden" style="background: rgba(255, 255, 255, 0.08);">
           <div id="profileBrierBar" class="h-2 rounded-full transition-all duration-500" style="width: 86%; background-color: var(--c-accent);"></div>
         </div>
       </div>
 
       <!-- 2. מרשם שבירות הנחות (Assumption Fragility Registry) -->
-      <div class="p-4 rounded-2xl border border-white/10 bg-white/[0.02] space-y-3">
+      <div class="p-4 rounded-2xl border space-y-3" style="border-color: var(--c-border); background: var(--c-glass);">
         <div class="flex items-center justify-between">
-          <span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border border-rose-500/30 bg-rose-500/10 text-rose-400">מרשם הנחות שבירות</span>
-          <span class="text-sm font-semibold text-stone-200">שבירות לפי קטגוריות</span>
+          <span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border" style="border-color: var(--c-border); background: rgba(212, 175, 55, 0.1); color: var(--c-accent);">מרשם הנחות שבירות</span>
+          <span class="text-sm font-semibold" style="color: var(--c-text);">שבירות לפי קטגוריות</span>
         </div>
-        <p class="text-[11px] opacity-60 font-light">
+        <p class="text-[11px] opacity-60 font-light" style="color: var(--c-text);">
           היכן הנחות העבודה שלך נטו להתברר כשגויות או כפגיעות ביותר בדיעבד:
         </p>
 
@@ -629,64 +851,64 @@
           <!-- Item 1 -->
           <div class="space-y-1">
             <div class="flex justify-between text-xs font-light">
-              <span class="text-stone-300">זמני ביצוע, רכש ולוגיסטיקה</span>
-              <span class="text-rose-400 font-mono font-medium">64% שבירות</span>
+              <span style="color: var(--c-text);">זמני ביצוע, רכש ולוגיסטיקה</span>
+              <span class="font-mono font-medium opacity-80" style="color: var(--c-text);">64% שבירות</span>
             </div>
-            <p class="text-[10px] opacity-50">פקטור תת-הערכה אופייני: משימות נמשכו בפועל פי 2.4 מהצפוי.</p>
-            <div class="w-full bg-stone-800/80 rounded-full h-1.5 overflow-hidden">
-              <div class="h-1.5 bg-rose-500 rounded-full" style="width: 64%;"></div>
+            <p class="text-[10px] opacity-50" style="color: var(--c-text);">פקטור תת-הערכה אופייני: משימות נמשכו בפועל פי 2.4 מהצפוי.</p>
+            <div class="w-full rounded-full h-1.5 overflow-hidden" style="background: rgba(255, 255, 255, 0.08);">
+              <div class="h-1.5 rounded-full opacity-60" style="width: 64%; background-color: var(--c-accent);"></div>
             </div>
           </div>
 
           <!-- Item 2 -->
           <div class="space-y-1">
             <div class="flex justify-between text-xs font-light">
-              <span class="text-stone-300">יישור קו ותלות בגורמי חוץ</span>
-              <span class="text-amber-400 font-mono font-medium">42% שבירות</span>
+              <span style="color: var(--c-text);">יישור קו ותלות בגורמי חוץ</span>
+              <span class="font-mono font-medium opacity-80" style="color: var(--c-text);">42% שבירות</span>
             </div>
-            <p class="text-[10px] opacity-50">הנחה על עבודה עם ספק יחיד יצרה חיכוך תפעולי ב-3 מתוך 7 מקרים.</p>
-            <div class="w-full bg-stone-800/80 rounded-full h-1.5 overflow-hidden">
-              <div class="h-1.5 bg-amber-400 rounded-full" style="width: 42%;"></div>
+            <p class="text-[10px] opacity-50" style="color: var(--c-text);">הנחה על עבודה עם ספק יחיד יצרה חיכוך תפעולי ב-3 מתוך 7 מקרים.</p>
+            <div class="w-full rounded-full h-1.5 overflow-hidden" style="background: rgba(255, 255, 255, 0.08);">
+              <div class="h-1.5 rounded-full opacity-60" style="width: 42%; background-color: var(--c-accent);"></div>
             </div>
           </div>
 
           <!-- Item 3 -->
           <div class="space-y-1">
             <div class="flex justify-between text-xs font-light">
-              <span class="text-stone-300">ביקוש לקוחות ומוכנות לשלם</span>
-              <span class="text-emerald-400 font-mono font-medium">21% שבירות</span>
+              <span style="color: var(--c-text);">ביקוש לקוחות ומוכנות לשלם</span>
+              <span class="font-mono font-medium" style="color: var(--c-accent);">21% שבירות</span>
             </div>
-            <p class="text-[10px] opacity-50">רמת דיוק גבוהה — בדיקות מקדימות בשבועיים אימתו את הביקוש ביעילות.</p>
-            <div class="w-full bg-stone-800/80 rounded-full h-1.5 overflow-hidden">
-              <div class="h-1.5 bg-emerald-400 rounded-full" style="width: 21%;"></div>
+            <p class="text-[10px] opacity-50" style="color: var(--c-text);">רמת דיוק גבוהה — בדיקות מקדימות בשבועיים אימתו את הביקוש ביעילות.</p>
+            <div class="w-full rounded-full h-1.5 overflow-hidden" style="background: rgba(255, 255, 255, 0.08);">
+              <div class="h-1.5 rounded-full" style="width: 21%; background-color: var(--c-accent);"></div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- 3. מבנה תיק ההחלטות (Decision Architecture & Portfolio) -->
-      <div class="p-4 rounded-2xl border border-white/10 bg-white/[0.02] space-y-3">
+      <div class="p-4 rounded-2xl border space-y-3" style="border-color: var(--c-border); background: var(--c-glass);">
         <div class="flex items-center justify-between">
-          <span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border border-white/10 bg-white/[0.04] text-stone-400">חתימת החלטות</span>
-          <span class="text-sm font-semibold text-stone-200">מבנה תיק ההחלטות</span>
+          <span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border border-white/10 bg-white/[0.04] opacity-70" style="color: var(--c-text);">חתימת החלטות</span>
+          <span class="text-sm font-semibold" style="color: var(--c-text);">מבנה תיק ההחלטות</span>
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-center">
-          <div class="p-2.5 rounded-xl border border-white/5 bg-white/[0.02]">
-            <div class="text-xl font-bold font-mono text-stone-100" id="profileTotalDecisions">26</div>
-            <div class="text-[9px] opacity-60 mt-0.5">החלטות מתועדות</div>
+          <div class="p-2.5 rounded-xl border border-white/5" style="background: rgba(0, 0, 0, 0.3);">
+            <div class="text-xl font-bold font-mono" id="profileTotalDecisions" style="color: var(--c-accent);">26</div>
+            <div class="text-[9px] opacity-60 mt-0.5" style="color: var(--c-text);">החלטות מתועדות</div>
           </div>
-          <div class="p-2.5 rounded-xl border border-white/5 bg-white/[0.02]">
-            <div class="text-xl font-bold font-mono text-emerald-400" id="profileClosedLoops">13</div>
-            <div class="text-[9px] opacity-60 mt-0.5">מעגלים שנחתמו</div>
+          <div class="p-2.5 rounded-xl border border-white/5" style="background: rgba(0, 0, 0, 0.3);">
+            <div class="text-xl font-bold font-mono" id="profileClosedLoops" style="color: var(--c-accent);">13</div>
+            <div class="text-[9px] opacity-60 mt-0.5" style="color: var(--c-text);">מעגלים שנחתמו</div>
           </div>
-          <div class="p-2.5 rounded-xl border border-white/5 bg-white/[0.02]">
-            <div class="text-xl font-bold font-mono text-amber-300" id="profileReversibility">72%</div>
-            <div class="text-[9px] opacity-60 mt-0.5">הפיכות חלקית/מלאה</div>
+          <div class="p-2.5 rounded-xl border border-white/5" style="background: rgba(0, 0, 0, 0.3);">
+            <div class="text-xl font-bold font-mono opacity-80" id="profileReversibility" style="color: var(--c-text);">72%</div>
+            <div class="text-[9px] opacity-60 mt-0.5" style="color: var(--c-text);">הפיכות חלקית/מלאה</div>
           </div>
-          <div class="p-2.5 rounded-xl border border-white/5 bg-white/[0.02]">
-            <div class="text-xl font-bold font-mono text-stone-200" id="profileCommitSlope">0.71</div>
-            <div class="text-[9px] opacity-60 mt-0.5">שיפוע התחייבות</div>
+          <div class="p-2.5 rounded-xl border border-white/5" style="background: rgba(0, 0, 0, 0.3);">
+            <div class="text-xl font-bold font-mono" id="profileCommitSlope" style="color: var(--c-accent);">0.71</div>
+            <div class="text-[9px] opacity-60 mt-0.5" style="color: var(--c-text);">שיפוע התחייבות</div>
           </div>
         </div>
       </div>
@@ -840,6 +1062,33 @@
         >
           אישור ומעבר למרחב
         </button>
+
+        <!-- Social Sign-In (Google / Apple) -->
+        <div class="pt-2 border-t border-white/10 space-y-1.5">
+          <button 
+            type="button"
+            onclick="handleSocialLogin('google')" 
+            class="w-full py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-2 border transition-all active:scale-[0.98] bg-white/[0.04] hover:bg-white/[0.08] text-stone-100 border-stone-700"
+          >
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+            </svg>
+            <span>התחבר עם Google</span>
+          </button>
+          <button 
+            type="button"
+            onclick="handleSocialLogin('apple')" 
+            class="w-full py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-2 border transition-all active:scale-[0.98] bg-white/[0.04] hover:bg-white/[0.08] text-stone-100 border-stone-700"
+          >
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.92-2.85-.9.04-1.99.6-2.64 1.35-.58.66-1.08 1.73-.95 2.76 1 .08 2.05-.51 2.67-1.26"/>
+            </svg>
+            <span>התחבר עם Apple</span>
+          </button>
+        </div>
       </div>
 
     </div>
@@ -922,11 +1171,13 @@
           .doc(decision.id)
           .set(payload, { merge: true });
 
-        // 2. Also save in root decisions collection for global queries & backup
-        await firestoreDb
-          .collection('decisions')
-          .doc(decision.id)
-          .set(payload, { merge: true });
+        // 2. Only if currentUsername is guy_founder, also update root decisions collection for founder backup
+        if (currentUsername === 'guy_founder') {
+          await firestoreDb
+            .collection('decisions')
+            .doc(decision.id)
+            .set(payload, { merge: true });
+        }
 
         // 3. Automatically sync and update local DECISION_CYCLES.md file
         try {
@@ -956,10 +1207,12 @@
           .doc(decisionId)
           .delete();
 
-        await firestoreDb
-          .collection('decisions')
-          .doc(decisionId)
-          .delete();
+        if (currentUsername === 'guy_founder') {
+          await firestoreDb
+            .collection('decisions')
+            .doc(decisionId)
+            .delete();
+        }
 
         setCloudStatus(true, 'נמחק מהענן');
         setTimeout(() => setCloudStatus(true, 'ענן מחובר'), 3000);
@@ -1014,7 +1267,7 @@
       updateTopBarStatus('טוען נתונים מהענן...', true);
       const cloudDecisions = [];
 
-      // Tier 1: Firestore Web SDK (User-scoped collection & Root collection)
+      // Tier 1: Firestore Web SDK (strictly User-scoped collection)
       if (firestoreDb) {
         try {
           const userSnap = await firestoreDb
@@ -1030,7 +1283,8 @@
             }
           });
 
-          if (cloudDecisions.length === 0) {
+          // Legacy migration fallback: strictly for guy_founder only if user collection is empty
+          if (cloudDecisions.length === 0 && username === 'guy_founder') {
             const rootSnap = await firestoreDb.collection('decisions').get();
             rootSnap.forEach(doc => {
               const data = doc.data();
@@ -1044,17 +1298,28 @@
         }
       }
 
-      // Tier 2: Direct Firestore REST API (Guaranteed browser CORS & no SDK dependency)
+      // Tier 2: Direct Firestore REST API (strictly scoped to this user)
       if (cloudDecisions.length === 0) {
         try {
-          const restUrl = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/decisions?key=${firebaseConfig.apiKey}&pageSize=100`;
+          const restUrl = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/users/${encodeURIComponent(username)}/decisions?key=${firebaseConfig.apiKey}&pageSize=100`;
           const res = await fetch(restUrl);
           if (res.ok) {
             const data = await res.json();
             if (data.documents && data.documents.length > 0) {
               const parsed = data.documents.map(decodeDoc).filter(d => !isMockOrLegacy(d));
               cloudDecisions.push(...parsed);
-              console.log(`[ECHO Cloud]: Fetched ${parsed.length} decisions via Firestore REST API`);
+              console.log(`[ECHO Cloud]: Fetched ${parsed.length} decisions via Firestore REST API for @${username}`);
+            }
+          } else if (username === 'guy_founder') {
+            // Legacy root fallback strictly for guy_founder
+            const rootUrl = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/decisions?key=${firebaseConfig.apiKey}&pageSize=100`;
+            const rootRes = await fetch(rootUrl);
+            if (rootRes.ok) {
+              const rootData = await rootRes.json();
+              if (rootData.documents && rootData.documents.length > 0) {
+                const parsed = rootData.documents.map(decodeDoc).filter(d => !isMockOrLegacy(d));
+                cloudDecisions.push(...parsed);
+              }
             }
           }
         } catch (restErr) {
@@ -1062,8 +1327,8 @@
         }
       }
 
-      // Tier 3: Bundled seed DECISION_CYCLES.json fallback
-      if (cloudDecisions.length === 0) {
+      // Tier 3: Bundled seed DECISION_CYCLES.json fallback (STRICTLY for guy_founder)
+      if (cloudDecisions.length === 0 && username === 'guy_founder') {
         try {
           const res = await fetch('DECISION_CYCLES.json');
           if (res.ok) {
@@ -1071,7 +1336,7 @@
             if (data.decisions && data.decisions.length > 0) {
               const parsed = data.decisions.filter(d => !isMockOrLegacy(d));
               cloudDecisions.push(...parsed);
-              console.log(`[ECHO Cloud]: Loaded ${parsed.length} decisions from DECISION_CYCLES.json`);
+              console.log(`[ECHO Cloud]: Loaded ${parsed.length} decisions from DECISION_CYCLES.json for @guy_founder`);
             }
           }
         } catch (jsonErr) {}
@@ -1093,12 +1358,15 @@
       const merged = Array.from(map.values()).sort((a, b) => (a.frozenAt || 0) - (b.frozenAt || 0));
       localStorage.setItem(key, JSON.stringify(merged));
 
-      // Always populate the latest decision into Section 2 so the deliberation mirror shows real data
       if (merged.length > 0) {
         const latest = merged[merged.length - 1];
         applyDecisionToUI(latest);
         // Unlock scroll thread so user can explore their deliberation room
         setScrollLock(false);
+      } else {
+        // Zero decisions: clean empty canvas with no other user's data
+        resetToEmptyState();
+        setScrollLock(true);
       }
 
       // Sync any local-only records up to Firestore if SDK is ready
@@ -1216,6 +1484,49 @@
 
       if (isNewUser) {
         alert(`נפתח מרחב שיקול דעת חדש ונקי עבור @${currentUsername}!\nכל החלטה שתקליט תישמר בנפרד בענן ובמכשיר.`);
+      }
+    }
+
+    async function handleSocialLogin(providerName) {
+      try {
+        if (typeof firebase === 'undefined' || !firebase.auth) {
+          alert('ספריית האימות אינה זמינה כרגע.');
+          return;
+        }
+        let provider;
+        if (providerName === 'google') {
+          provider = new firebase.auth.GoogleAuthProvider();
+        } else if (providerName === 'apple') {
+          provider = new firebase.auth.OAuthProvider('apple.com');
+        } else {
+          return;
+        }
+
+        setCloudStatus(true, 'מתחבר...');
+        const result = await firebase.auth().signInWithPopup(provider);
+        const user = result.user;
+        if (user) {
+          const userIdentifier = user.displayName 
+            ? user.displayName.trim().replace(/[\s\/\\#\?]/g, '_') 
+            : (user.email ? user.email.split('@')[0] : user.uid);
+          
+          currentUsername = userIdentifier;
+          localStorage.setItem('echo_username', currentUsername);
+          addKnownUser(currentUsername);
+          updateUserDisplay();
+          closeSwitchUserModal();
+          resetToEmptyState();
+          loadUserDecisionHistory();
+          alert(`שלום ${user.displayName || userIdentifier}!\nהתחברת בהצלחה למרחב האישי והמאובטח שלך.`);
+        }
+      } catch (err) {
+        console.warn('[ECHO Auth Error]:', err);
+        if (err.code === 'auth/operation-not-allowed' || err.code === 'auth/configuration-not-found') {
+          alert('התחברות Social דורשת הפעלת הספק ב-Firebase Console. תוכל להזין שם משתמש לשימוש במרחב אישי.');
+        } else if (err.code !== 'auth/popup-closed-by-user') {
+          alert(`הודעת התחברות: ${err.message || err.code}`);
+        }
+        setCloudStatus(true, 'ענן מחובר');
       }
     }
 
@@ -1366,7 +1677,7 @@
       if (!Array.isArray(assumptionsArray) || assumptionsArray.length === 0) {
         currentAssumptionsList = [''];
       } else {
-        currentAssumptionsList = assumptionsArray.map(s => typeof s === 'string' ? s.trim() : String(s)).filter((s, i) => s.length > 0 || i === 0).slice(0, 5);
+        currentAssumptionsList = assumptionsArray.map(s => typeof s === 'string' ? s : String(s)).slice(0, 5);
         if (currentAssumptionsList.length === 0) currentAssumptionsList = [''];
       }
 
@@ -1615,13 +1926,24 @@
               setScrollLock(false);
               updateJournalBadges(valid.length);
               updateTopBarStatus(`ענן מחובר (${valid.length} החלטות)`, false);
+            } else {
+              resetToEmptyState();
+              updateJournalBadges(0);
+              updateTopBarStatus('ענן מחובר (0 החלטות)', false);
             }
+          } else {
+            resetToEmptyState();
+            updateJournalBadges(0);
+            updateTopBarStatus('ענן מחובר (0 החלטות)', false);
           }
         } catch (e) {
           console.error(e);
+          resetToEmptyState();
         }
       } else {
         resetToEmptyState();
+        updateJournalBadges(0);
+        updateTopBarStatus('ענן מחובר (0 החלטות)', false);
       }
 
       // Sync with Cloud Firestore in background
@@ -2383,8 +2705,8 @@
         return;
       }
       const firstLine = rawVerbatim.split('\n')[0].trim();
-      let title = firstLine.slice(0, 45) + (firstLine.length > 45 ? '...' : '');
       let consideration = `אתה בוחן: ${rawVerbatim}`;
+      let title = `דילמה: ${rawVerbatim}`;
       let goalsPrices = `קידום היעד ביחס ל-${firstLine.slice(0, 35)} תוך שליטה בעלויות ובאי-ודאות`;
       let facts = `הנתונים המוצגים בלכידה: "${firstLine.slice(0, 80)}"`;
       let assumptions = `ההנחה שהתנאים הנוכחיים וההערכות הראשוניות ישקפו את המציאות בפועל`;
@@ -2483,7 +2805,9 @@
               userId: currentUsername,
               frozenAt: Date.now(),
               rawVerbatim: rawVerbatim,
-              title: hd.consideration ? `דילמה: ${hd.consideration.slice(0, 35)}` : 'דילמת שיקול דעת',
+              title: hd.consideration 
+                ? (hd.consideration.startsWith('דילמה:') ? hd.consideration : `דילמה: ${hd.consideration.replace(/^אתה שוקל:\s*/, '')}`)
+                : (dc.title || 'דילמת שיקול דעת'),
               consideration: hd.consideration || dc.dimConsideration || rawVerbatim,
               goalsPrices: hd.goalsPrices || dc.dimGoalsPrices || '',
               facts: hd.facts || dc.dimFacts || '',
@@ -2670,7 +2994,9 @@ ${pastSummary}
           userId: currentUsername,
           frozenAt: Date.now(),
           rawVerbatim: rawVerbatim,
-          title: parsed.title || 'דילמת שיקול דעת',
+          title: parsed.consideration 
+            ? (parsed.consideration.startsWith('דילמה:') ? parsed.consideration : `דילמה: ${parsed.consideration.replace(/^אתה שוקל:\s*/, '')}`)
+            : (parsed.title || 'דילמת שיקול דעת'),
           consideration: parsed.consideration || rawVerbatim,
           goalsPrices: parsed.goalsPrices || 'השגת המטרה תוך שמירה על משאבים',
           facts: factsVal,
@@ -3378,6 +3704,47 @@ ${pastSummary}
       alert(`מעגל הלמידה נשמר בהצלחה וקושר להחלטה:\n"${dec.title}"\n\nסטטוס: ${statusLabels[currentFuQuickStatus] || currentFuQuickStatus}\nכל הכבוד על סגירת מעגל שיקול הדעת.`);
     }
 
+    // ================= ECHOES & REFLECTIONS TAB MODAL (השתקפויות והדים) =================
+    function openEchoesTabModal() {
+      closeTechnicalHeader();
+      try {
+        const key = getUserStorageKey();
+        const raw = localStorage.getItem(key) || '[]';
+        const decisions = JSON.parse(raw).filter(d => !isMockOrLegacy(d));
+        const total = decisions.length;
+        const closed = decisions.filter(d => d.status === 'evaluated' || d.followUpStatus === 'evaluated' || d.evaluatedAt).length;
+
+        // Update progress counters based on real decisions count
+        const capturesEl = document.getElementById('echoesCapturesProgress');
+        const closuresEl = document.getElementById('echoesClosuresProgress');
+        if (capturesEl) capturesEl.innerText = `${total % 3}/3`;
+        if (closuresEl) closuresEl.innerText = `${closed % 3}/3`;
+      } catch (e) {
+        console.warn('Echoes progress update:', e);
+      }
+
+      const modal = document.getElementById('modalEchoesTab');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeEchoesTabModal() {
+      const modal = document.getElementById('modalEchoesTab');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function toggleEchoesExamples() {
+      const box = document.getElementById('echoesExamplesBox');
+      const text = document.getElementById('echoesExamplesToggleText');
+      if (!box) return;
+      if (box.classList.contains('hidden')) {
+        box.classList.remove('hidden');
+        if (text) text.innerText = '▲ הסתר דוגמאות ממעגלי ההחלטה שלך';
+      } else {
+        box.classList.add('hidden');
+        if (text) text.innerText = '▼ ראה דוגמאות ממעגלי ההחלטה שלך';
+      }
+    }
+
     // ================= DECISION PROFILE MODAL (EPISTEMIC META-PROFILE) =================
     function openDecisionProfileModal() {
       closeTechnicalHeader();
@@ -3656,6 +4023,12 @@ ${pastSummary}
           badge.classList.add('hidden');
         }
       }
+
+      // Update top technical bar badge for Echoes tab
+      const echoesBadge = document.getElementById('btnDirectEchoesTabBadge');
+      if (echoesBadge) {
+        echoesBadge.innerText = `(${valid.length % 3}/3)`;
+      }
     }
 
     let isRefiningAnswer = false;
@@ -3683,7 +4056,20 @@ ${pastSummary}
           const editRel = document.getElementById('editReliance');
           const editUnk = document.getElementById('editUnknowns');
           
-          if (editCons) cur.consideration = editCons.value;
+          if (editCons) {
+            cur.consideration = editCons.value;
+            const titleEl = document.getElementById('dispTitle');
+            if (titleEl) {
+              let val = editCons.value.trim();
+              if (val) {
+                if (!val.startsWith('דילמה:')) {
+                  val = `דילמה: ${val.replace(/^אתה שוקל:\s*/, '')}`;
+                }
+                titleEl.innerText = val;
+                cur.title = val;
+              }
+            }
+          }
           if (editGoals) cur.goalsPrices = editGoals.value;
           if (editFacts) cur.facts = editFacts.value;
           cur.assumptionsList = currentAssumptionsList;
@@ -3733,10 +4119,16 @@ ${pastSummary}
       submitRefinementAnswer(false);
     }
 
-    function setHistoricalAnswer(text) {
+    function setHistoricalAnswer(type) {
+      let text = type;
+      if (type === 'הנסיבות שונות הפעם' || type === 'הנסיבות שונות') {
+        text = 'ביחס לתקדים שהוצג: הנסיבות בדילמה הנוכחית שונות מהמקרה בעבר ולא נכון להשליך ממנו ישירות.';
+      } else if (type === 'הלקח תקף גם כאן') {
+        text = 'ביחס לתקדים שהוצג: הלקח מהמקרה בעבר תקף ומנחה גם בדילמה הנוכחית.';
+      }
       const ansInput = document.getElementById('inputUserAnswer');
       if (ansInput) {
-        ansInput.value = (ansInput.value ? ansInput.value + ' | ' : '') + 'התייחסות לעבר: ' + text;
+        ansInput.value = (ansInput.value ? ansInput.value + '\n' : '') + text;
       }
       const histBox = document.getElementById('historicalQuestionBox');
       if (histBox) {
@@ -3768,6 +4160,20 @@ ${pastSummary}
       const relianceVal = assumptionsVal || (editRel ? editRel.value.trim() : '');
       const unknownsVal = missingInfoVal || (editUnk ? editUnk.value.trim() : '');
       const qText = document.getElementById('dispQuestion') ? document.getElementById('dispQuestion').innerText.trim() : '';
+
+      // Extract historical context if present
+      const histBox = document.getElementById('historicalQuestionBox');
+      const isHistVisible = histBox && !histBox.classList.contains('hidden');
+      const histQText = isHistVisible && document.getElementById('dispHistoricalQuestion') 
+        ? document.getElementById('dispHistoricalQuestion').innerText.trim() 
+        : '';
+      const histTagText = isHistVisible && document.getElementById('dispHistoricalTag')
+        ? document.getElementById('dispHistoricalTag').innerText.trim()
+        : '';
+
+      const historicalContextPrompt = histQText ? `
+- שאלת עבר / תקדים היסטורי שהוצג למשתמש: """${histQText}""" ${histTagText ? `(${histTagText})` : ''}
+` : '';
 
       // If user chose low-friction exit "מספיק לי לעכשיו" or left text empty (allowed, non-blocking)
       if (isSkip || !answerText) {
@@ -3820,7 +4226,7 @@ ${pastSummary}
 
       const prompt = `
 אתה מנוע הזיכוך וההתחדדות האפיסטמי של מערכת Echo (הד).
-תפקידך לסייע לאדם לראות את החשיבה שלו, לזהות מה השתנה בה בעקבות שאלת הארה, ולהציע 1 עד 3 חלופות פעולה אופרטיביות חדות (הצעת המערכת).
+תפקידך לסייע לאדם לראות את החשיבה שלו, לזהות מה השתנה בה בעקבות שאלת הארה או עימות מול תקדים עבר, ולהציע 1 עד 3 חלופות פעולה אופרטיביות חדות (הצעת המערכת).
 
 הקשר הדילמה והניתוח:
 - הדילמה: """${considerationVal}"""
@@ -3828,12 +4234,19 @@ ${pastSummary}
 - עובדות קשיחות: """${factsVal}"""
 - הנחות המוצא: """${assumptionsVal}"""
 - המידע החסר: """${missingInfoVal}"""
-- שאלת ההארה שנשאלה: """${qText}"""
-- מענה המשתמש לשאלה: """${answerText}"""
+- שאלת ההארה הראשית שנשאלה: """${qText}"""
+${historicalContextPrompt}
+- מענה המשתמש: """${answerText}"""
 
-הוראות קריטיות לניתוח:
-1. אל תחזור בצורה שטחית או תוכי על המילים של המשתמש!
-2. בצע עיבוד מעמיק של התשובה שלו מול נקודת המוצא.
+כללי עיגון קריטיים (Strict Grounding & Anti-Hallucination):
+1. איסור מוחלט על המצאת נרטיבים, חוויות עבר, משקעים או כוונות של צדדים שלישיים (כגון "משקעי עבר של הדיירים", "פגיעות קודמות", וכדומה) שלא הופיעו מפורשות במלל הגולמי או בעובדות הקשיחות!
+2. כאשר המשתמש מתייחס לעבר (כגון "הנסיבות שונות" או "הלקח תקף"), התייחסותו היא אך ורק לפער בין מקרה העבר של שיקול הדעת שלו (שהוצג בשאלת העבר) לבין הדילמה הנוכחית. לעולם אל תשליך או תמציא חוויות עבר של צדדים שלישיים.
+3. ב"insightNow": הסבר מה השתנה, התחדד או הוכרע בשיקול הדעת של המשתמש. אם המשתמש קבע שהנסיבות שונות מהתקדים שהוצג, חדד בדיוק מדוע התקדים אינו ישים כאן ומה נדרש כעת בהתבסס אך ורק על העובדות וההנחות הקיימות.
+4. ב"proposedSteps": הצע חלופות קונקרטיות הנגזרות אך ורק מפערי המידע והעובדות שהוצגו, ללא פעולות המבוססות על השערות מומצאות.
+
+הוראות לניתוח:
+1. אל תחזור בצורה שטחית או תוכי על המילים של המשתמש.
+2. בצע עיבוד מעמיק של התשובה שלו מול נקודת המוצא תוך נאמנות מלאה לעובדות.
 3. חלץ פלט JSON קפדני:
 {
   "insightBefore": "משפט אחד ממצה של מה שהאדם הניח או חשב בנקודת המוצא לפני שנשאל",
@@ -3936,7 +4349,14 @@ ${pastSummary}
 
     function applyDecisionToUI(dec) {
       const titleEl = document.getElementById('dispTitle');
-      if (titleEl) titleEl.innerText = dec.title || 'דילמת שיקול דעת';
+      if (titleEl) {
+        let fullText = dec.consideration || dec.title || dec.rawVerbatim || 'דילמת שיקול דעת';
+        fullText = fullText.trim();
+        if (!fullText.startsWith('דילמה:')) {
+          fullText = `דילמה: ${fullText.replace(/^אתה שוקל:\s*/, '')}`;
+        }
+        titleEl.innerText = fullText;
+      }
 
       const editCons = document.getElementById('editConsideration');
       if (editCons) {

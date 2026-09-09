@@ -353,10 +353,13 @@ export class DecisionService {
     return sessionState;
   }
 
-  async updateMirror(caseId: string, updates: Partial<FiveHumanDimensions>): Promise<DecisionCase> {
+  async updateMirror(caseId: string, updates: Partial<FiveHumanDimensions>, requestingUserId?: string): Promise<DecisionCase> {
     const session = DecisionService.casesCache.get(caseId);
     if (!session) {
       throw new Error(`Case ${caseId} not found.`);
+    }
+    if (requestingUserId && session.decisionCase.userId && session.decisionCase.userId !== requestingUserId) {
+      throw new Error(`PERMISSION_DENIED: User ${requestingUserId} cannot access data belonging to ${session.decisionCase.userId}.`);
     }
 
     if (updates.consideration) session.decisionCase.dimConsideration = updates.consideration;
@@ -375,11 +378,15 @@ export class DecisionService {
 
   async recordMirrorFeedback(
     caseId: string,
-    feedback: 'accurate' | 'inaccurate'
+    feedback: 'accurate' | 'inaccurate',
+    requestingUserId?: string
   ): Promise<DecisionCase> {
     const session = DecisionService.casesCache.get(caseId);
     if (!session) {
       throw new Error(`Case ${caseId} not found.`);
+    }
+    if (requestingUserId && session.decisionCase.userId && session.decisionCase.userId !== requestingUserId) {
+      throw new Error(`PERMISSION_DENIED: User ${requestingUserId} cannot access data belonging to ${session.decisionCase.userId}.`);
     }
 
     session.decisionCase.mirrorFeedback = feedback;
@@ -390,9 +397,13 @@ export class DecisionService {
   async submitDeliberationAnswer(
     caseId: string,
     userAnswer: string,
-    skip: boolean = false
+    skip: boolean = false,
+    requestingUserId?: string
   ): Promise<{ success: boolean; refinedInsight: RefinedInsight | null; nextStep: string | null }> {
     const session = DecisionService.casesCache.get(caseId);
+    if (session && requestingUserId && session.decisionCase.userId && session.decisionCase.userId !== requestingUserId) {
+      throw new Error(`PERMISSION_DENIED: User ${requestingUserId} cannot access data belonging to ${session.decisionCase.userId}.`);
+    }
     const now = Date.now();
 
     const isNonCollaboration = Boolean(
@@ -507,7 +518,11 @@ export class DecisionService {
     };
   }
 
-  getCase(caseId: string): CaseSessionState | undefined {
-    return DecisionService.casesCache.get(caseId);
+  getCase(caseId: string, requestingUserId?: string): CaseSessionState | undefined {
+    const session = DecisionService.casesCache.get(caseId);
+    if (session && requestingUserId && session.decisionCase.userId && session.decisionCase.userId !== requestingUserId) {
+      throw new Error(`PERMISSION_DENIED: User ${requestingUserId} cannot access data belonging to ${session.decisionCase.userId}.`);
+    }
+    return session;
   }
 }

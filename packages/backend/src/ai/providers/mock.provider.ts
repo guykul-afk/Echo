@@ -254,7 +254,8 @@ export class MockAiProvider implements IAiProvider {
     humanDimensions: FiveHumanDimensions,
     _illuminationQuestion: string,
     userAnswer: string,
-    isSkip: boolean
+    isSkip: boolean,
+    _historicalQuestion?: string
   ): Promise<DeltaAnalysisResult> {
     if (isSkip || !userAnswer || userAnswer.trim().length === 0 || userAnswer.includes('[דילוג') || userAnswer.includes('[נטישה')) {
       return {

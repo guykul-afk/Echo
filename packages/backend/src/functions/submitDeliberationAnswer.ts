@@ -27,7 +27,7 @@ export async function submitDeliberationAnswerHandler(
   }
 
   const answer = data.answerText || '';
-  const result = await decisionService.submitDeliberationAnswer(data.caseId, answer, data.skip);
+  const result = await decisionService.submitDeliberationAnswer(data.caseId, answer, data.skip, userId);
 
   const now = Date.now();
   const statement: Statement = {

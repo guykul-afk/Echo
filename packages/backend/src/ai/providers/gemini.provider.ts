@@ -218,7 +218,8 @@ CRITICAL: DO NOT repeat these angles, tropes (e.g. freemium, binary dichotomy), 
     humanDimensions: FiveHumanDimensions,
     illuminationQuestion: string,
     userAnswer: string,
-    isSkip: boolean
+    isSkip: boolean,
+    historicalQuestion?: string
   ): Promise<DeltaAnalysisResult> {
     if (isSkip || !userAnswer || userAnswer.trim().length === 0 || userAnswer.includes('[דילוג') || userAnswer.includes('[נטישה')) {
       return {
@@ -248,7 +249,7 @@ Initial Mirror Dimensions:
 
 Illumination Question:
 "${illuminationQuestion}"
-
+${historicalQuestion ? `\nHistorical Precedent Question Asked:\n"${historicalQuestion}"\n` : ''}
 User's Response:
 """${userAnswer}"""
 `;

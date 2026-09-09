@@ -1,5 +1,6 @@
 import { EvaluationContract } from '@echo/shared';
 import { CallableContext } from './createDecisionCase.js';
+import { DecisionService } from '../services/decision.service.js';
 
 export interface FinalizeContractRequest {
   caseId: string;
@@ -17,7 +18,8 @@ export interface FinalizeContractRequest {
  */
 export async function finalizeEvaluationContractHandler(
   data: FinalizeContractRequest,
-  context: CallableContext
+  context: CallableContext,
+  decisionService: DecisionService = new DecisionService()
 ) {
   if (!context.auth || !context.auth.uid) {
     throw new Error('UNAUTHENTICATED: User must be signed in.');
@@ -27,6 +29,9 @@ export async function finalizeEvaluationContractHandler(
   if (!data.caseId || !data.targetCriteria) {
     throw new Error('INVALID_ARGUMENT: caseId and targetCriteria are required.');
   }
+
+  // Enforce zero-trust ownership verification
+  decisionService.getCase(data.caseId, userId);
 
   const now = Date.now();
   const reviewDate = now + (data.checkHorizonDays || 14) * 24 * 60 * 60 * 1000;

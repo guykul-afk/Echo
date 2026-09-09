@@ -96,28 +96,50 @@ function categorizeDecision(d) {
   };
 }
 
-async function fetchAllDecisionsFromFirestore() {
-  let url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/decisions?key=${FIRESTORE_API_KEY}&pageSize=100`;
+async function fetchAllDecisionsFromFirestore(targetUser = 'guy_founder') {
+  let url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/users/${targetUser}/decisions?key=${FIRESTORE_API_KEY}&pageSize=100`;
   const allDocs = [];
 
-  while (url) {
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`Firestore fetch failed: ${res.status} ${res.statusText}`);
+  try {
+    while (url) {
+      const res = await fetch(url);
+      if (!res.ok) {
+        break;
+      }
+      const data = await res.json();
+      if (data.documents && data.documents.length > 0) {
+        allDocs.push(...data.documents.map(decodeDoc));
+      }
+      if (data.nextPageToken) {
+        url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/users/${targetUser}/decisions?key=${FIRESTORE_API_KEY}&pageSize=100&pageToken=${data.nextPageToken}`;
+      } else {
+        url = null;
+      }
     }
-    const data = await res.json();
-    if (data.documents && data.documents.length > 0) {
-      allDocs.push(...data.documents.map(decodeDoc));
-    }
-    if (data.nextPageToken) {
-      url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/decisions?key=${FIRESTORE_API_KEY}&pageSize=100&pageToken=${data.nextPageToken}`;
-    } else {
-      url = null;
+  } catch (e) {
+    console.warn('[Sync]: User-scoped fetch fallback:', e.message);
+  }
+
+  // Fallback to legacy root decisions if user collection was empty
+  if (allDocs.length === 0) {
+    let legacyUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/decisions?key=${FIRESTORE_API_KEY}&pageSize=100`;
+    while (legacyUrl) {
+      const res = await fetch(legacyUrl);
+      if (!res.ok) break;
+      const data = await res.json();
+      if (data.documents && data.documents.length > 0) {
+        allDocs.push(...data.documents.map(decodeDoc));
+      }
+      if (data.nextPageToken) {
+        legacyUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/decisions?key=${FIRESTORE_API_KEY}&pageSize=100&pageToken=${data.nextPageToken}`;
+      } else {
+        legacyUrl = null;
+      }
     }
   }
 
   // Filter out invalid or empty docs, sort by timestamp
-  return allDocs.sort((a, b) => (a.frozenAt || 0) - (b.frozenAt || 0));
+  return allDocs.filter(d => d.userId === targetUser || !d.userId).sort((a, b) => (a.frozenAt || 0) - (b.frozenAt || 0));
 }
 
 function generateMarkdown(decisions, lastUpdatedIso) {

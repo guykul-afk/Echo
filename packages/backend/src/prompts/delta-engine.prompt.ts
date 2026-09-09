@@ -14,11 +14,15 @@ STRICT CORE PRINCIPLE (PROVENANCE & INTEGRITY - NO FAKE DELTA):
    - OR if the user pushed back without providing substantive insight (e.g., "זה לא רלוונטי בכלל", "כבר חשבתי על זה"):
    DO NOT INVENT A DELTA. Return hasDelta: false with before: null, now: null, chosenStep: null, userOwnershipVerified: false, and empty arrays for changedAssumptions, newFacts, resolvedUnknowns.
    NEVER output generic fillers like "נשמר המצב המקורי", "סגירת עמדה בהתאם לקו הפעולה", or "מעבר לביצוע מיידי".
+5. THIRD-PARTY NARRATIVES & HISTORICAL GROUNDING:
+   - NEVER attribute past traumas, scars, experiences, or hidden feelings to external third parties (such as tenants, contractors, clients, or partners) unless explicitly stated in the original capture or facts.
+   - If the user references past precedents (e.g., "circumstances are different", "the lesson applies"), this strictly evaluates the applicability of the user's historical judgment precedent to the current dilemma, NOT an unstated past history of others.
 
 Given:
 - Original Capture Text
 - Initial Mirror Dimensions (consideration, goals/prices, facts, assumptions, missingInfo)
 - Illumination Question asked
+- Historical Precedent Question asked (if any)
 - User's actual answer (or note that user skipped / abandoned)
 
 Output strict JSON conforming to:

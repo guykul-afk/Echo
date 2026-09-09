@@ -94,7 +94,7 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
       <View style={styles.header}>
         {onOpenProfile && (
           <TouchableOpacity style={styles.profileBtn} onPress={onOpenProfile}>
-            <Text style={styles.profileBtnText}>📊 פרופיל כיול</Text>
+            <Text style={styles.profileBtnText}>🪞 השתקפויות והדים</Text>
           </TouchableOpacity>
         )}
         <Text style={styles.title}>echo</Text>

@@ -1,5 +1,6 @@
 import { Outcome, QuickLoopStatus } from '@echo/shared';
 import { CallableContext } from './createDecisionCase.js';
+import { DecisionService } from '../services/decision.service.js';
 
 export interface RecordOutcomeRequest {
   caseId: string;
@@ -25,7 +26,8 @@ export interface RecordOutcomeRequest {
  */
 export async function recordOutcomeHandler(
   data: RecordOutcomeRequest,
-  context: CallableContext
+  context: CallableContext,
+  decisionService: DecisionService = new DecisionService()
 ) {
   if (!context.auth || !context.auth.uid) {
     throw new Error('UNAUTHENTICATED: User must be signed in.');
@@ -35,6 +37,9 @@ export async function recordOutcomeHandler(
   if (!data.caseId) {
     throw new Error('INVALID_ARGUMENT: caseId is required.');
   }
+
+  // Enforce zero-trust ownership verification
+  decisionService.getCase(data.caseId, userId);
 
   const whatHappened = data.whatHappened || data.actualResultSummary || 'עודכנה התקדמות בהבנה';
   const assumptionClarification = data.assumptionClarification || data.unexpectedLearnings || '';

@@ -7,6 +7,7 @@ export interface DeltaComputeParams {
   rawCapture: string;
   humanDimensions: FiveHumanDimensions;
   illuminationQuestion: string;
+  historicalQuestion?: string;
   userAnswer: string;
   isSkip?: boolean;
 }
@@ -33,7 +34,8 @@ export class DeltaService {
         params.humanDimensions,
         params.illuminationQuestion,
         params.userAnswer,
-        isExplicitNonAnswer
+        isExplicitNonAnswer,
+        params.historicalQuestion
       );
     }
 
