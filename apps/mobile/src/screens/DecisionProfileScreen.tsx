@@ -29,8 +29,8 @@ export const DecisionProfileScreen: React.FC<DecisionProfileScreenProps> = ({
           <Text style={styles.backBtnText}>→ חזרה</Text>
         </TouchableOpacity>
         <View style={styles.titleContainer}>
-          <Text style={styles.screenTitle}>השתקפויות והדים</Text>
-          <Text style={styles.screenSubtitle}>המראה ארוכת הטווח של שיקול הדעת</Text>
+          <Text style={styles.screenTitle}>פרופיל שיקול דעת</Text>
+          <Text style={styles.screenSubtitle}>כיול אישי וזיכרון אפיסטמי</Text>
         </View>
       </View>
 
