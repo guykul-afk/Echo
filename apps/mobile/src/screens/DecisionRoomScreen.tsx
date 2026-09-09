@@ -428,11 +428,11 @@ const styles = StyleSheet.create({
   },
   scrollTip: {
     color: LuxuryTheme.text.tertiary,
-    fontSize: 11
+    fontSize: 14
   },
   backTip: {
     color: LuxuryTheme.text.tertiary,
-    fontSize: 11
+    fontSize: 14
   },
   centerContent: {
     flex: 1,
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
   },
   subPrompt: {
     color: LuxuryTheme.text.tertiary,
-    fontSize: 13,
+    fontSize: 15,
     textAlign: 'right'
   },
   editorialQuote: {
@@ -485,11 +485,11 @@ const styles = StyleSheet.create({
   },
   editLabel: {
     color: LuxuryTheme.text.secondary,
-    fontSize: 12
+    fontSize: 15
   },
   micBtn: {
     color: LuxuryTheme.accent.gold,
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '600'
   },
   largeInput: {
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
   },
   compactInput: {
     color: LuxuryTheme.text.primary,
-    fontSize: 13,
+    fontSize: 15,
     minHeight: 40,
     textAlignVertical: 'top'
   },
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     color: LuxuryTheme.text.secondary,
-    fontSize: 12
+    fontSize: 15
   },
   answerInput: {
     backgroundColor: 'rgba(255, 255, 255, 0.02)',
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     color: LuxuryTheme.text.primary,
-    fontSize: 13,
+    fontSize: 15,
     minHeight: 50,
     textAlignVertical: 'top'
   },
@@ -578,7 +578,7 @@ const styles = StyleSheet.create({
   },
   skipBtnText: {
     color: LuxuryTheme.text.tertiary,
-    fontSize: 12,
+    fontSize: 15,
     textDecorationLine: 'underline'
   },
   insightBox: {
@@ -594,11 +594,11 @@ const styles = StyleSheet.create({
   },
   insightLabel: {
     color: LuxuryTheme.text.tertiary,
-    fontSize: 11
+    fontSize: 14
   },
   insightVal: {
     color: LuxuryTheme.text.secondary,
-    fontSize: 14,
+    fontSize: 16,
     textAlign: 'right'
   },
   divider: {

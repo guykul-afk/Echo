@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   },
   tag: {
     color: LuxuryTheme.accent.gold,
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '600',
     letterSpacing: 1,
     textAlign: 'right',
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   },
   caseSub: {
     color: LuxuryTheme.text.tertiary,
-    fontSize: 13,
+    fontSize: 15,
     marginTop: 6,
     textAlign: 'right'
   },
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   },
   reminderLabel: {
     color: LuxuryTheme.accent.gold,
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '600',
     textAlign: 'right',
     marginBottom: 4
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   },
   label: {
     color: LuxuryTheme.text.secondary,
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '500',
     marginBottom: 10,
     textAlign: 'right'
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
   },
   evalChipText: {
     color: LuxuryTheme.text.secondary,
-    fontSize: 13
+    fontSize: 15
   },
   voiceBtn: {
     paddingVertical: 14,
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
   },
   voiceBtnText: {
     color: LuxuryTheme.accent.gold,
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600'
   },
   textInput: {
