@@ -192,7 +192,7 @@ export const DecisionFlowPipeline: React.FC<DecisionFlowPipelineProps> = ({
           <div className="flex-1 p-3 rounded-xl border"
                style={{ backgroundColor: 'rgba(21, 28, 40, 0.85)', borderColor: 'rgba(212, 175, 55, 0.35)' }}>
             <div className="flex justify-between items-center mb-1 text-[11px]">
-              <span className="font-bold" style={{ color: LuxuryTheme.accent.gold }}>שאלת חידוד (נקודת מפנה)</span>
+              <span className="font-bold" style={{ color: LuxuryTheme.accent.gold }}>שאלת חידוד</span>
               <span className="opacity-50 text-[10px]">התערבות מכיילת</span>
             </div>
             <div className="text-xs font-medium italic leading-relaxed" style={{ color: LuxuryTheme.accent.gold }}>
@@ -238,7 +238,7 @@ export const DecisionFlowPipeline: React.FC<DecisionFlowPipelineProps> = ({
 
           <div className="flex-1 p-3 rounded-xl border bg-white/[0.02] border-white/10">
             <div className="flex justify-between items-center mb-1 text-[11px] opacity-80">
-              <span className="font-medium">התשובה שהובילה לבהירות</span>
+              <span className="font-medium">תשובתך לשאלה</span>
             </div>
             <div className="text-xs leading-relaxed opacity-90">{answer}</div>
           </div>
