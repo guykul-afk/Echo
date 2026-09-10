@@ -11,7 +11,10 @@ export type AssertionCategory =
   | 'preference'
   | 'action'
   | 'prediction'
-  | 'outcome';
+  | 'outcome'
+  | 'decision_mechanism'
+  | 'principle'
+  | 'tradeoff';
 
 export interface GraphAssertion {
   id: string;
@@ -29,6 +32,8 @@ export interface GraphAssertion {
   lastConfirmedAt?: number;
   lastAskedAt?: number;
   sentimentOrPolarity?: 'risk_seeking' | 'risk_averse' | 'pro' | 'con' | 'neutral';
+  condition?: string;
+  semanticEmbedding?: number[];
   createdAt: number;
 }
 

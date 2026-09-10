@@ -1,7 +1,8 @@
 import {
   RetrievalBeforeAskResult,
   GraphAssertion,
-  KnowledgeEntity
+  KnowledgeEntity,
+  DeepDecisionMechanisms
 } from '@echo/shared';
 import { KnowledgeGraphService } from './knowledgeGraph.service.js';
 
@@ -36,15 +37,17 @@ export class RetrievalBeforeAskService {
   /**
    * Evaluates a draft question against the user's personal Knowledge Graph.
    * Incorporates:
-   * 1. Entity-based and concept phrase matching (no trivial single-word matches).
-   * 2. Novelty Gate: never repeat confirmed assertions within 14-30 days.
-   * 3. Contradiction Retrieval: surfaces opposing memories to prevent confirmation bias.
-   * 4. Memory Budget: max 1-2 short assertions (<=120 chars), preamble context before illumination.
+   * 1. Deep Decision Mechanisms matching (Trade-offs, Principles, Qualified Conditions).
+   * 2. Entity-based and concept phrase matching.
+   * 3. Novelty Gate: never repeat confirmed assertions within 14-30 days.
+   * 4. Contradiction Retrieval: surfaces opposing memories to prevent confirmation bias.
+   * 5. Memory Budget: max 1-2 short assertions (<=120 chars), qualified preamble context.
    */
   async checkBeforeAsk(
     userId: string,
     draftQuestion: string,
-    rawText: string
+    rawText: string,
+    deepMechanisms?: DeepDecisionMechanisms
   ): Promise<RetrievalBeforeAskResult> {
     const activeAssertions = await this.knowledgeGraphService.getActiveAssertionsByUser(userId);
     const entities = await this.knowledgeGraphService.getEntitiesByUser(userId);
@@ -57,7 +60,7 @@ export class RetrievalBeforeAskService {
       e.name && e.name.trim().length >= 2 && inputLower.includes(e.name.toLowerCase().trim())
     );
 
-    // 2. Filter candidate assertions by Entity, Specific Concept Phrase, or Thematic Assumption Overlap
+    // 2. Filter candidate assertions by Deep Mechanisms, Entity, Concept Phrase, or Thematic Overlap
     const candidateAssertions: { assertion: GraphAssertion; score: number; reason: string }[] = [];
     const inputWords = new Set(
       inputLower
@@ -67,34 +70,73 @@ export class RetrievalBeforeAskService {
     );
 
     for (const assertion of activeAssertions) {
+      let score = 0;
+      let reason = '';
+
+      const stmtClean = assertion.statement.toLowerCase().trim();
+
+      // Deep Mechanism Match: Tradeoffs
+      if (deepMechanisms?.tradeoffs && deepMechanisms.tradeoffs.length > 0) {
+        for (const t of deepMechanisms.tradeoffs) {
+          const prot = (t.protectedValue || '').toLowerCase().trim();
+          const sacr = (t.sacrificedValue || '').toLowerCase().trim();
+          if ((prot && stmtClean.includes(prot)) || (sacr && stmtClean.includes(sacr))) {
+            const tradeScore = (prot && stmtClean.includes(prot) && sacr && stmtClean.includes(sacr)) ? 0.98 : 0.92;
+            if (tradeScore > score) {
+              score = tradeScore;
+              reason = `deep_tradeoff_match(${t.protectedValue}/${t.sacrificedValue})`;
+            }
+          }
+        }
+      }
+
+      // Deep Mechanism Match: Operating Principles
+      if (deepMechanisms?.operatingPrinciples && deepMechanisms.operatingPrinciples.length > 0) {
+        for (const p of deepMechanisms.operatingPrinciples) {
+          const pClean = p.toLowerCase().trim();
+          if (pClean.length >= 6 && (stmtClean.includes(pClean) || pClean.includes(stmtClean))) {
+            if (0.95 > score) {
+              score = 0.95;
+              reason = `operating_principle_match`;
+            }
+          }
+        }
+      }
+
+      // Deep Mechanism Match: Framework & Topology
+      if (assertion.category === 'decision_mechanism' && deepMechanisms) {
+        if (deepMechanisms.dilemmaTopology && stmtClean.includes(deepMechanisms.dilemmaTopology)) {
+          score = Math.max(score, 0.88);
+          reason = reason ? `${reason}+topology_match` : 'deep_topology_match';
+        }
+        if (deepMechanisms.dominantEvidenceType && stmtClean.includes(deepMechanisms.dominantEvidenceType)) {
+          score = Math.max(score, 0.88);
+          reason = reason ? `${reason}+evidence_match` : 'deep_evidence_match';
+        }
+      }
+
+      // Lexical & Entity matching (fallback/complementary)
       const isEntityMatch = Boolean(
         assertion.entityId && relevantEntities.some(e => e.id === assertion.entityId)
       );
 
-      // Check if statement shares a distinct 2-word concept phrase with the current dilemma
       const conceptPhrases = extractConceptPhrases(assertion.statement);
       const hasConceptMatch = conceptPhrases.some(phrase => inputLower.includes(phrase));
-
-      const stmtClean = assertion.statement.toLowerCase().trim();
       const isFullSubstring = stmtClean.length >= 8 && inputLower.includes(stmtClean);
 
-      // Keyword / thematic overlap
       const stmtWords = stmtClean
         .split(/[\s,.:;״"()!?\-\/]+/)
         .map(w => w.trim())
         .filter(w => w.length >= 3 && !HEBREW_STOPWORDS.has(w));
       const sharedWords = stmtWords.filter(w => inputWords.has(w));
 
-      let score = 0;
-      let reason = '';
-
       if (isEntityMatch) {
         score = Math.max(score, 0.9);
-        reason = 'entity_match';
+        reason = reason ? `${reason}+entity` : 'entity_match';
       }
       if (hasConceptMatch || isFullSubstring) {
         score = Math.max(score, 0.85);
-        reason = reason ? `${reason}+concept_phrase` : 'concept_phrase_overlap';
+        reason = reason ? `${reason}+concept` : 'concept_phrase_overlap';
       }
       if (sharedWords.length >= 2) {
         const overlapScore = Math.min(0.8, 0.45 + (sharedWords.length * 0.1));
@@ -107,6 +149,12 @@ export class RetrievalBeforeAskService {
       if (assertion.category === 'outcome' && score > 0) {
         score = Math.min(0.99, score + 0.15);
         reason += '+historical_outcome_precedent';
+      }
+
+      // Bonus for qualified condition presence (Horizon 2)
+      if (assertion.condition && score >= 0.6) {
+        score = Math.min(0.99, score + 0.05);
+        reason += '+qualified_condition';
       }
 
       if (score >= 0.5) {
@@ -161,7 +209,11 @@ export class RetrievalBeforeAskService {
     if (topContradiction) {
       memoryPreamble = `במקרה קודם ציינת "${topAssertion.statement.slice(0, 55)}", אך בהחלטה אחרת: "${topContradiction.statement.slice(0, 55)}".`;
     } else if (budgetAssertions.length > 0) {
-      memoryPreamble = `מהקשר קודם: "${topAssertion.statement.slice(0, 70)}"`;
+      if (topAssertion.condition) {
+        memoryPreamble = `מתקדים עבר: "${topAssertion.statement.slice(0, 60)}" (סייג שהוגדר: "${topAssertion.condition.slice(0, 45)}")`;
+      } else {
+        memoryPreamble = `מהקשר קודם: "${topAssertion.statement.slice(0, 70)}"`;
+      }
     }
 
     // Determine if we should suppress, convert to confirmation, or simply provide memory context
@@ -184,13 +236,17 @@ export class RetrievalBeforeAskService {
 
     // Only convert to confirmation in rare, high-confidence, unconfirmed cases (<= 20% target)
     // and when explicitly looking for previously stated user facts
-    const shouldConfirm = topAssertion.sourceType === 'user_stated' &&
+    const shouldConfirm = (topAssertion.sourceType === 'user_stated' || topAssertion.category === 'principle' || topAssertion.category === 'decision_mechanism') &&
       !topContradiction &&
-      (topAssertion.confidenceLevel >= 90) &&
+      (topAssertion.confidenceLevel >= 85) &&
       !topAssertion.lastAskedAt;
 
     if (shouldConfirm) {
       await this.knowledgeGraphService.recordAssertionAsked(userId, topAssertion.id);
+      const confQuestion = topAssertion.condition
+        ? `בעבר פעלת לפי: "${topAssertion.statement}" [סייג: "${topAssertion.condition}"]. האם סייג זה מתקיים גם בדילמה הנוכחית?`
+        : `בעבר ציינת ש"${topAssertion.statement}". האם זה עדיין תקף?`;
+
       return {
         entities: relevantEntities,
         assertions: budgetAssertions,
@@ -199,7 +255,7 @@ export class RetrievalBeforeAskService {
         hasKnownAnswer: true,
         knownAnswerFact: topAssertion.statement,
         shouldConvertToConfirmation: true,
-        confirmationQuestion: `בעבר ציינת ש"${topAssertion.statement}". האם זה עדיין תקף?`,
+        confirmationQuestion: confQuestion,
         canSuppressIntervention: false,
         retrievalScore: topCandidate.score,
         retrievalReason: `confirmation_requested(${topCandidate.reason})`,

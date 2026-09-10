@@ -110,3 +110,49 @@ export interface IlluminationQuestion {
   createdAt: number;
 }
 
+/**
+ * 8 Analytical Decision Mechanism Catalogs (OKF Horizon 2)
+ */
+export type DominantEvidenceType =
+  | 'hard_data'
+  | 'external_authority'
+  | 'past_experience'
+  | 'intuition'
+  | 'social_consensus';
+
+export type DilemmaTopology =
+  | 'binary_dichotomy'
+  | 'resource_allocation'
+  | 'search_problem';
+
+export type OptimizationStrategy = 'maximizing' | 'satisficing';
+
+export type DecisionDriver = 'upside_capture' | 'downside_protection';
+
+export type FocusHorizon = 'symptom_patching' | 'structural_redesign';
+
+export interface DecisionTradeoff {
+  protectedValue: string;
+  sacrificedValue: string;
+  context?: string;
+}
+
+export interface QualifiedCondition {
+  targetAssertion: string;
+  condition: string;
+}
+
+export interface DeepDecisionMechanisms {
+  operatingPrinciples?: string[];
+  tradeoffs?: DecisionTradeoff[];
+  boundaryConditions?: QualifiedCondition[];
+  dominantEvidenceType?: DominantEvidenceType;
+  dilemmaTopology?: DilemmaTopology;
+  optimizationStrategy?: OptimizationStrategy;
+  decisionDriver?: DecisionDriver;
+  statusQuoCost?: string;
+  focusHorizon?: FocusHorizon;
+  ignoredSecondOrder?: string[];
+  agencyCenter?: LocusOfControl;
+}
+

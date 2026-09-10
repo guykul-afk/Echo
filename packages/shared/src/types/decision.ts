@@ -1,4 +1,5 @@
 import { Outcome } from './outcome.js';
+import { DeepDecisionMechanisms } from './cognitive.js';
 
 export type DecisionStatus =
   | 'deliberating'
@@ -79,6 +80,7 @@ export interface DecisionCase {
   historicalInterventionUsed?: string; // שאלת עבר מותנית: מופעלת רק אם מזוהה צורך
   nextStep?: string;
   refinedInsight?: RefinedInsight | null;
+  deepMechanisms?: DeepDecisionMechanisms;
 
   outcome?: Outcome;
   resolvedAt?: number;

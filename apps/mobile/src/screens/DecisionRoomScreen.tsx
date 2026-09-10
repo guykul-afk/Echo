@@ -1,10 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { LuxuryTheme } from '../theme/colors.js';
+import { LuxuryTheme } from '../theme/colors';
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
-import { DecisionFlowPipeline } from '../graphics/DecisionFlowPipeline.js';
-
-const SCREEN_HEIGHT = 700;
+import { DecisionFlowPipeline } from '../graphics/DecisionFlowPipeline';
+import { EchoPastCard } from '../components/EchoPastCard';
 
 interface DecisionRoomScreenProps {
   decisionCase: DecisionCase;
@@ -47,12 +46,8 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   const [userAnswer, setUserAnswer] = useState('');
   const [isVoiceRecording, setIsVoiceRecording] = useState(false);
   const [insight, setInsight] = useState<RefinedInsight | null>(initialRefinedInsight || null);
-
-  const scrollToStage = (index: number) => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({ y: index * (SCREEN_HEIGHT - 80), animated: true });
-    }
-  };
+  
+  const [isContextExpanded, setIsContextExpanded] = useState(false);
 
   const startVoiceInput = (setter: (val: string) => void) => {
     const SpeechRec = typeof window !== 'undefined' && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
@@ -127,7 +122,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
     };
     setInsight(refined);
     onAnswerSubmit(finalAnswer, false);
-    scrollToStage(5); // Scroll to Summary card
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
   };
 
   const handleSkip = () => {
@@ -138,218 +133,158 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
     };
     setInsight(refined);
     onAnswerSubmit('', true);
-    scrollToStage(5);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
+  };
+
+  const toggleContext = () => {
+    setIsContextExpanded(!isContextExpanded);
   };
 
   return (
     <ScrollView 
       ref={scrollRef}
       style={styles.container}
-      pagingEnabled
+      contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      {/* ================= CARD 1: הדילמה ================= */}
-      <View style={styles.cardSection}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.stageTag}>1 · הדילמה שלך</Text>
-          <Text style={styles.scrollTip}>גלול מטה או מעלה בכל עת</Text>
-        </View>
+      {/* ================= SECTION 1: Core Essence ================= */}
+      <View style={styles.coreSection}>
+        <Text style={styles.heroHeadline}>
+          {consideration}
+        </Text>
 
-        <View style={styles.centerContent}>
-          <Text style={styles.heroHeadline}>
-            {consideration}
-          </Text>
-
-          <View style={styles.editBox}>
-            <View style={styles.editBoxHeader}>
-              <Text style={styles.editLabel}>הניסוח שלך:</Text>
-              <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('consideration', val))}>
-                <Text style={styles.micBtn}>🎙️ עדכן בקול</Text>
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.largeInput}
-              multiline
-              value={consideration}
-              onChangeText={val => handleFieldChange('consideration', val)}
-              textAlign="right"
-            />
+        <View style={styles.editBox}>
+          <View style={styles.editBoxHeader}>
+            <Text style={styles.editLabel}>הניסוח שלך:</Text>
+            <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('consideration', val))}>
+              <Text style={styles.micBtn}>🎙️ עדכן</Text>
+            </TouchableOpacity>
           </View>
-        </View>
-
-        <TouchableOpacity style={styles.bottomArrow} onPress={() => scrollToStage(1)}>
-          <Text style={styles.arrowText}>המתח המרכזי ↓</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* ================= CARD 2: המתח המרכזי ================= */}
-      <View style={styles.cardSection}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.stageTag}>2 · המתח המרכזי</Text>
-          <TouchableOpacity onPress={() => scrollToStage(0)}>
-            <Text style={styles.backTip}>↑ חזרה לדילמה</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.centerContent}>
-          <Text style={styles.subPrompt}>מה עומד מול מה? ערכים, מטרות ומחירים:</Text>
-          <Text style={styles.editorialQuote}>{centralTension}</Text>
-
-          <View style={styles.editBox}>
-            <View style={styles.editBoxHeader}>
-              <Text style={styles.editLabel}>מטרות ומחירים שחשובים לך:</Text>
-              <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('goalsPrices', val))}>
-                <Text style={styles.micBtn}>🎙️ עדכן בקול</Text>
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.largeInput}
-              multiline
-              value={goalsPrices}
-              onChangeText={val => handleFieldChange('goalsPrices', val)}
-              placeholder="מה חשוב לך להשיג, ועל מה אתה לא מוכן לוותר..."
-              placeholderTextColor={LuxuryTheme.text.tertiary}
-              textAlign="right"
-            />
-          </View>
-        </View>
-
-        <TouchableOpacity style={styles.bottomArrow} onPress={() => scrollToStage(2)}>
-          <Text style={styles.arrowText}>מה שידוע בבירור ↓</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* ================= CARD 3: מה שידוע בבירור (עובדות) ================= */}
-      <View style={styles.cardSection}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.stageTag}>3 · מה שידוע בבירור</Text>
-          <TouchableOpacity onPress={() => scrollToStage(1)}>
-            <Text style={styles.backTip}>↑ חזרה למתח</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.centerContent}>
-          <Text style={styles.subPrompt}>נתונים, התרחשויות קונקרטיות ומידע מוצק:</Text>
-
-          <View style={[styles.editBox, { borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }]}>
-            <View style={styles.editBoxHeader}>
-              <Text style={[styles.editLabel, { color: LuxuryTheme.accent.gold, fontWeight: '600' }]}>עובדות מוצקות:</Text>
-              <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('facts', val))}>
-                <Text style={styles.micBtn}>🎙️ עדכן בקול</Text>
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={[styles.largeInput, { minHeight: 90 }]}
-              multiline
-              value={facts}
-              onChangeText={val => handleFieldChange('facts', val)}
-              placeholder="נתונים ועובדות מוצקות שאינם מוטלים בספק..."
-              placeholderTextColor={LuxuryTheme.text.tertiary}
-              textAlign="right"
-            />
-          </View>
-        </View>
-
-        <TouchableOpacity style={styles.bottomArrow} onPress={() => scrollToStage(3)}>
-          <Text style={styles.arrowText}>ההנחה המובילה ↓</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* ================= CARD 4: ההנחה המובילה ================= */}
-      <View style={styles.cardSection}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.stageTag}>4 · ההנחה המובילה</Text>
-          <TouchableOpacity onPress={() => scrollToStage(2)}>
-            <Text style={styles.backTip}>↑ חזרה לעובדות</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.centerContent}>
-          <Text style={styles.subPrompt}>על מה אתה מסתמך? השערות וציפיות לעתיד:</Text>
-
-          <View style={[styles.editBox, { borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }]}>
-            <View style={styles.editBoxHeader}>
-              <Text style={[styles.editLabel, { color: LuxuryTheme.accent.gold, fontWeight: '600' }]}>ההנחה שמובילה אותך:</Text>
-              <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('assumptions', val))}>
-                <Text style={styles.micBtn}>🎙️ עדכן בקול</Text>
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={[styles.largeInput, { minHeight: 90 }]}
-              multiline
-              value={assumptions}
-              onChangeText={val => handleFieldChange('assumptions', val)}
-              placeholder="השערות, ציפיות ותרחישים שאתה מניח שיתממשו..."
-              placeholderTextColor={LuxuryTheme.text.tertiary}
-              textAlign="right"
-            />
-          </View>
-        </View>
-
-        <TouchableOpacity style={styles.bottomArrow} onPress={() => scrollToStage(4)}>
-          <Text style={styles.arrowText}>שאלת חידוד ↓</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* ================= CARD 5: שאלת חידוד ================= */}
-      <View style={styles.cardSection}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.stageTag}>5 · שאלת חידוד</Text>
-          <TouchableOpacity onPress={() => scrollToStage(3)}>
-            <Text style={styles.backTip}>↑ חזרה להנחות</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.centerContent}>
-          <Text style={styles.questionText}>
-            "{effectiveQuestion}"
-          </Text>
-
-          {/* Audio-First Voice Button */}
-          <TouchableOpacity
-            style={[styles.bigVoiceBtn, isVoiceRecording && styles.bigVoiceBtnRecording]}
-            onPress={() => startVoiceInput(setUserAnswer)}
-          >
-            <Text style={styles.bigVoiceBtnText}>
-              {isVoiceRecording ? '● מקשיב... לחץ לסיום' : '🎙️ הקלט תשובה בקול (דיבור חופשי)'}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Manual Input Fallback */}
           <TextInput
-            style={styles.answerInput}
+            style={styles.largeInput}
             multiline
-            placeholder="או הקלד תשובה ידנית..."
-            placeholderTextColor={LuxuryTheme.text.tertiary}
-            value={userAnswer}
-            onChangeText={setUserAnswer}
+            value={consideration}
+            onChangeText={val => handleFieldChange('consideration', val)}
             textAlign="right"
           />
-
-          <TouchableOpacity style={styles.continueBtn} onPress={() => handleProceedWithAnswer()}>
-            <Text style={styles.continueBtnText}>המשך עם המענה ←</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
-            <Text style={styles.skipBtnText}>מספיק לי לעכשיו — המשך ללא מענה</Text>
-          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.bottomArrow} onPress={() => scrollToStage(5)}>
-          <Text style={styles.arrowText}>לסיכום ↓</Text>
+        <Text style={styles.subPrompt}>מה עומד מול מה? ערכים, מטרות ומחירים:</Text>
+        <Text style={styles.editorialQuote}>{centralTension}</Text>
+
+        <View style={styles.editBox}>
+          <View style={styles.editBoxHeader}>
+            <Text style={styles.editLabel}>מטרות ומחירים שחשובים לך:</Text>
+            <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('goalsPrices', val))}>
+              <Text style={styles.micBtn}>🎙️ עדכן</Text>
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            style={styles.largeInput}
+            multiline
+            value={goalsPrices}
+            onChangeText={val => handleFieldChange('goalsPrices', val)}
+            placeholder="מה חשוב לך להשיג..."
+            placeholderTextColor={LuxuryTheme.text.tertiary}
+            textAlign="right"
+          />
+        </View>
+      </View>
+
+      {/* ================= SECTION 2: Progressive Disclosure (Facts & Assumptions) ================= */}
+      <View style={styles.accordionWrapper}>
+        <TouchableOpacity style={styles.accordionHeader} onPress={toggleContext} activeOpacity={0.8}>
+          <Text style={styles.accordionTitle}>נתוני רקע והנחות עבודה</Text>
+          <Text style={styles.accordionIcon}>{isContextExpanded ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+
+        {isContextExpanded && (
+          <View style={styles.accordionContent}>
+            <View style={[styles.editBox, { borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }]}>
+              <View style={styles.editBoxHeader}>
+                <Text style={[styles.editLabel, { color: LuxuryTheme.accent.gold, fontWeight: '600' }]}>עובדות מוצקות:</Text>
+                <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('facts', val))}>
+                  <Text style={styles.micBtn}>🎙️ עדכן</Text>
+                </TouchableOpacity>
+              </View>
+              <TextInput
+                style={[styles.largeInput, { minHeight: 70 }]}
+                multiline
+                value={facts}
+                onChangeText={val => handleFieldChange('facts', val)}
+                placeholder="נתונים ועובדות..."
+                placeholderTextColor={LuxuryTheme.text.tertiary}
+                textAlign="right"
+              />
+            </View>
+
+            <View style={[styles.editBox, { borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)', marginTop: 12 }]}>
+              <View style={styles.editBoxHeader}>
+                <Text style={[styles.editLabel, { color: LuxuryTheme.accent.gold, fontWeight: '600' }]}>ההנחה שמובילה אותך:</Text>
+                <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('assumptions', val))}>
+                  <Text style={styles.micBtn}>🎙️ עדכן</Text>
+                </TouchableOpacity>
+              </View>
+              <TextInput
+                style={[styles.largeInput, { minHeight: 70 }]}
+                multiline
+                value={assumptions}
+                onChangeText={val => handleFieldChange('assumptions', val)}
+                placeholder="השערות, ציפיות..."
+                placeholderTextColor={LuxuryTheme.text.tertiary}
+                textAlign="right"
+              />
+            </View>
+          </View>
+        )}
+      </View>
+
+      {/* ================= SECTION 3: Echo from the Past ================= */}
+      {(historicalQuestion || similarCaseAnalogy) && (
+        <EchoPastCard
+          title={similarCaseAnalogy?.title || 'תקדים עבר רלוונטי'}
+          reason={similarCaseAnalogy?.reason || historicalQuestion?.questionText || ''}
+          score={0.85}
+        />
+      )}
+
+      {/* ================= SECTION 4: Bespoke Question ================= */}
+      <View style={styles.questionSection}>
+        <Text style={styles.questionText}>
+          "{effectiveQuestion}"
+        </Text>
+
+        <TouchableOpacity
+          style={[styles.bigVoiceBtn, isVoiceRecording && styles.bigVoiceBtnRecording]}
+          onPress={() => startVoiceInput(setUserAnswer)}
+        >
+          <Text style={styles.bigVoiceBtnText}>
+            {isVoiceRecording ? '● מקשיב... לחץ לסיום' : '🎙️ הקלט תשובה בקול (דיבור חופשי)'}
+          </Text>
+        </TouchableOpacity>
+
+        <TextInput
+          style={styles.answerInput}
+          multiline
+          placeholder="או הקלד תשובה ידנית..."
+          placeholderTextColor={LuxuryTheme.text.tertiary}
+          value={userAnswer}
+          onChangeText={setUserAnswer}
+          textAlign="right"
+        />
+
+        <TouchableOpacity style={styles.continueBtn} onPress={() => handleProceedWithAnswer()}>
+          <Text style={styles.continueBtnText}>המשך עם המענה ←</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
+          <Text style={styles.skipBtnText}>מספיק לי לעכשיו — המשך ללא מענה</Text>
         </TouchableOpacity>
       </View>
 
-      {/* ================= CARD 6: סיכום ================= */}
-      <View style={styles.cardSection}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.stageTag}>6 · סיכום</Text>
-          <TouchableOpacity onPress={() => scrollToStage(4)}>
-            <Text style={styles.backTip}>↑ חזרה לשאלת חידוד</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.centerContent}>
+      {/* ================= SECTION 5: Summary ================= */}
+      {insight && (
+        <View style={styles.summarySection}>
           <Text style={styles.heroHeadline}>שרשרת שיקול הדעת המזוקקת</Text>
           <Text style={styles.subPrompt}>כל התהליך כפי שהתחדד מהדילמה ועד לצעד המעשי:</Text>
 
@@ -373,10 +308,9 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
                 : null
             }
             answer={userAnswer || undefined}
-            conclusion={insight?.now || userAnswer || 'הבנת את גורם המפתח להכרעה'}
-            nextStep={insight?.chosenStep || 'בירור מוקדם לפני הכרעה'}
-            scrollable={true}
-            maxHeight={360}
+            conclusion={insight.now || userAnswer || 'הבנת את גורם המפתח להכרעה'}
+            nextStep={insight.chosenStep || 'בירור מוקדם לפני הכרעה'}
+            scrollable={false}
           />
 
           <TouchableOpacity 
@@ -386,9 +320,9 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
             <Text style={styles.saveDecisionBtnText}>שמור בזיכרון ההחלטות ←</Text>
           </TouchableOpacity>
         </View>
+      )}
 
-        <View style={{ height: 40 }} />
-      </View>
+      <View style={{ height: 60 }} />
     </ScrollView>
   );
 };
@@ -398,34 +332,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: LuxuryTheme.background.base
   },
-  cardSection: {
-    height: SCREEN_HEIGHT - 80,
+  content: {
     padding: 24,
-    justifyContent: 'space-between'
+    paddingTop: 40,
+    gap: 24
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10
-  },
-  stageTag: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1
-  },
-  scrollTip: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 14
-  },
-  backTip: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 14
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: 'center',
+  coreSection: {
     gap: 16
   },
   heroHeadline: {
@@ -449,16 +361,6 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontFamily: 'serif'
   },
-  questionText: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 22,
-    fontWeight: '600',
-    fontStyle: 'italic',
-    textAlign: 'center',
-    lineHeight: 30,
-    fontFamily: 'serif',
-    marginBottom: 12
-  },
   editBox: {
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderRadius: 16,
@@ -467,7 +369,7 @@ const styles = StyleSheet.create({
     padding: 14
   },
   editBoxHeader: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8
@@ -485,21 +387,56 @@ const styles = StyleSheet.create({
     color: LuxuryTheme.text.primary,
     fontSize: 16,
     lineHeight: 24,
-    minHeight: 60,
+    minHeight: 50,
     textAlignVertical: 'top'
   },
-  compactBlock: {
+  accordionWrapper: {
     backgroundColor: 'rgba(255, 255, 255, 0.02)',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 12
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    overflow: 'hidden'
   },
-  compactInput: {
-    color: LuxuryTheme.text.primary,
+  accordionHeader: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'rgba(212, 175, 55, 0.03)'
+  },
+  accordionTitle: {
+    color: LuxuryTheme.text.secondary,
     fontSize: 15,
-    minHeight: 40,
-    textAlignVertical: 'top'
+    fontWeight: '600'
+  },
+  accordionIcon: {
+    color: LuxuryTheme.accent.gold,
+    fontSize: 14
+  },
+  accordionContent: {
+    padding: 16,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)'
+  },
+  questionSection: {
+    marginTop: 12,
+    gap: 16,
+    padding: 20,
+    backgroundColor: 'rgba(212, 175, 55, 0.03)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.15)'
+  },
+  questionText: {
+    color: LuxuryTheme.accent.gold,
+    fontSize: 22,
+    fontWeight: '600',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    lineHeight: 30,
+    fontFamily: 'serif',
+    marginBottom: 8
   },
   bigVoiceBtn: {
     backgroundColor: 'rgba(212, 175, 55, 0.15)',
@@ -518,24 +455,6 @@ const styles = StyleSheet.create({
     color: LuxuryTheme.accent.gold,
     fontSize: 14,
     fontWeight: '700'
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    justifyContent: 'center'
-  },
-  chipBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.25)',
-    borderRadius: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 12
-  },
-  chipText: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 15
   },
   answerInput: {
     backgroundColor: 'rgba(255, 255, 255, 0.02)',
@@ -567,32 +486,15 @@ const styles = StyleSheet.create({
   },
   skipBtnText: {
     color: LuxuryTheme.text.tertiary,
-    fontSize: 15,
+    fontSize: 14,
     textDecorationLine: 'underline'
   },
-  insightBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.3)',
-    borderRadius: 16,
-    padding: 16,
-    gap: 12
-  },
-  insightRow: {
-    gap: 4
-  },
-  insightLabel: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 14
-  },
-  insightVal: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 16,
-    textAlign: 'right'
-  },
-  divider: {
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)'
+  summarySection: {
+    marginTop: 24,
+    gap: 16,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)'
   },
   saveDecisionBtn: {
     backgroundColor: 'rgba(212, 175, 55, 0.25)',
@@ -607,14 +509,5 @@ const styles = StyleSheet.create({
     color: LuxuryTheme.text.primary,
     fontSize: 15,
     fontWeight: '700'
-  },
-  bottomArrow: {
-    alignItems: 'center',
-    paddingVertical: 8
-  },
-  arrowText: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 12,
-    fontWeight: '500'
   }
 });

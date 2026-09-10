@@ -8,7 +8,8 @@ import {
   FiveHumanDimensions,
   FourHumanDimensions,
   RefinedInsight,
-  RetrievalBeforeAskResult
+  RetrievalBeforeAskResult,
+  DeepDecisionMechanisms
 } from '@echo/shared';
 import { AiProviderFactory } from '../ai/factory.js';
 import { IAiProvider } from '../ai/provider.interface.js';
@@ -99,6 +100,7 @@ export class DecisionService {
     let bespokeQuestion: IlluminationQuestion | undefined;
     let historicalQuestion: IlluminationQuestion | undefined;
     let memoryCheck: RetrievalBeforeAskResult | undefined;
+    let deepMechanisms: DeepDecisionMechanisms | undefined;
     let humanDimensions: FiveHumanDimensions | undefined = extracted.fiveDimensions || (extracted.fourDimensions as FiveHumanDimensions);
 
     // Phase 2 (Adaptive Friction): Infer from commitmentGradient / rawCapture length if not explicitly passed
@@ -134,6 +136,7 @@ export class DecisionService {
         userGender ? { name: dto.userName || 'מיכל', gender: userGender } : undefined
       );
       humanDimensions = cognitiveResult.humanDimensions || humanDimensions;
+      deepMechanisms = cognitiveResult.deepMechanisms;
 
       epistemicState = {
         caseId,
@@ -187,7 +190,8 @@ export class DecisionService {
         memoryCheck = await this.retrievalBeforeAskService.checkBeforeAsk(
           dto.userId,
           bespokeQuestion.questionText,
-          rawCapture
+          rawCapture,
+          deepMechanisms
         );
 
         const hasContradiction = Boolean(memoryCheck.contradictingAssertions && memoryCheck.contradictingAssertions.length > 0);
@@ -214,7 +218,7 @@ export class DecisionService {
             caseId,
             strategy: 'outcome_contract_anchor',
             origin: 'historical_precedent',
-            questionText: `בעבר ציינת לגבי נושא דומה: "${memoryCheck.knownAnswerFact}". האם לקח זה רלוונטי גם לדילמה הנוכחית?`,
+            questionText: memoryCheck.confirmationQuestion || `בעבר ציינת לגבי נושא דומה: "${memoryCheck.knownAnswerFact}". האם לקח זה רלוונטי גם לדילמה הנוכחית?`,
             triggerReason: 'זוהה תקדים עבר ישיר בנושא דומה',
             shouldIntervene: true,
             isSecondary: true,
@@ -283,6 +287,7 @@ export class DecisionService {
       aiInterventionUsed: bespokeQuestion?.shouldIntervene !== false ? (bespokeQuestion?.questionText || extracted.illuminationQuestion) : undefined,
       historicalInterventionUsed: historicalQuestion?.shouldIntervene !== false ? historicalQuestion?.questionText : undefined,
       refinedInsight: undefined,
+      deepMechanisms,
       createdAt: now,
       updatedAt: now
     };
@@ -409,6 +414,88 @@ export class DecisionService {
         confidenceLevel: 85,
         createdAt: now
       });
+    }
+
+    // Horizon 2: Index Deep Decision Mechanisms (Principles, Tradeoffs, Qualified Boundaries, Frameworks)
+    if (deepMechanisms?.operatingPrinciples) {
+      for (let pIdx = 0; pIdx < deepMechanisms.operatingPrinciples.length; pIdx++) {
+        const pText = (deepMechanisms.operatingPrinciples[pIdx] || '').trim();
+        if (pText.length >= 4) {
+          const statement = pText.length > 120 ? pText.slice(0, 117) + '...' : pText;
+          await this.knowledgeGraphService.saveAssertion({
+            id: `asrt-${caseId}-principle-${pIdx}`,
+            userId: dto.userId,
+            caseId,
+            statement,
+            category: 'principle',
+            sourceType: 'ai_inferred',
+            timestamp: now,
+            confidenceLevel: 85,
+            createdAt: now
+          });
+        }
+      }
+    }
+
+    if (deepMechanisms?.tradeoffs) {
+      for (let tIdx = 0; tIdx < deepMechanisms.tradeoffs.length; tIdx++) {
+        const tr = deepMechanisms.tradeoffs[tIdx];
+        if (tr && tr.protectedValue && tr.sacrificedValue) {
+          const statement = `שימור: ${tr.protectedValue} | ויתור: ${tr.sacrificedValue}`.slice(0, 120);
+          await this.knowledgeGraphService.saveAssertion({
+            id: `asrt-${caseId}-tradeoff-${tIdx}`,
+            userId: dto.userId,
+            caseId,
+            statement,
+            category: 'tradeoff',
+            sourceType: 'ai_inferred',
+            timestamp: now,
+            confidenceLevel: 90,
+            createdAt: now
+          });
+        }
+      }
+    }
+
+    if (deepMechanisms?.boundaryConditions) {
+      for (let bIdx = 0; bIdx < deepMechanisms.boundaryConditions.length; bIdx++) {
+        const bc = deepMechanisms.boundaryConditions[bIdx];
+        if (bc && bc.targetAssertion) {
+          const statement = bc.targetAssertion.slice(0, 120);
+          await this.knowledgeGraphService.saveAssertion({
+            id: `asrt-${caseId}-cond-${bIdx}`,
+            userId: dto.userId,
+            caseId,
+            statement,
+            condition: bc.condition,
+            category: 'assumption',
+            sourceType: 'ai_inferred',
+            timestamp: now,
+            confidenceLevel: 85,
+            createdAt: now
+          });
+        }
+      }
+    }
+
+    if (deepMechanisms && (deepMechanisms.dominantEvidenceType || deepMechanisms.dilemmaTopology)) {
+      const parts: string[] = [];
+      if (deepMechanisms.dilemmaTopology) parts.push(`מבנה: ${deepMechanisms.dilemmaTopology}`);
+      if (deepMechanisms.dominantEvidenceType) parts.push(`ראיה: ${deepMechanisms.dominantEvidenceType}`);
+      if (deepMechanisms.decisionDriver) parts.push(`מניע: ${deepMechanisms.decisionDriver}`);
+      if (parts.length > 0) {
+        await this.knowledgeGraphService.saveAssertion({
+          id: `asrt-${caseId}-mechanism`,
+          userId: dto.userId,
+          caseId,
+          statement: parts.join(' | ').slice(0, 120),
+          category: 'decision_mechanism',
+          sourceType: 'ai_inferred',
+          timestamp: now,
+          confidenceLevel: 85,
+          createdAt: now
+        });
+      }
     }
 
     return sessionState;
