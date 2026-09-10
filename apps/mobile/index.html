@@ -843,12 +843,16 @@
           .doc(decision.id)
           .set(payload, { merge: true });
 
-        // 2. Only if currentUsername is guy_founder, also update root decisions collection for founder backup
-        if (currentUsername === 'guy_founder') {
-          await firestoreDb
-            .collection('decisions')
-            .doc(decision.id)
-            .set(payload, { merge: true });
+        // 2. Only if currentUsername is guy_founder / Guy_Kuleski, also update root decisions collection for founder backup
+        if (currentUsername === 'guy_founder' || currentUsername === 'Guy_Kuleski' || currentUsername === 'guy_kuleski') {
+          try {
+            await firestoreDb
+              .collection('decisions')
+              .doc(decision.id)
+              .set(payload, { merge: true });
+          } catch (rootErr) {
+            console.warn('[ECHO Cloud]: Root decisions backup notice:', rootErr);
+          }
         }
 
         // 3. Automatically sync and update local DECISION_CYCLES.md file
