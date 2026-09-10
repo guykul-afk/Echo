@@ -6,6 +6,7 @@ import { OutcomeModal } from './screens/OutcomeModal.js';
 import { DecisionProfileScreen } from './screens/DecisionProfileScreen.js';
 import { DecisionJournalScreen } from './screens/DecisionJournalScreen.js';
 import { TopDrawer } from './components/TopDrawer.js';
+import { checkRedirectAuth } from './services/firebaseAuth.js';
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, QuickLoopStatus, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
 
 type AppStep = 'capture' | 'decision_room' | 'outcome' | 'profile' | 'journal';
@@ -34,6 +35,15 @@ export const App: React.FC = () => {
       localStorage.setItem('ECHO_ACTIVE_USER', newUser);
     }
   };
+
+  // Check if user just redirected back from Google Social Auth
+  useEffect(() => {
+    checkRedirectAuth().then((authenticatedUser) => {
+      if (authenticatedUser) {
+        handleSwitchUser(authenticatedUser);
+      }
+    });
+  }, []);
 
   // Precedents database for real-time Tri-Factor matching
   const PRECEDENTS_DATABASE = [

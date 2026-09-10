@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LuxuryTheme } from '../theme/colors.js';
+import { UserAuthModal } from './UserAuthModal.js';
 
 interface TopDrawerProps {
   currentUser: string;
@@ -15,6 +16,7 @@ export const TopDrawer: React.FC<TopDrawerProps> = ({
   onOpenCalibration
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [apiKey, setApiKey] = useState<string>('');
 
   useEffect(() => {
@@ -23,10 +25,7 @@ export const TopDrawer: React.FC<TopDrawerProps> = ({
   }, []);
 
   const handlePromptUser = () => {
-    const name = window.prompt('הזן שם משתמש (למשל: guy_founder):', currentUser);
-    if (name && name.trim()) {
-      onSwitchUser(name.trim());
-    }
+    setIsAuthModalOpen(true);
   };
 
   const handlePromptApiKey = () => {
@@ -143,6 +142,16 @@ export const TopDrawer: React.FC<TopDrawerProps> = ({
           </div>
         </div>
       </div>
+
+      {/* User Identity & Social Sign-In Modal */}
+      <UserAuthModal
+        isOpen={isAuthModalOpen}
+        currentUser={currentUser}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSelectUser={(u) => {
+          onSwitchUser(u);
+        }}
+      />
     </div>
   );
 };
