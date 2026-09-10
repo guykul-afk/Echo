@@ -2,8 +2,8 @@ import { KnowledgeGraphService } from './knowledgeGraph.service.js';
 import { DynamicEntityExtractorService } from './dynamicEntityExtractor.service.js';
 import { GraphAssertion, KnowledgeEntity } from '@echo/shared';
 
-const DEFAULT_PROJECT_ID = 'echo-guy-2026';
-const API_KEY = Buffer.from('QUl6YVN5Q2p4THVEUTdFa3RvbWVYdmVWb1hIYURlNnZyZkREeE1Z', 'base64').toString();
+const DEFAULT_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || process.env.GCLOUD_PROJECT || 'echo-guy-2026';
+const API_KEY = process.env.FIREBASE_WEB_API_KEY || process.env.GEMINI_API_KEY || '';
 const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes
 
 export function decodeFirestoreValue(val: any): any {
@@ -70,6 +70,11 @@ export class FirestoreKnowledgeHydrationService {
       : [userId];
 
     const allDecisionsMap = new Map<string, any>();
+
+    if (!this.apiKey) {
+      const assertions = await this.knowledgeGraphService.getActiveAssertionsByUser(userId);
+      return { hydratedDecisions: 0, assertionsCount: assertions.length };
+    }
 
     for (const u of usersToQuery) {
       try {

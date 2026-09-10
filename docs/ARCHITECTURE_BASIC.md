@@ -10,48 +10,50 @@
 
 ```mermaid
 flowchart TB
-    subgraph ClientLayer ["📱 שכבת לקוח (Mobile Client)"]
-        UI["React Native (Expo SDK 51+)"]
-        Skia["Shopify Skia (Echo Orb 120 FPS)"]
-        State["Zustand / Offline Sync"]
+    subgraph ClientLayer ["📱 שכבת לקוח (Mobile Web & PWA)"]
+        UI["React 18 + Vite (Mobile-First Shell)"]
+        Canvas["HTML5 Canvas 2D (Echo Orb)"]
+        Audio["Web Audio API & MediaRecorder"]
+        State["State Manager / LocalStorage & Precedents"]
     end
 
     subgraph Gateway ["🛡️ אבטחה ואימות"]
-        Auth["Firebase Authentication\n(JWT & Apple / Google / Email)"]
+        Auth["Firebase Authentication\n(Google Sign-In, Email, User Switcher)"]
         Rules["Firestore Security Rules\n(Path-Based RLS /users/{userId})"]
+    end
+
+    subgraph DirectEngines ["⚡ מנועי קליינט ישירים (Low Latency)"]
+        ClientGemini["Direct Gemini Engine (Flash 2.5 / 1.5)\naiService.ts"]
+        FirestoreDirect["Firestore Web SDK & REST API Fallback\nfirestoreSync.ts"]
+        Catalog["38+ Decison Cycles Catalog\nDECISION_CYCLES.json"]
     end
 
     subgraph BackendLayer ["☁️ שירותי ענן (Firebase Cloud Functions v2)"]
         FnCapture["createDecisionCase\n(הקפאה וחילוץ אפיסטמי)"]
         FnDelib["submitDeliberationAnswer\n(מענה לשאלת הארה)"]
-        FnContract["finalizeEvaluationContract\n(נעילת חוזה ומעקב)"]
         FnOutcome["recordOutcome\n(תיעוד תוצאה וסגירת מעגל)"]
         Worker["runConsolidationJob\n(איחוד זיכרון אסינכרוני ברקע)"]
+        Services["KnowledgeGraph & RetrievalBeforeAsk\n(הדים מהעבר וניתוח ישויות)"]
     end
 
-    subgraph AILayer ["🧠 שכבת מנועי AI (Strategy Pattern)"]
-        Factory["AiProviderFactory"]
-        Gemini["Gemini 1.5 Pro / Flash"]
-        OpenAI["OpenAI GPT-4o"]
-        Local["Local LLM (Ollama / Llama.cpp)"]
-    end
-
-    subgraph StorageLayer ["💾 נתונים ואחסון (Storage & Vectors)"]
-        Firestore[("Firestore NoSQL DB\n(סכמת OKF היררכית)")]
-        Vectors[("Firestore Vector Search\n(Vertex AI Text-Embeddings)")]
-        Media[("Cloud Storage\n(/recordings/{userId}/*)")]
+    subgraph StorageLayer ["💾 נתונים ואחסון (Storage & Cloud)"]
+        Firestore[("Firestore NoSQL DB\n(סכמת OKF ויומן החלטות)")]
+        LocalCache[("Local Storage & Bundled Precedents")]
     end
 
     UI --> Auth
-    UI --> Skia
-    UI --> FnCapture & FnDelib & FnContract & FnOutcome
-    FnCapture & FnDelib & FnContract & FnOutcome --> Rules
-    Rules --> Firestore & Media
-    FnCapture --> Factory
-    Factory --> Gemini & OpenAI & Local
-    FnCapture --> Vectors
+    UI --> Canvas
+    UI --> Audio
+    UI --> ClientGemini
+    UI --> FirestoreDirect
+    FirestoreDirect --> Rules
+    Rules --> Firestore
+    UI --> Catalog
+    UI --> FnCapture & FnDelib & FnOutcome
+    FnCapture & FnDelib & FnOutcome --> Rules
     FnOutcome --> Worker
     Worker --> Firestore
+    Services --> Firestore
 ```
 
 ---
@@ -63,63 +65,55 @@ flowchart TB
 ```
 ECHO/
 ├── apps/
-│   └── mobile/                # אפליקציית Mobile ב-React Native (Expo)
+│   └── mobile/                # אפליקציית Mobile-First ב-React 18 + Vite (PWA)
 │       ├── src/
-│       │   ├── screens/       # מסכי המשתמש (QuickCapture, DecisionRoom וכו')
-│       │   ├── graphics/      # רכיבי Skia Shaders ו-Echo Orb
-│       │   ├── theme/         # ערכת נושא Luxury Dark Mode
-│       │   └── navigation/    # ניווט ואבטחת מסכים
+│       │   ├── screens/       # מסכי המשתמש (QuickCapture, DecisionRoom, Journal, Profile וכו')
+│       │   ├── graphics/      # מנוע Canvas 2D של כדור ההד (EchoOrb.tsx) וזרימת שלבים
+│       │   ├── theme/         # ערכת נושא Luxury Dark Mode מבוססת DESIGN_SYSTEM.md
+│       │   ├── components/    # כרטיס הד מהעבר (EchoPastCard), TopDrawer, מודאלים
+│       │   └── services/      # מנוע AI ישיר (aiService.ts), סנכרון Firestore (firestoreSync.ts), אודיו
 │       └── package.json
 ├── packages/
 │   ├── shared/                # חוזי טיפוסים משותפים (Single Source of Truth)
 │   │   ├── src/
-│   │   │   ├── types/         # הגדרות ממשקי OKF (decision, statement, era וכו')
+│   │   │   ├── types/         # הגדרות ממשקי OKF (decision, cognitive, outcome, era וכו')
 │   │   │   └── index.ts
 │   │   └── package.json
-│   └── backend/               # שירותי שרת ומנוע AI
+│   └── backend/               # שירותי שרת ומנוע AI מתקדם
 │       ├── src/
 │       │   ├── ai/            # Strategy Pattern עבור ספקי ה-AI
-│       │   ├── prompts/       # פרומפטים מובנים לחילוץ אפיסטמי
-│       │   ├── services/      # לוגיקה עסקית (שליפה משולשת, איחוד)
-│       │   └── functions/     # Callable Cloud Functions
+│       │   ├── prompts/       # פרומפטים מובנים לחילוץ אפיסטמי ודלתא
+│       │   ├── services/      # לוגיקה עסקית (DecisionService, RetrievalBeforeAsk, KnowledgeGraph)
+│       │   └── functions/     # Callable Cloud Functions v2
 │       └── package.json
 ├── firebase/                  # קבצי תצורה של Firebase
 │   ├── firestore.rules        # חוקי אבטחה הרמטיים (Path-based isolation)
 │   ├── storage.rules          # חוקי אבטחת מדיה והקלטות
-│   └── firestore.indexes.json # אינדקסים משולבים ואינדקסים וקטוריים
-└── docs/                      # מסמכי ארכיטקטורה ויסוד
+│   └── firestore.indexes.json # אינדקסים משולבים
+├── DECISION_CYCLES.json       # מאגר 38 מחזורי הכרעה היסטוריים מאומתים
+└── docs/                      # מסמכי ארכיטקטורה, חזון ואפיון
 ```
 
 ---
 
 ## 3. פירוט שכבות הטכנולוגיה (Tech Stack Detail)
 
-### 3.1 שכבת הלקוח (Frontend Mobile)
-- **Framework:** React Native מבוסס **Expo SDK 51+** עם TypeScript קפדני (`strict: true`).
-- **Styling:** **NativeWind (Tailwind CSS v3)** מותאם למובייל לתמיכה מלאה בערכת נושא מותאמת אישית.
-- **Graphic Engine:** **Shopify React Native Skia** ברינדור מואץ חומרה ב-GPU (120 FPS). משמש ליצירת כדור ההד (Echo Orb), פעימות הילה (Aura Glow), ואפקטי גלים בריאקטיביות קולית.
-- **Animations:** **React Native Reanimated 3** לביצוע מעברי מסכים ואנימציות Accordion מבוססות חומרה ב-UI Thread בלבד.
+### 3.1 שכבת הלקוח (Frontend Mobile Web / PWA)
+- **Framework:** **React 18** מבוסס **Vite** עם TypeScript קפדני (`strict: true`). מעטפת מובייל רספונסיבית מלאה (המותאמת לפריסה מלאה בסמארטפון ולמוקאפ ממוסגר יוקרתי במסכי דסקטופ).
+- **Styling:** **Tailwind CSS** בשילוב אובייקט `LuxuryTheme` המיישם 100% מכללי **[DESIGN_SYSTEM.md](../DESIGN_SYSTEM.md)** (פלטת 3 צבעים בלבד: Void `#07080B`, Typography `#E6E8EE`, Sacred Gold `#D4AF37`, פונטים: Frank Ruhl Libre & Assistant, כיווניות ימין-לשמאל `dir="rtl"`).
+- **Graphic Engine:** **HTML5 Canvas 2D Engine** מתמטי מובנה (`EchoOrb.tsx`) הפועל ב-60 FPS ללא ספריות כבדות. מחשב 32 פרוסות רוחב כדוריות, 140 נקודות לטבעת, זווית הטיה פרספקטיבית של 22 מעלות וסיבוב ציר Yaw מתמיד, המגיב בזמן אמת לעוצמת הקול.
+- **Audio Engine:** **Web Audio API** סטנדרטי בדפדפן (`MediaRecorder`, `AudioContext`, `AnalyserNode`) המבטיח תאימות מוחלטת בכל דפדפן נייד ללא צורך בספריות נייטיב חיצוניות.
 
-### 3.2 שכבת השרת (Serverless Cloud Functions)
+### 3.2 שכבת השרת והענן (Serverless Cloud Functions v2)
 - **Runtime:** **Firebase Cloud Functions v2** (Node.js 20+ / TypeScript).
-- **Communication Protocol:** **Callable Functions (HTTPS with Auth Context)**. כל קריאה מאומתת ברמת ה-Framework ומזריקה את ה-`context.auth.uid` האותנטי ללא אפשרות זיוף.
-- **Background Processing:** **Cloud Tasks** וטריגרים מתוזמנים (**Cloud Scheduler**) לביצוע עבודות תחזוקה אסינכרוניות.
+- **Communication Protocol:** **Callable Functions (HTTPS with Auth Context)**.
+- **שירותי ליבה מתקדמים:** `DecisionService`, `KnowledgeGraphService`, `RetrievalBeforeAskService`, `DynamicEntityExtractorService` ו-`TriFactorRetrievalService`.
 
-### 3.3 שכבת ה-AI המודל-אגנוסטית (Strategy Pattern)
-כדי למנוע תלות נוקשה בספק ענן יחיד (Vendor Lock-in), פותחה שכבת Adapter סביב הממשק `IAiProvider`:
-
-```typescript
-export interface IAiProvider {
-  extractEpistemicSchema(rawText: string, activeEraContext?: Record<string, any>): Promise<EpistemicExtractionResult>;
-  generateStructuralEmbedding(signature: Record<string, any>, context: Record<string, any>): Promise<number[]>;
-  transcribeAudio?(audioBuffer: Buffer): Promise<string>;
-}
-```
-
-- **GeminiProvider:** ספק ברירת מחדל מבוסס **Google Gemini 1.5 Pro / Flash** (מהירות, חלון קונטקסט ענק ודיוק בסכמות JSON מורכבות).
-- **OpenAiProvider:** תמיכה מלאה ב-**OpenAI GPT-4o** דרך Structured Outputs.
-- **LocalProvider:** תמיכה במודלים מקומיים בקוד פתוח (דרך Ollama / Llama.cpp) לטובת משתמשים עם דרישות פרטיות קיצוניות (Air-gapped / Local-only).
-- **AiProviderFactory:** טוען ומזריק את הספק הרצוי בהתאם להגדרת משתנה סביבה יחיד (`AI_PROVIDER`).
+### 3.3 ארכיטקטורת AI היברידית וחוסן רב-שכבתי
+כדי להבטיח זמני תגובה מיידיים (Zero Friction) וחוסן במצבי אי-חיבור, המערכת מיישמת גישה היברידית:
+1. **פנייה ישירה מהקליינט ל-Google Gemini (`aiService.ts`):** מפעילה את מודלי `gemini-2.5-flash` / `gemini-1.5-flash` בחילוץ אפיסטמי ממוקד (טמפרטורה 0.2, פלט JSON מובנה) תוך שניות בודדות.
+2. **סנכרון רב-מסלולי (Multi-Tier Firestore Sync):** ניסיון ראשוני ב-Firestore SDK, מעבר שקוף ל-Firestore REST API (עמיד לחסימות רשת), וגיבוי מקומי מלא לקובץ `DECISION_CYCLES.json`.
+3. **שכבת Strategy Pattern ב-Backend (`IAiProvider`):** מאפשרת מעבר קל בין Gemini, OpenAI GPT-4o ומודלים מקומיים בענן.
 
 ---
 
@@ -179,7 +173,12 @@ graph TD
    - ימי דעיכת הפיכות (Reversibility Decay Days).
    - מתח מנהל-סוכן (Principal-Agent Tension).
 2. **Contextual Match ($0.35$):** תאימות של ה-`OperatingContext` (שלב החברה, משאב בחסר וסבילות סיכון). אם ההחלטה התקבלה בשלב חיים שונה, מופקת אזהרה למשתמש על השוני בהקשר.
-3. **Semantic Match ($0.20$):** דמיון קוסינוס וקטורי של תיאור ההחלטה ב-Vertex AI.
+3. **Semantic Match ($0.20$):** דמיון קוסינוס וקטורי של תיאור ההחלטה מול תקדימי העבר.
+
+#### שירות שליפה מקדים והדים מהעבר (`RetrievalBeforeAskService` & `EchoPastCard`)
+היישום המעשי של השליפה מתבצע מול מאגר 38 מחזורי ההחלטה המאומתים (`DECISION_CYCLES.json`):
+- **רף סינון מחמיר:** כרטיס הד מהעבר (`EchoPastCard`) מוצג בממשק רק כאשר הציון המשוקלל חוצה **85%** ($\text{Score} \ge 0.85$). מתחת לרף זה, המערכת שומרת על שקט קוגניטיבי מוחלט (Smart Silence) ונמנעת משליפות שווא.
+- **שאלה היסטורית מותנית:** המערכת אינה מסתפקת בהצגת המקרה, אלא שולפת את הלקח ההיסטורי ומנסחת שאלת חידוד מונעת ("במקרה דומה בעבר התברר ש... האם נכון לבדוק זאת גם כאן?").
 
 ### 4.3 צינור 3: חוזה מעקב וסגירת מעגל (Evaluation & Outcome Loop)
 

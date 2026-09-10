@@ -70,46 +70,46 @@
 
 ---
 
-### Task TASK-005: תשתית אפליקציית Mobile וערכת נושא יוקרתית
+### Task TASK-005: תשתית אפליקציית Mobile Web וערכת נושא יוקרתית
 - **Target Agent**: Frontend UI & Graphics Sub-Agent
 - **Owned Files/Paths**:
-  - `apps/mobile/src/theme/*`
-  - `apps/mobile/src/navigation/RootNavigator.tsx`
-  - `apps/mobile/src/components/common/ScreenContainer.tsx`
-  - `apps/mobile/src/components/common/Typography.tsx`
-  - `apps/mobile/tailwind.config.js`
+  - `apps/mobile/src/theme/colors.ts`
+  - `apps/mobile/src/App.tsx`
+  - `apps/mobile/src/components/TopDrawer.tsx`
+  - `apps/mobile/vite.config.ts`
+  - `apps/mobile/index.html`
 - **Dependencies**: TASK-001
-- **Context/Contracts**: הקמת שלד ה-Expo, תצורת NativeWind ו-TypeScript. יישום פלטת צבעי Luxury Dark Mode (גרפיט עמוק `#0D0E12`, טקסט פנינה `#F4F4F5`, הדגשות ענבר `#F59E0B`), תמיכה ב-SafeArea ו-Navigation Stack.
-- **Definition of Done**: האפליקציה רצה ב-Expo ללא אזהרות; מסך בסיס מציג את הטיפוגרפיה והצבעים המוגדרים בצורה מדויקת.
+- **Context/Contracts**: הקמת שלד ה-Vite + React 18 במבנה Mobile-First (קונטיינר רספונסיבי עם מוקאפ יוקרתי בדסקטופ). יישום פלטת 3 הצבעים המחייבת מ-[DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) (Void `#07080B`, Typography `#E6E8EE`, Sacred Gold `#D4AF37`), וטיפוגרפיית Frank Ruhl Libre ו-Assistant בכיווניות ימין-לשמאל (`dir="rtl"`).
+- **Definition of Done**: האפליקציה מתקמפלת ורצה ב-Vite (`npm run dev`) ללא שגיאות; צבעי ה-Void והזהב מרונדרים בדיוק מושלם.
 
 ---
 
-### Task TASK-006: מנוע גלים ואפקט הד ב-Shopify React Native Skia
+### Task TASK-006: מנוע גאומטריה וקנבס כדור ההד (HTML5 Canvas 2D)
 - **Target Agent**: Frontend UI & Graphics Sub-Agent
 - **Owned Files/Paths**:
   - `apps/mobile/src/graphics/EchoOrb.tsx`
-  - `apps/mobile/src/graphics/RippleShaders.ts`
-  - `apps/mobile/src/graphics/PulsingAura.tsx`
+  - `apps/mobile/src/graphics/DecisionFlowPipeline.tsx`
 - **Dependencies**: TASK-005
-- **Context/Contracts**: מימוש גרפיקה דינמית מואצת חומרה ב-Skia. כדור ההד (Echo Orb) מגיב למצב הקלטה (פועם ומתרחב לפי עוצמת הקול / אנימציית נשימה חלקה ב-60–120 FPS).
-- **Definition of Done**: הקומפוננטה מרנדרת אפקט תאורה עדין ומגיבה לפרמטרים דינמיים ללא נפילת פריימים במכשיר/סימולטור.
+- **Context/Contracts**: מימוש גרפיקה מתמטית חלקה ב-HTML5 Canvas 2D ללא ספריות נייטיב כבדות. כדור ההד (`EchoOrb`) מרנדר 32 פרוסות רוחב כדוריות, 140 נקודות לטבעת, הטיה של 22 מעלות וסיבוב ציר קבוע ב-60 FPS בצבע זהב בלעדי (`#D4AF37`), ומגיב לעוצמת השמע.
+- **Definition of Done**: הקומפוננטה מרנדרת אפקט פעימה ונשימה עדין ומגיבה לתדרי קול ללא נפילת פריימים.
 
 ---
 
 ## Phase 3: פונקציות שרת ומסכי משתמש
 
-### Task TASK-007: מימוש Cloud Functions עבור מחזור חיי ההחלטה
+### Task TASK-007: מימוש Cloud Functions ומנוע AI היברידי
 - **Target Agent**: Backend & Cloud Functions Sub-Agent
 - **Owned Files/Paths**:
   - `packages/backend/src/functions/createDecisionCase.ts`
   - `packages/backend/src/functions/submitDeliberationAnswer.ts`
-  - `packages/backend/src/functions/finalizeEvaluationContract.ts`
   - `packages/backend/src/functions/recordOutcome.ts`
-  - `packages/backend/src/services/vectorSearch.service.ts`
-  - `packages/backend/src/index.ts`
+  - `packages/backend/src/services/decision.service.ts`
+  - `packages/backend/src/services/retrievalBeforeAsk.service.ts`
+  - `apps/mobile/src/services/aiService.ts`
+  - `apps/mobile/src/services/firestoreSync.ts`
 - **Dependencies**: TASK-002, TASK-004
-- **Context/Contracts**: מימוש הפונקציות ה-Callable ב-Firebase Functions v2. ביצוע הקפאה מקורית של הטקסט, חילוץ סכמה, יצירת וקטור דמיון מבני, שמירה ב-Firestore, וחיפוש KNN מבודד למשתמש הנוכחי בלבד.
-- **Definition of Done**: הפונקציות רצות מקומית ב-Firebase Emulator; קריאות בדיקה עם Bearer Token מבודד שומרות את המידע ומחזירות סכמה אפיסטמית תקינה.
+- **Context/Contracts**: מימוש ארכיטקטורה היברידית: שירותי Backend ב-Cloud Functions לצד פנייה ישירה מבוקרת מהלקוח ל-Gemini Flash (`aiService.ts`) לחילוץ אפיסטמי מהיר (Latency נמוך) וסנכרון רב-שכבתי (Firestore SDK + REST API + קובץ `DECISION_CYCLES.json` לגיבוי לא מקוון).
+- **Definition of Done**: חילוץ אפיסטמי מלא מתבצע תוך שניות בודדות, והמידע נשמר בענן וב-localStorage באופן עמיד.
 
 ---
 
@@ -117,38 +117,33 @@
 - **Target Agent**: Frontend UI & Graphics Sub-Agent
 - **Owned Files/Paths**:
   - `apps/mobile/src/screens/QuickCaptureScreen.tsx`
-  - `apps/mobile/src/components/capture/AudioRecorderButton.tsx`
-  - `apps/mobile/src/components/capture/TextInputBox.tsx`
-  - `apps/mobile/src/hooks/useAudioRecording.ts`
+  - `apps/mobile/src/services/voiceService.ts`
 - **Dependencies**: TASK-005, TASK-006
-- **Context/Contracts**: מסך מינימליסטי המשלב את ה-Echo Orb במרכזו, תמיכה בהקלטת קול (Expo AV) עם חיווי ויזואלי, ושדה טקסט חופשי. כפתור "הקפא והאר" מעביר נתונים הלאה.
-- **Definition of Done**: המשתמש יכול להקליד טקסט או להקליט קול, לראות אנימציית גלים חלקה, וללחוץ על שליחה המפעילה מעבר למסך חדר ההחלטה.
+- **Context/Contracts**: מסך מינימליסטי המשלב את ה-Echo Orb במרכזו, תמיכה בהקלטת קול חלקה בדפדפן (Web Audio API / MediaRecorder) עם ניתוח תדרים חי, תיבת טקסט חופשית לבחירה, וכפתור בחירת רמת חיכוך (מהיר / ממוקד / מעמיק).
+- **Definition of Done**: המשתמש יכול להקליד טקסט או להקליט קול, לראות אנימציית גלים חיה ב-Canvas, ולשלוח לניתוח.
 
 ---
 
-### Task TASK-009: מסך חדר ההחלטה ומראת החשיבה (Decision Room)
+### Task TASK-009: מסך חדר ההחלטה והמראה המתפתחת (Decision Room)
 - **Target Agent**: Frontend UI & Graphics Sub-Agent
 - **Owned Files/Paths**:
   - `apps/mobile/src/screens/DecisionRoomScreen.tsx`
-  - `apps/mobile/src/components/deliberation/FrozenOriginalCard.tsx`
-  - `apps/mobile/src/components/deliberation/EpistemicSchemaView.tsx`
-  - `apps/mobile/src/components/deliberation/IlluminationCard.tsx`
-  - `apps/mobile/src/components/deliberation/AnalogousCasesCarousel.tsx`
+  - `apps/mobile/src/components/EchoPastCard.tsx`
 - **Dependencies**: TASK-005, TASK-001
-- **Context/Contracts**: מסך לקריאה בלבד ללא עריכה. מציג כרטיס מקור נעול (`🔒 Frozen`), בלוקים נקיים של עובדות, הנחות ואי-ודאות, כרטיס בולט עם שאלת ההארה האחת ומקום להשיב עליה, וקרוסלת מקרים דומים מתחת.
-- **Definition of Done**: המסך מציג באופן קריא ואלגנטי את הסכמה מול Mock Data או מול שרת; שאלת ההארה מובילה להזנת תשובה ולמעבר לחוזה הערכה.
+- **Context/Contracts**: מסך עריכה ושיקוף חי. מציג בראשו את מיקוד 20 השניות הראשונות (המתח המרכזי וציר ההכרעה), מראת 4 ממדים הניתנת לעריכה ישירה ע"י המשתמש, שאלת הארה חדה אחת עם כפתור "מספיק לי לעכשיו", כרטיס הד מהעבר (`EchoPastCard`) בעת זיהוי דמיון גבוה ($\ge 0.85$), וצעדים קונקרטיים מוצעים.
+- **Definition of Done**: המשתמש רואה את חשיבתו משוקפת בצורה בהירה, יכול לערוך כל ממד ישירות, משיב על שאלת החידוד ורואה את ההתחדדות המיידית (Before/After).
 
 ---
 
-### Task TASK-010: מסך חוזה הערכה ומודאל תוצאה (Evaluation & Outcome)
+### Task TASK-010: מודאל תוצאה, יומן החלטות ופרופיל כיול
 - **Target Agent**: Frontend UI & Graphics Sub-Agent
 - **Owned Files/Paths**:
-  - `apps/mobile/src/screens/EvaluationContractScreen.tsx`
   - `apps/mobile/src/screens/OutcomeModal.tsx`
-  - `apps/mobile/src/components/contract/CriteriaPicker.tsx`
+  - `apps/mobile/src/screens/DecisionJournalScreen.tsx`
+  - `apps/mobile/src/screens/DecisionProfileScreen.tsx`
 - **Dependencies**: TASK-009
-- **Context/Contracts**: מסך הגדרת קריטריון הצלחה מדויק מראש ומועד בדיקה. מודאל התוצאה מאפשר תיעוד קצר של מה קרה בפועל ובחינת תקיפות הקריטריון.
-- **Definition of Done**: המשתמש יכול לנעול מקרה, להגדיר תאריך, ולצפות במודאל סגירת מעגל מתפקד.
+- **Context/Contracts**: סגירת מעגל למידה רכה ב-3 צירים (מה קרה בפועל, מה התברר לגבי ההנחה, ומה היית משנה) לצד 4 כפתורי מענה מהיר. יומן החלטות המציג את היסטוריית המקרים שנחתמו, ומסך פרופיל המציג מדדי למידה וכיול.
+- **Definition of Done**: המשתמש יכול לתעד תוצאה, לדפדף ביומן ההחלטות ולצפות במדדי הכיול.
 
 ---
 

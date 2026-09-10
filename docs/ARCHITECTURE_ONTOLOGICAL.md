@@ -93,6 +93,20 @@ graph TD
   - `frozen_at`: חותמת זמן מדויקת (epoch ms) שבה ננעל מצב החשיבה המקורי לפני עיבוד ה-AI.
   - `raw_capture_text`: המלל המקורי המדויק ללא שום מניפולציה.
 
+  **5 ממדי המראה האנושיים ומיקוד 20 השניות הראשונות (Human Dimensions & First 20 Seconds):**
+  - `dim_consideration`: אתה שוקל (ניסוח הדילמה בגוף שני).
+  - `central_tension`: המתח המרכזי בין ערכים או מחירים.
+  - `key_hinge`: ציר ההכרעה הקריטי שעליו תקום ותיפול ההחלטה.
+  - `dim_goals_prices`: מטרות, ערכים ומחירים שלא תרצה לשלם.
+  - `dim_facts`: עובדות קשיחות מאומתות.
+  - `dim_assumptions`: הנחות סמויות וציפיות.
+  - `dim_missing_info`: פערי מידע מרכזיים להכרעה.
+
+  **מנגנוני שיקול דעת עמוקים (OKF Horizon 2 Deep Mechanisms):**
+  - `operating_principles`: עקרונות פעולה וכללי אצבע ניהוליים המופעלים בדילמה.
+  - `tradeoffs`: ויתורים מודעים בין ערך מוגן (`protectedValue`) לערך מוקרב (`sacrificedValue`).
+  - `boundary_conditions`: תנאי סף וסייגים לקיום ההנחות.
+
 ### 3.3 `Statement` (טענה אפיסטמית אטומית)
 - **Concept ID:** `concept:statement`
 - **ייעוד:** יחידת טענה בסיסית שחולצה מהלכידה הגולמית, מסווגת לפי תפקידה הקוגניטיבי.

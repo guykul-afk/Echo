@@ -4,49 +4,52 @@ service cloud.firestore {
 
     // Helper functions for zero-trust authorization
     function isAuthenticated() {
-      return request.auth != null;
+      return request.auth != null && request.auth.uid != null;
     }
 
     function isFounder() {
-      return isAuthenticated() && (
-        request.auth.token.email == 'guykul@gmail.com' ||
-        (request.auth.token.email != null && request.auth.token.email.matches('(?i).*guy.*'))
-      );
+      return isAuthenticated() &&
+        request.auth.token.email == 'guykul@gmail.com' &&
+        request.auth.token.email_verified == true;
     }
 
     function isOwner(userId) {
-      return (
-        request.auth == null ||
-        isFounder() ||
-        (isAuthenticated() && request.auth.uid == userId) ||
-        userId == 'guy_founder' ||
-        userId == 'guy_kuleski' ||
-        userId == 'Guy_Kuleski' ||
-        userId == 'guykul'
+      return isAuthenticated() && (
+        request.auth.uid == userId ||
+        (isFounder() && (
+          userId == 'Guy_Kuleski' ||
+          userId == 'guy_kuleski' ||
+          userId == 'guy_founder' ||
+          userId == request.auth.uid
+        ))
       );
     }
 
     // User-scoped decisions, sessions, and multi-tenancy (Strict Isolation)
     match /users/{userId} {
-      allow read, write: if isOwner(userId) || isAuthenticated() || request.auth == null;
+      allow read, write: if isOwner(userId);
 
       match /{allSubcollections=**} {
-        allow read, write: if isOwner(userId) || isAuthenticated() || request.auth == null;
+        allow read, write: if isOwner(userId);
       }
     }
 
-    // Decisions collection: restricted access - no unauthenticated or cross-user scanning
+    // Decisions collection: restricted to founder or decision owner
     match /decisions/{decisionId} {
-      allow read, write: if isAuthenticated() || request.auth == null;
+      allow read, write: if isFounder();
     }
 
     // Canonical Decision Cases, contracts, statements
+    // All authenticated users can read historical precedents, only founder can write
     match /decision_cases/{caseId} {
-      allow read, write: if isAuthenticated() || request.auth == null;
+      allow read: if isAuthenticated();
+      allow write: if isFounder();
 
       match /{allSubcollections=**} {
-        allow read, write: if isAuthenticated() || request.auth == null;
+        allow read: if isAuthenticated();
+        allow write: if isFounder();
       }
     }
   }
 }
+
