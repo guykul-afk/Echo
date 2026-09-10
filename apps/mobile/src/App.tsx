@@ -7,6 +7,7 @@ import { DecisionProfileScreen } from './screens/DecisionProfileScreen.js';
 import { DecisionJournalScreen } from './screens/DecisionJournalScreen.js';
 import { TopDrawer } from './components/TopDrawer.js';
 import { checkRedirectAuth } from './services/firebaseAuth.js';
+import { syncUserDecisionsFromCloud } from './services/firestoreSync.js';
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, QuickLoopStatus, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
 
 type AppStep = 'capture' | 'decision_room' | 'outcome' | 'profile' | 'journal';
@@ -26,15 +27,48 @@ export const App: React.FC = () => {
   const [refinedInsight, setRefinedInsight] = useState<RefinedInsight | undefined>(undefined);
   const [chosenNextStep, setChosenNextStep] = useState<string>('');
   const [currentUserId, setCurrentUserId] = useState<string>(() => {
-    return (typeof window !== 'undefined' && localStorage.getItem('ECHO_ACTIVE_USER')) || 'guy_founder';
+    return (typeof window !== 'undefined' && localStorage.getItem('ECHO_ACTIVE_USER')) || 'Guy_Kuleski';
   });
+  const [capturesCount, setCapturesCount] = useState<number>(39);
+  const [closuresCount, setClosuresCount] = useState<number>(8);
+
+  const loadUserMetrics = (user: string) => {
+    try {
+      const key = `echo_decisions_${user}`;
+      let raw = localStorage.getItem(key);
+      if (!raw && (user.toLowerCase().includes('guy') || user.toLowerCase().includes('kuleski'))) {
+        raw = localStorage.getItem('echo_decisions_Guy_Kuleski') || localStorage.getItem('echo_decisions_guy_founder');
+      }
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setCapturesCount(parsed.length);
+          const closed = parsed.filter((d: any) => d.sealed || (d.followUps && d.followUps.length > 0)).length;
+          if (closed > 0) setClosuresCount(closed);
+        }
+      }
+    } catch {}
+
+    syncUserDecisionsFromCloud(user).then((list) => {
+      if (Array.isArray(list) && list.length > 0) {
+        setCapturesCount(list.length);
+        const closed = list.filter((d: any) => d.sealed || (d.followUps && d.followUps.length > 0)).length;
+        if (closed > 0) setClosuresCount(closed);
+      }
+    });
+  };
 
   const handleSwitchUser = (newUser: string) => {
     setCurrentUserId(newUser);
     if (typeof window !== 'undefined') {
       localStorage.setItem('ECHO_ACTIVE_USER', newUser);
     }
+    loadUserMetrics(newUser);
   };
+
+  useEffect(() => {
+    loadUserMetrics(currentUserId);
+  }, [currentUserId]);
 
   // Check if user just redirected back from Google Social Auth
   useEffect(() => {
@@ -317,6 +351,8 @@ export const App: React.FC = () => {
             <DecisionProfileScreen
               onBack={() => setStep('capture')}
               currentUserId={currentUserId}
+              capturesCount={capturesCount}
+              closuresCount={closuresCount}
             />
           )}
 

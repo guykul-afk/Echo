@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LuxuryTheme } from '../theme/colors.js';
 import { signInWithGoogleSocial, handleAppleSignInNotice } from '../services/firebaseAuth.js';
+import { syncUserDecisionsFromCloud } from '../services/firestoreSync.js';
 
 interface UserAuthModalProps {
   isOpen: boolean;
@@ -31,7 +32,7 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
         }
       }
     } catch {}
-    setKnownUsers(['guy_founder', 'guy_kuleski', 'dana_investor', 'noam_founder']);
+    setKnownUsers(['Guy_Kuleski', 'guy_founder', 'dana_investor', 'noam_founder']);
   }, [currentUser, isOpen]);
 
   const saveKnownUser = (name: string) => {
@@ -44,18 +45,22 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
 
   const handleUpdateCurrentName = () => {
     if (inputName.trim()) {
-      saveKnownUser(inputName.trim());
-      onSelectUser(inputName.trim());
+      const name = inputName.trim();
+      saveKnownUser(name);
+      onSelectUser(name);
+      syncUserDecisionsFromCloud(name);
       onClose();
     }
   };
 
   const handleSwitchToNew = () => {
     if (inputName.trim()) {
-      saveKnownUser(inputName.trim());
-      onSelectUser(inputName.trim());
+      const name = inputName.trim();
+      saveKnownUser(name);
+      onSelectUser(name);
+      syncUserDecisionsFromCloud(name);
       onClose();
-      alert(`נפתח מרחב שיקול דעת עבור @${inputName.trim()}! כל החלטה שתקליט תישמר בנפרד.`);
+      alert(`נפתח מרחב שיקול דעת עבור @${name}! כל החלטה שתקליט תישמר בנפרד.`);
     }
   };
 
@@ -66,6 +71,7 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
       if (user) {
         saveKnownUser(user);
         onSelectUser(user);
+        await syncUserDecisionsFromCloud(user);
         onClose();
         alert(`התחברת בהצלחה למרחב של @${user}!`);
       }
@@ -139,6 +145,7 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
                   onClick={() => {
                     setInputName(u);
                     onSelectUser(u);
+                    syncUserDecisionsFromCloud(u);
                     onClose();
                   }}
                   className={`px-2.5 py-1 rounded-lg text-[10px] border transition-all cursor-pointer ${
@@ -177,13 +184,14 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
           <button
             type="button"
             onClick={() => {
-              saveKnownUser('guy_founder');
-              onSelectUser('guy_founder');
+              saveKnownUser('Guy_Kuleski');
+              syncUserDecisionsFromCloud('Guy_Kuleski');
+              onSelectUser('Guy_Kuleski');
               onClose();
             }}
             className="w-full py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all active:scale-[0.98] text-amber-300 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 shadow-md cursor-pointer"
           >
-            <span>⚡ כניסה מיידית למרחב (Guy Founder)</span>
+            <span>⚡ כניסה מיידית למרחב של גיא (39 לכידות)</span>
           </button>
 
           {/* Social Sign-In (Google / Apple) */}

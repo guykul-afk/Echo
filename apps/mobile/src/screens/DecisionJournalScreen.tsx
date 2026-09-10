@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LuxuryTheme } from '../theme/colors.js';
+import { syncUserDecisionsFromCloud } from '../services/firestoreSync.js';
 
 interface DecisionJournalScreenProps {
   onBack: () => void;
@@ -13,6 +14,7 @@ interface StoredDecision {
   date?: string;
   consideration?: string;
   rawCaptureText?: string;
+  rawVerbatim?: string;
   dimConsideration?: string;
   centralTension?: string;
   keyHinge?: string;
@@ -20,14 +22,38 @@ interface StoredDecision {
   insightNow?: string;
   nextStep?: string;
   chosenNextStep?: string;
+  insightChosenStep?: string;
+  refinedAction?: string;
+  actionAnswer?: string;
+  userAnswer?: string;
+  selectedCriterion?: string;
+  assumptions?: string;
+  question?: string;
+  goal?: string;
+  observations?: string;
+  contractCriterion?: string;
   status?: string;
+  sealed?: boolean;
   followUps?: Array<{
     timestamp: number;
     quickStatus?: string;
     realityText?: string;
     assumptionText?: string;
     processText?: string;
+    text?: string;
   }>;
+}
+
+function cleanHtml(str?: string): string {
+  if (!str) return '';
+  return str
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&quot;/gi, '"')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 const SEED_DECISIONS: StoredDecision[] = [
@@ -96,22 +122,40 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
 }) => {
   const [decisions, setDecisions] = useState<StoredDecision[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  const fetchAndSync = async (showLoading = true) => {
+    if (showLoading) setIsSyncing(true);
+    try {
+      const list = await syncUserDecisionsFromCloud(currentUserId);
+      if (list && list.length > 0) {
+        setDecisions(list);
+      }
+    } catch (err) {
+      console.warn('Sync notice:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   useEffect(() => {
     try {
       const key = `echo_decisions_${currentUserId}`;
-      const saved = localStorage.getItem(key);
+      let saved = localStorage.getItem(key);
+      if (!saved && (currentUserId.toLowerCase().includes('guy') || currentUserId.toLowerCase().includes('kuleski'))) {
+        saved = localStorage.getItem('echo_decisions_Guy_Kuleski') || localStorage.getItem('echo_decisions_guy_founder');
+      }
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setDecisions(parsed);
-          return;
         }
       }
     } catch (e) {
       console.warn('Could not load user decisions from localStorage', e);
     }
-    setDecisions(SEED_DECISIONS);
+
+    fetchAndSync(decisions.length === 0);
   }, [currentUserId]);
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
@@ -142,12 +186,21 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
           <h2 className="font-editorial text-xl font-bold tracking-wider" style={{ color: LuxuryTheme.accent.gold }}>
             יומן החלטות
           </h2>
-          <span className="text-[10px] opacity-60">
-            {decisions.length} החלטות מתועדות בזיכרון
-          </span>
+          <div className="flex items-center justify-center gap-1.5 text-[10px] opacity-70">
+            <span>{decisions.length} החלטות מתועדות</span>
+            {isSyncing && <span className="text-amber-400 animate-pulse">(מסנכרן...)</span>}
+          </div>
         </div>
 
-        <div className="w-16"></div>
+        <button
+          type="button"
+          onClick={() => fetchAndSync(true)}
+          disabled={isSyncing}
+          className="text-[10px] px-2.5 py-1 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] transition-all cursor-pointer text-amber-200"
+          title="סנכרן החלטות מענן Firestore"
+        >
+          {isSyncing ? '...' : 'סנכרן 🔄'}
+        </button>
       </div>
 
       {/* Decisions List */}
@@ -161,9 +214,12 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
           {decisions.map((d) => {
             const isExpanded = expandedId === d.id;
             const dateStr = d.date || (d.frozenAt ? new Date(d.frozenAt).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: 'numeric' }) : '—');
-            const considerationText = d.dimConsideration || d.consideration || d.rawCaptureText || '—';
-            const nextStepText = d.chosenNextStep || d.nextStep || '—';
+            const considerationText = cleanHtml(d.dimConsideration || d.consideration || d.rawVerbatim || d.rawCaptureText || d.goal) || '—';
+            const nextStepText = cleanHtml(d.chosenNextStep || d.nextStep || d.insightChosenStep || d.refinedAction || d.actionAnswer || d.userAnswer || d.selectedCriterion) || '—';
+            const beforeText = cleanHtml(d.insightBefore || d.assumptions) || '—';
+            const nowText = cleanHtml(d.insightNow || d.question || d.keyHinge) || 'בדיקת הנחת הציר';
             const hasFollowUps = d.followUps && d.followUps.length > 0;
+            const isSealed = d.sealed || hasFollowUps;
 
             return (
               <div
@@ -187,9 +243,9 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    {hasFollowUps ? (
+                    {isSealed ? (
                       <span className="px-2 py-0.5 rounded-full text-[9px] border text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
-                        ביררתי (הושלם)
+                        {hasFollowUps ? 'ביררתי (הושלם)' : 'נחתם למעקב'}
                       </span>
                     ) : (
                       <span className="px-2 py-0.5 rounded-full text-[9px] border text-amber-300 border-amber-500/30 bg-amber-500/10">
@@ -202,7 +258,7 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
                 {/* Title & Consideration */}
                 <div>
                   <h3 className="font-editorial text-sm font-bold text-[#E6E8EE]">
-                    {d.title}
+                    {d.title || 'החלטה ללא כותרת'}
                   </h3>
                   <p className="text-[11px] font-light text-[#E6E8EE]/70 mt-1 line-clamp-2">
                     <span style={{ color: LuxuryTheme.accent.gold }}>אתה שוקל: </span>
@@ -212,13 +268,15 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
 
                 {/* Next Step / Conclusion Snippet */}
                 <div className="p-2.5 rounded-xl bg-amber-400/[0.04] border border-amber-400/20 text-xs text-[#E6E8EE] space-y-1">
-                  <div className="text-[10px] opacity-70">
-                    <span>קודם: </span>
-                    <span>{d.insightBefore || '—'}</span>
-                  </div>
+                  {beforeText !== '—' && (
+                    <div className="text-[10px] opacity-70">
+                      <span>קודם: </span>
+                      <span>{beforeText}</span>
+                    </div>
+                  )}
                   <div className="text-[11px] text-emerald-300 font-medium pt-0.5">
                     <span>המסקנה: </span>
-                    <span>{d.insightNow || 'בדיקת הנחת הציר'}</span>
+                    <span>{nowText}</span>
                   </div>
                   {nextStepText !== '—' && (
                     <div className="text-[10px] text-amber-200/90 pt-0.5">
@@ -241,6 +299,18 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
                       <div>
                         <span className="text-[10px] block font-medium" style={{ color: LuxuryTheme.accent.gold }}>ציר ההכרעה:</span>
                         <p className="text-[11px] opacity-90">{d.keyHinge}</p>
+                      </div>
+                    )}
+                    {d.observations && (
+                      <div>
+                        <span className="text-[10px] block font-medium" style={{ color: LuxuryTheme.accent.gold }}>תצפיות:</span>
+                        <p className="text-[11px] opacity-90 whitespace-pre-line">{cleanHtml(d.observations)}</p>
+                      </div>
+                    )}
+                    {d.contractCriterion && (
+                      <div>
+                        <span className="text-[10px] block font-medium text-emerald-400">חוזה הכרעה:</span>
+                        <p className="text-[11px] opacity-90">{cleanHtml(d.contractCriterion)}</p>
                       </div>
                     )}
 

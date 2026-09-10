@@ -31,14 +31,26 @@ export function initFirebase() {
 }
 
 export function normalizeUsername(user: any): string {
-  if (!user) return 'guy_founder';
-  let userIdentifier = user.displayName 
-    ? user.displayName.trim().replace(/[\s\/\\#\?]/g, '_') 
+  if (!user) return 'Guy_Kuleski';
+  const email = (user.email || '').toLowerCase();
+  const displayName = (user.displayName || '').trim();
+  let userIdentifier = displayName 
+    ? displayName.replace(/[\s\/\\#\?]/g, '_') 
     : (user.email ? user.email.split('@')[0] : user.uid);
 
   const lower = userIdentifier.toLowerCase();
-  if (lower.includes('kuleski') || lower.includes('guykul') || lower === 'guy') {
-    userIdentifier = 'guy_kuleski';
+  if (
+    lower.includes('kuleski') || 
+    lower.includes('guykul') || 
+    lower === 'guy' || 
+    lower.includes('guy') || 
+    lower.includes('גיא') || 
+    lower.includes('קולסקי') ||
+    email.includes('kuleski') || 
+    email.includes('guy') ||
+    email.includes('guykul')
+  ) {
+    userIdentifier = 'Guy_Kuleski';
   }
   return userIdentifier;
 }

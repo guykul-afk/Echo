@@ -10,7 +10,7 @@ interface DecisionProfileScreenProps {
 
 export const DecisionProfileScreen: React.FC<DecisionProfileScreenProps> = ({
   onBack,
-  capturesCount = 35,
+  capturesCount = 39,
   closuresCount = 8
 }) => {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
