@@ -12,9 +12,7 @@ export const firebaseConfig = {
   storageBucket: "echo-guy-2026.firebasestorage.app",
   // Base64 encoded public web API key to prevent git commit scan false-positives
   apiKey: atob("QUl6YVN5Q2p4THVEUTdFa3RvbWVYdmVWb1hIYURlNnZyZkREeE1Z"),
-  authDomain: (typeof window !== 'undefined' && window.location.hostname && (window.location.hostname.includes('web.app') || window.location.hostname.includes('firebaseapp.com')))
-    ? window.location.hostname 
-    : "echo-guy-2026.web.app",
+  authDomain: "echo-guy-2026.firebaseapp.com",
   messagingSenderId: "381403602046",
   projectNumber: "381403602046"
 };
