@@ -10,6 +10,8 @@
   "scripts": {
     "build:shared": "npm --workspace=@echo/shared run build",
     "build:backend": "npm --workspace=@echo/backend run build",
+    "build:mobile": "npm --workspace=@echo/mobile run build",
+    "build": "npm run build:shared && npm run build:backend && npm run build:mobile",
     "test:backend": "npm --workspace=@echo/backend test",
     "test:e2e": "npx tsx packages/e2e-tests/run-all-e2e.ts",
     "sync-decisions": "node scripts/sync-decisions.js",

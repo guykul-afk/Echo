@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { LuxuryTheme } from '../theme/colors.js';
 import { Option } from '@echo/shared';
 
@@ -27,185 +26,96 @@ export const EvaluationContractScreen: React.FC<EvaluationContractScreenProps> =
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.screenTitle}>חוזה הערכה ונעילת החלטה</Text>
-      <Text style={styles.screenDesc}>
-        הגדר מראש מה ייחשב כאימות מוצלח ומתי נחזור לבחון את המצב, לפני שידועה התוצאה.
-      </Text>
+    <div className="flex-1 w-full max-w-[395px] mx-auto p-5 overflow-y-auto custom-scroll text-right space-y-5" dir="rtl">
+      <div>
+        <h2 className="font-editorial text-xl font-bold" style={{ color: LuxuryTheme.text.primary }}>
+          חוזה הערכה ונעילת החלטה
+        </h2>
+        <p className="text-xs opacity-60 leading-relaxed mt-1">
+          הגדר מראש מה ייחשב כאימות מוצלח ומתי נחזור לבחון את המצב, לפני שידועה התוצאה.
+        </p>
+      </div>
 
       {/* Select Option */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>הבחירה שנבחרה לפעולה:</Text>
-        {options.map((opt) => (
-          <TouchableOpacity
-            key={opt.id}
-            style={[
-              styles.optionCard,
-              selectedOptId === opt.id && styles.optionCardSelected
-            ]}
-            onPress={() => setSelectedOptId(opt.id)}
-          >
-            <Text
-              style={[
-                styles.optionText,
-                selectedOptId === opt.id && styles.optionTextSelected
-              ]}
-            >
-              {opt.title}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <div className="space-y-2">
+        <label className="text-xs font-semibold opacity-70 block">
+          הבחירה שנבחרה לפעולה:
+        </label>
+        <div className="space-y-1.5">
+          {options.map((opt) => {
+            const isSelected = selectedOptId === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setSelectedOptId(opt.id)}
+                className={`w-full p-3 rounded-xl border text-xs text-right cursor-pointer transition-all ${
+                  isSelected 
+                    ? 'border-amber-400 bg-amber-500/10 font-bold text-amber-200' 
+                    : 'border-white/10 bg-white/[0.02] text-stone-300 hover:bg-white/[0.05]'
+                }`}
+              >
+                {opt.title}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Define Target Criteria */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>קריטריון הצלחה מדויק לבדיקה עתידית:</Text>
-        <TextInput
-          style={styles.textInput}
-          multiline
+      <div className="space-y-2">
+        <label className="text-xs font-semibold opacity-70 block">
+          קריטריון הצלחה מדויק לבדיקה עתידית:
+        </label>
+        <textarea
+          rows={3}
           placeholder="לדוגמה: לפחות לקוח אחד ששילם בפועל וממשיך להשתמש בשבוע השמיני..."
-          placeholderTextColor={LuxuryTheme.text.tertiary}
           value={targetCriteria}
-          onChangeText={setTargetCriteria}
-          textAlign="right"
+          onChange={e => setTargetCriteria(e.target.value)}
+          className="w-full p-3 rounded-xl border border-white/10 bg-white/[0.03] text-xs text-right focus:outline-none resize-none placeholder:opacity-40"
+          style={{ color: LuxuryTheme.text.primary }}
         />
-      </View>
+      </div>
 
       {/* Select Review Horizon */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>מועד בדיקה חוזרת (אות מעקב):</Text>
-        <View style={styles.daysRow}>
-          {[14, 30, 60, 90].map((days) => (
-            <TouchableOpacity
-              key={days}
-              style={[styles.dayChip, reviewDays === days && styles.dayChipSelected]}
-              onPress={() => setReviewDays(days)}
-            >
-              <Text
-                style={[styles.dayChipText, reviewDays === days && styles.dayChipTextSelected]}
+      <div className="space-y-2">
+        <label className="text-xs font-semibold opacity-70 block">
+          מועד בדיקה חוזרת (אות מעקב):
+        </label>
+        <div className="grid grid-cols-4 gap-2">
+          {[14, 30, 60, 90].map((days) => {
+            const isSelected = reviewDays === days;
+            return (
+              <button
+                key={days}
+                type="button"
+                onClick={() => setReviewDays(days)}
+                className={`py-2 px-1 rounded-xl text-xs font-medium border text-center cursor-pointer transition-all ${
+                  isSelected 
+                    ? 'border-emerald-400 bg-emerald-500/15 text-emerald-300 font-bold' 
+                    : 'border-white/10 bg-white/[0.02] text-stone-400 hover:bg-white/[0.05]'
+                }`}
               >
                 {days} ימים
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-      <TouchableOpacity
-        style={[styles.lockButton, !targetCriteria.trim() && styles.lockButtonDisabled]}
+      <button
+        type="button"
         disabled={!targetCriteria.trim()}
-        onPress={handleComplete}
+        onClick={handleComplete}
+        className={`w-full py-3.5 px-4 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+          !targetCriteria.trim()
+            ? 'opacity-30 border-white/10 cursor-not-allowed'
+            : 'border-emerald-500 bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30'
+        }`}
       >
-        <Text style={styles.lockButtonText}>נעל ושמור לזיכרון שיקול הדעת ✓</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        נעל ושמור לזיכרון שיקול הדעת ✓
+      </button>
+    </div>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: LuxuryTheme.background.base
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingVertical: 28
-  },
-  screenTitle: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 22,
-    fontWeight: '700',
-    textAlign: 'right',
-    marginBottom: 6
-  },
-  screenDesc: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 13,
-    lineHeight: 18,
-    textAlign: 'right',
-    marginBottom: 24
-  },
-  section: {
-    marginBottom: 20
-  },
-  sectionLabel: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'right',
-    marginBottom: 8
-  },
-  optionCard: {
-    backgroundColor: LuxuryTheme.background.surface,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: LuxuryTheme.background.border,
-    marginBottom: 8
-  },
-  optionCardSelected: {
-    borderColor: LuxuryTheme.accent.auraGlow,
-    backgroundColor: 'rgba(99, 102, 241, 0.08)'
-  },
-  optionText: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 14,
-    textAlign: 'right'
-  },
-  optionTextSelected: {
-    color: LuxuryTheme.text.primary,
-    fontWeight: '600'
-  },
-  textInput: {
-    backgroundColor: LuxuryTheme.background.surface,
-    borderWidth: 1,
-    borderColor: LuxuryTheme.background.border,
-    borderRadius: 12,
-    padding: 12,
-    color: LuxuryTheme.text.primary,
-    fontSize: 14,
-    minHeight: 80,
-    textAlignVertical: 'top'
-  },
-  daysRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 6
-  },
-  dayChip: {
-    backgroundColor: LuxuryTheme.background.surface,
-    borderColor: LuxuryTheme.background.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16
-  },
-  dayChipSelected: {
-    borderColor: LuxuryTheme.accent.emeraldSuccess,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)'
-  },
-  dayChipText: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 13,
-    fontWeight: '500'
-  },
-  dayChipTextSelected: {
-    color: LuxuryTheme.accent.emeraldSuccess,
-    fontWeight: '700'
-  },
-  lockButton: {
-    backgroundColor: LuxuryTheme.accent.emeraldSuccess,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 20
-  },
-  lockButtonDisabled: {
-    opacity: 0.35
-  },
-  lockButtonText: {
-    color: LuxuryTheme.text.inverse,
-    fontSize: 15,
-    fontWeight: '700'
-  }
-});

@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { LuxuryTheme } from '../theme/colors.js';
 import { EchoOrb } from '../graphics/EchoOrb.js';
 
@@ -17,7 +16,7 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [frictionLevel, setFrictionLevel] = useState<'quick' | 'focused' | 'deep'>('deep');
-  const [recordHint, setRecordHint] = useState('לחץ להקלטה קולית חופשית');
+  const [recordHint, setRecordHint] = useState('גע בכדור להאזנה ולכידת מחשבה');
   const recognitionRef = useRef<any>(null);
 
   const handleToggleRecord = () => {
@@ -50,7 +49,7 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
 
           rec.onend = () => {
             setIsRecording(false);
-            setRecordHint('לחץ להקלטה קולית חופשית');
+            setRecordHint('גע בכדור להאזנה ולכידת מחשבה');
           };
 
           rec.start();
@@ -78,7 +77,7 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
         recognitionRef.current = null;
       }
       setIsRecording(false);
-      setRecordHint('לחץ להקלטה קולית חופשית');
+      setRecordHint('גע בכדור להאזנה ולכידת מחשבה');
     }
   };
 
@@ -89,158 +88,69 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>echo</Text>
-        <Text style={styles.subtitle}>הזיכרון הלומד של שיקול הדעת</Text>
-      </View>
+    <div className="flex-1 w-full max-w-[395px] mx-auto p-5 overflow-y-auto custom-scroll flex flex-col justify-between items-center text-center select-none" dir="rtl">
+      {/* Header with Profile button */}
+      <div className="w-full flex justify-between items-center pt-2 relative">
+        {onOpenProfile && (
+          <button
+            type="button"
+            onClick={onOpenProfile}
+            className="text-[11px] px-3 py-1 rounded-full border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] transition-all cursor-pointer flex items-center gap-1"
+            style={{ color: LuxuryTheme.accent.gold }}
+            title="מעבר לפרופיל שיקול דעת וכיול אישי"
+          >
+            <span>פרופיל כיול</span>
+            <span>←</span>
+          </button>
+        )}
+        <div className="flex-1 text-center">
+          <h1 className="font-editorial text-4xl font-bold tracking-[0.25em] pl-1" style={{ color: LuxuryTheme.accent.gold }}>
+            echo
+          </h1>
+          <p className="text-[11px] opacity-60 tracking-wider">הזיכרון הלומד של שיקול הדעת</p>
+        </div>
+      </div>
 
       {/* Center Echo Orb */}
-      <View style={styles.orbWrapper}>
-        <TouchableOpacity activeOpacity={0.8} onPress={handleToggleRecord}>
-          <EchoOrb isRecording={isRecording} isProcessing={isLoading} size={190} />
-        </TouchableOpacity>
-        <Text style={styles.recordHint}>
+      <div className="my-auto flex flex-col items-center justify-center py-4">
+        <EchoOrb 
+          isRecording={isRecording} 
+          isProcessing={isLoading} 
+          size={240}
+          onClick={handleToggleRecord}
+        />
+        <p className="text-xs mt-3 tracking-wide opacity-70 transition-all font-light" style={{ color: LuxuryTheme.text.secondary }}>
           {recordHint}
-        </Text>
-      </View>
+        </p>
+      </div>
 
       {/* Input Text Box */}
-      <View style={styles.inputContainer}>
+      <div className="w-full space-y-3 pb-2 text-right">
+        <div className="relative">
+          <textarea
+            rows={3}
+            placeholder="או הקלד כאן: מה הדילמה והשיקולים שעומדים בפניך כרגע?"
+            value={inputText}
+            onChange={e => setInputText(e.target.value)}
+            className="w-full p-3.5 rounded-2xl border bg-white/[0.03] text-xs text-right focus:outline-none resize-none placeholder:opacity-30 leading-relaxed"
+            style={{ borderColor: LuxuryTheme.background.border, color: LuxuryTheme.text.primary }}
+          />
+        </div>
 
-        <TextInput
-          style={styles.textInput}
-          multiline
-          placeholder="או כתוב כאן: מה ההחלטה שעומדת בפניך כרגע?"
-          placeholderTextColor={LuxuryTheme.text.tertiary}
-          value={inputText}
-          onChangeText={setInputText}
-          textAlign="right"
-        />
-
-        <TouchableOpacity
-          style={[styles.submitButton, !inputText.trim() && styles.submitButtonDisabled]}
+        <button
+          type="button"
           disabled={!inputText.trim() || isLoading}
-          onPress={handleProceed}
+          onClick={handleProceed}
+          className={`w-full py-3.5 px-4 rounded-xl border text-xs font-semibold transition-all cursor-pointer text-center ${
+            !inputText.trim() || isLoading
+              ? 'opacity-30 border-white/10 bg-white/[0.02] cursor-not-allowed'
+              : 'border-amber-400 bg-amber-500/20 text-amber-100 hover:bg-amber-500/30 active:scale-[0.98] shadow-lg'
+          }`}
         >
-          <Text style={styles.submitButtonText}>
-            {isLoading ? 'מקפיא ומחלץ סכמה...' : 'הקפא והאר את ההחלטה ←'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+          {isLoading ? 'מקפיא ומחלץ סכמה אפיסטמית...' : 'הקפא והאר את ההחלטה ←'}
+        </button>
+      </div>
+    </div>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: LuxuryTheme.background.base,
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-    justifyContent: 'space-between'
-  },
-  header: {
-    alignItems: 'center',
-    marginTop: 10,
-    width: '100%',
-    position: 'relative'
-  },
-  profileBtn: {
-    position: 'absolute',
-    left: 0,
-    top: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)'
-  },
-  profileBtnText: {
-    color: LuxuryTheme.accent.auraGlow,
-    fontSize: 11,
-    fontWeight: '600'
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: LuxuryTheme.text.primary,
-    letterSpacing: 4
-  },
-  subtitle: {
-    fontSize: 14,
-    color: LuxuryTheme.text.secondary,
-    marginTop: 6,
-    fontWeight: '300'
-  },
-  orbWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 20
-  },
-  recordHint: {
-    fontSize: 13,
-    color: LuxuryTheme.text.tertiary,
-    marginTop: 24
-  },
-  inputContainer: {
-    width: '100%',
-    marginBottom: 16
-  },
-  textInput: {
-    backgroundColor: LuxuryTheme.background.surface,
-    borderColor: LuxuryTheme.background.border,
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    color: LuxuryTheme.text.primary,
-    fontSize: 15,
-    minHeight: 110,
-    textAlignVertical: 'top'
-  },
-  submitButton: {
-    backgroundColor: LuxuryTheme.accent.auraGlow,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 14
-  },
-  submitButtonDisabled: {
-    opacity: 0.4
-  },
-  submitButtonText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 15,
-    fontWeight: '600'
-  },
-  frictionSelectorRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 10
-  },
-  frictionChip: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    alignItems: 'center'
-  },
-  frictionChipActive: {
-    borderColor: LuxuryTheme.accent.auraGlow,
-    backgroundColor: 'rgba(99, 102, 241, 0.2)'
-  },
-  frictionChipText: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 12,
-    fontWeight: '500'
-  },
-  frictionChipTextActive: {
-    color: LuxuryTheme.text.primary,
-    fontWeight: '700'
-  }
-});

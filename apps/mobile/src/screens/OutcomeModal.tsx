@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { LuxuryTheme } from '../theme/colors.js';
 import { QuickLoopStatus } from '@echo/shared';
 
@@ -12,12 +11,14 @@ interface OutcomeModalProps {
     processReflection: string;
     quickStatus: QuickLoopStatus;
   }) => void;
+  onCancel?: () => void;
 }
 
 export const OutcomeModal: React.FC<OutcomeModalProps> = ({
   caseTitle,
   nextStepChosen,
-  onSubmitOutcome
+  onSubmitOutcome,
+  onCancel
 }) => {
   const [quickStatus, setQuickStatus] = useState<QuickLoopStatus>('clarified');
   const [whatHappened, setWhatHappened] = useState('');
@@ -69,26 +70,39 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
   };
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
+    <div className="flex-1 w-full max-w-[395px] mx-auto p-5 overflow-y-auto custom-scroll text-right flex flex-col justify-center min-h-[600px] space-y-4" dir="rtl">
       {/* Header */}
-      <View style={styles.headerRow}>
-        <Text style={styles.tag}>סגירת מעגל</Text>
-        <Text style={styles.heading}>איך זה נגמר?</Text>
-        <Text style={styles.caseSub}>{caseTitle}</Text>
-      </View>
+      <div className="space-y-1">
+        <div className="text-xs font-bold tracking-wider" style={{ color: LuxuryTheme.accent.gold }}>
+          סגירת מעגל
+        </div>
+        <h2 className="font-editorial text-2xl font-bold" style={{ color: LuxuryTheme.text.primary }}>
+          איך זה נגמר?
+        </h2>
+        <p className="text-xs opacity-60 line-clamp-2">
+          {caseTitle}
+        </p>
+      </div>
 
       {/* Reminder Card */}
       {nextStepChosen && (
-        <View style={styles.reminderBox}>
-          <Text style={styles.reminderLabel}>הצעד שהגדרת לעצמך:</Text>
-          <Text style={styles.reminderText}>"{nextStepChosen}"</Text>
-        </View>
+        <div className="p-3.5 rounded-xl border-r-4 border bg-white/[0.02]"
+             style={{ borderRightColor: LuxuryTheme.accent.gold, borderColor: 'rgba(212, 175, 55, 0.25)' }}>
+          <div className="text-[11px] font-bold mb-1" style={{ color: LuxuryTheme.accent.gold }}>
+            הצעד שהגדרת לעצמך:
+          </div>
+          <div className="text-xs italic opacity-85">
+            "{nextStepChosen}"
+          </div>
+        </div>
       )}
 
       {/* Quick Status 4-Chips */}
-      <View style={styles.section}>
-        <Text style={styles.label}>מה הסטטוס בפועל?</Text>
-        <View style={styles.evalGrid}>
+      <div className="space-y-2">
+        <label className="text-xs font-medium opacity-80 block">
+          מה הסטטוס בפועל?
+        </label>
+        <div className="grid grid-cols-2 gap-2">
           {(
             [
               ['clarified', 'הסתדר מעולה ✓', LuxuryTheme.accent.gold],
@@ -96,184 +110,75 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
               ['not_yet', 'עדיין פתוח ⏳', LuxuryTheme.accent.gold],
               ['irrelevant', 'ירד מהפרק ✕', LuxuryTheme.text.tertiary]
             ] as const
-          ).map(([val, label, color]) => (
-            <TouchableOpacity
-              key={val}
-              style={[
-                styles.evalChip,
-                quickStatus === val && { borderColor: color, backgroundColor: 'rgba(212,175,55,0.08)' }
-              ]}
-              onPress={() => setQuickStatus(val as QuickLoopStatus)}
-            >
-              <Text style={[styles.evalChipText, quickStatus === val && { color, fontWeight: '700' }]}>
+          ).map(([val, label, color]) => {
+            const isSelected = quickStatus === val;
+            return (
+              <button
+                type="button"
+                key={val}
+                onClick={() => setQuickStatus(val as QuickLoopStatus)}
+                className={`py-3 px-2 rounded-xl text-xs font-medium border transition-all cursor-pointer text-center ${
+                  isSelected 
+                    ? 'border-amber-400 bg-amber-500/10 text-amber-200 font-bold shadow' 
+                    : 'border-white/10 bg-white/[0.02] text-stone-300 hover:bg-white/[0.05]'
+                }`}
+              >
                 {label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-      {/* Audio-First Voice Button */}
-      <View style={styles.section}>
-        <TouchableOpacity
-          style={[styles.voiceBtn, isRecording && styles.voiceBtnRecording]}
-          onPress={handleToggleVoice}
+      {/* Audio-First Voice Button & Textarea */}
+      <div className="space-y-2.5">
+        <button
+          type="button"
+          onClick={handleToggleVoice}
+          className={`w-full py-3 px-4 rounded-xl border flex items-center justify-center gap-2 text-xs font-semibold cursor-pointer transition-all ${
+            isRecording 
+              ? 'border-rose-500 bg-rose-500/20 text-rose-200 animate-pulse' 
+              : 'border-amber-500/35 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20'
+          }`}
         >
-          <Text style={styles.voiceBtnText}>
-            {isRecording ? '● מקשיב... לחץ לסיום' : '🎙️ הקלט בקצרה מה קרה (5 שניות)'}
-          </Text>
-        </TouchableOpacity>
+          <span>{isRecording ? '● מקשיב... לחץ לסיום' : '🎙️ הקלט בקצרה מה קרה (5 שניות)'}</span>
+        </button>
 
-        <TextInput
-          style={styles.textInput}
-          multiline
+        <textarea
+          rows={3}
           placeholder="או כתוב במשפט קצר: מה קרה בפועל?"
-          placeholderTextColor={LuxuryTheme.text.tertiary}
           value={whatHappened}
-          onChangeText={setWhatHappened}
-          textAlign="right"
+          onChange={e => setWhatHappened(e.target.value)}
+          className="w-full p-3 rounded-xl border bg-white/[0.03] border-white/10 text-xs text-right focus:outline-none resize-none placeholder:opacity-40"
+          style={{ color: LuxuryTheme.text.primary }}
         />
-      </View>
+      </div>
 
-      {/* 1-Tap Save */}
-      <TouchableOpacity
-        style={styles.saveButton}
-        onPress={handleSubmit}
-      >
-        <Text style={styles.saveButtonText}>שמור והמשך ←</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      {/* Actions */}
+      <div className="flex gap-2 pt-2">
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-3 rounded-xl border border-white/10 bg-white/[0.02] text-xs opacity-70 hover:opacity-100 cursor-pointer"
+          >
+            ביטול
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={handleSubmit}
+          className="flex-1 py-3 px-4 rounded-xl border text-xs font-bold transition-all active:scale-[0.98] cursor-pointer text-center"
+          style={{ 
+            borderColor: LuxuryTheme.accent.gold, 
+            backgroundColor: 'rgba(212, 175, 55, 0.2)', 
+            color: LuxuryTheme.text.primary 
+          }}
+        >
+          שמור והמשך ←
+        </button>
+      </div>
+    </div>
   );
 };
 
-const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-    backgroundColor: LuxuryTheme.background.base
-  },
-  container: {
-    padding: 24,
-    justifyContent: 'center',
-    minHeight: '100%'
-  },
-  headerRow: {
-    marginBottom: 20
-  },
-  tag: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 15,
-    fontWeight: '600',
-    letterSpacing: 1,
-    textAlign: 'right',
-    marginBottom: 6
-  },
-  heading: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 26,
-    fontWeight: '700',
-    textAlign: 'right',
-    fontFamily: 'serif'
-  },
-  caseSub: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 15,
-    marginTop: 6,
-    textAlign: 'right'
-  },
-  reminderBox: {
-    backgroundColor: 'rgba(212, 175, 55, 0.05)',
-    borderRightWidth: 3,
-    borderRightColor: LuxuryTheme.accent.gold,
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 20
-  },
-  reminderLabel: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'right',
-    marginBottom: 4
-  },
-  reminderText: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 14,
-    fontStyle: 'italic',
-    textAlign: 'right'
-  },
-  section: {
-    marginBottom: 20
-  },
-  label: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 15,
-    fontWeight: '500',
-    marginBottom: 10,
-    textAlign: 'right'
-  },
-  evalGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8
-  },
-  evalChip: {
-    width: '48%',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  evalChipText: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 15
-  },
-  voiceBtn: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.35)',
-    backgroundColor: 'rgba(212, 175, 55, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12
-  },
-  voiceBtnRecording: {
-    borderColor: '#F43F5E',
-    backgroundColor: 'rgba(244, 63, 94, 0.15)'
-  },
-  voiceBtnText: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 15,
-    fontWeight: '600'
-  },
-  textInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 14,
-    color: LuxuryTheme.text.primary,
-    fontSize: 14,
-    minHeight: 60,
-    textAlignVertical: 'top'
-  },
-  saveButton: {
-    backgroundColor: 'rgba(212, 175, 55, 0.25)',
-    borderColor: LuxuryTheme.accent.gold,
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 10
-  },
-  saveButtonText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 15,
-    fontWeight: '700'
-  }
-});

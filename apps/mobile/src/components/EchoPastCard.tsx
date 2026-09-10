@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LuxuryTheme } from '../theme/colors';
 
 export interface EchoPastCardProps {
@@ -16,88 +15,45 @@ export const EchoPastCard: React.FC<EchoPastCardProps> = ({ title, reason, score
   };
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity style={styles.header} onPress={toggleExpand} activeOpacity={0.8}>
-        <View style={styles.headerRow}>
-          <Text style={styles.badgeText}>✨ הד מהעבר</Text>
+    <div className="my-3 rounded-2xl border overflow-hidden transition-all duration-300"
+         style={{ 
+           backgroundColor: 'rgba(212, 175, 55, 0.05)', 
+           borderColor: 'rgba(212, 175, 55, 0.25)' 
+         }}>
+      <button 
+        type="button"
+        onClick={toggleExpand} 
+        className="w-full p-3.5 text-right focus:outline-none cursor-pointer flex flex-col gap-1.5 transition-colors hover:bg-white/[0.02]"
+      >
+        <div className="flex flex-row-reverse justify-between items-center w-full">
+          <span className="text-xs font-bold tracking-wider" style={{ color: LuxuryTheme.accent.gold }}>
+            ✨ הד מהעבר
+          </span>
           {score !== undefined && (
-            <Text style={styles.scoreText}>התאמה: {Math.round(score * 100)}%</Text>
+            <span className="text-[11px] opacity-70" style={{ color: LuxuryTheme.text.tertiary }}>
+              התאמה: {Math.round(score * 100)}%
+            </span>
           )}
-        </View>
-        <Text style={styles.titleText}>{title}</Text>
-        <Text style={styles.expandHint}>
-          {expanded ? '▲ הקטן' : '▼ הרחב פרטים'}
-        </Text>
-      </TouchableOpacity>
+        </div>
+        <div className="text-[14px] font-semibold text-right w-full" style={{ color: LuxuryTheme.text.primary }}>
+          {title}
+        </div>
+        <div className="text-[11px] font-medium mt-0.5 text-right flex items-center justify-end gap-1" style={{ color: LuxuryTheme.accent.gold }}>
+          <span>{expanded ? '▲ הקטן פרטים' : '▼ הרחב פרטים על התקדים'}</span>
+        </div>
+      </button>
 
       {expanded && (
-        <View style={styles.content}>
-          <Text style={styles.reasonLabel}>הקשר רלוונטי:</Text>
-          <Text style={styles.reasonText}>{reason}</Text>
-        </View>
+        <div className="p-3.5 pt-2 border-t text-right" style={{ borderTopColor: 'rgba(212, 175, 55, 0.1)' }}>
+          <div className="text-[11px] font-semibold mb-1" style={{ color: LuxuryTheme.text.secondary }}>
+            הקשר רלוונטי מהעבר:
+          </div>
+          <div className="text-xs font-light leading-relaxed whitespace-pre-wrap" style={{ color: LuxuryTheme.text.primary }}>
+            {reason}
+          </div>
+        </div>
       )}
-    </View>
+    </div>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: 'rgba(212, 175, 55, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.25)',
-    borderRadius: 12,
-    marginVertical: 12,
-    overflow: 'hidden'
-  },
-  header: {
-    padding: 14,
-  },
-  headerRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6
-  },
-  badgeText: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5
-  },
-  scoreText: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 11
-  },
-  titleText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 15,
-    fontWeight: '600',
-    textAlign: 'right',
-    marginBottom: 8
-  },
-  expandHint: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 12,
-    textAlign: 'right'
-  },
-  content: {
-    padding: 14,
-    paddingTop: 0,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(212, 175, 55, 0.1)',
-  },
-  reasonLabel: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 12,
-    marginTop: 10,
-    marginBottom: 4,
-    textAlign: 'right',
-    fontWeight: '500'
-  },
-  reasonText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 14,
-    textAlign: 'right',
-    lineHeight: 20
-  }
-});

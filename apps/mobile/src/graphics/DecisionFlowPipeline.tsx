@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { LuxuryTheme } from '../theme/colors.js';
+import { EchoPastCard } from '../components/EchoPastCard';
 
 export interface PastEchoItem {
   title: string;
   reason: string;
   date?: string;
+  score?: number;
 }
 
 export interface DecisionFlowPipelineProps {
@@ -19,7 +20,7 @@ export interface DecisionFlowPipelineProps {
   conclusion?: string;
   nextStep?: string;
   scrollable?: boolean;
-  maxHeight?: number;
+  maxHeight?: number | string;
 }
 
 const splitIntoBullets = (text?: string): string[] => {
@@ -51,457 +52,230 @@ export const DecisionFlowPipeline: React.FC<DecisionFlowPipelineProps> = ({
   conclusion,
   nextStep,
   scrollable = true,
-  maxHeight = 440
+  maxHeight = 480
 }) => {
   const factBullets = splitIntoBullets(facts);
   const assumptionBullets = splitIntoBullets(assumptions);
 
   const content = (
-    <View style={styles.flowContainer}>
+    <div className="flex flex-col gap-3 text-right" dir="rtl">
       
       {/* 01. הדילמה (אתה שוקל) */}
-      <View style={styles.nodeRow}>
-        <View style={styles.badgeCol}>
-          <View style={[styles.stepBadge, styles.stepBadgeGoldBorder]}>
-            <Text style={styles.stepNumGold}>01</Text>
-          </View>
-          <View style={styles.verticalSpine} />
-        </View>
+      <div className="flex flex-row items-start gap-2.5">
+        <div className="flex flex-col items-center w-7 shrink-0">
+          <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border"
+               style={{ borderColor: 'rgba(212, 175, 55, 0.4)', backgroundColor: 'rgba(212, 175, 55, 0.08)', color: LuxuryTheme.accent.gold }}>
+            01
+          </div>
+          <div className="w-[1px] flex-1 min-h-[28px] mt-1 -mb-2" style={{ backgroundColor: 'rgba(212, 175, 55, 0.2)' }}></div>
+        </div>
 
-        <View style={[styles.card, styles.cardGoldTint]}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardHeaderTagGold}>הדילמה שזוקקה</Text>
-            <Text style={styles.cardHeaderSub}>המראה משקפת</Text>
-          </View>
-          <Text style={styles.dimLabel}>אתה שוקל:</Text>
-          <Text style={styles.cardMainText}>{dilemma || 'טרם הוגדרה דילמה'}</Text>
-        </View>
-      </View>
+        <div className="flex-1 p-3 rounded-xl border"
+             style={{ backgroundColor: 'rgba(212, 175, 55, 0.03)', borderColor: 'rgba(212, 175, 55, 0.25)' }}>
+          <div className="flex justify-between items-center mb-1 text-[11px]">
+            <span className="font-bold" style={{ color: LuxuryTheme.accent.gold }}>הדילמה שזוקקה</span>
+            <span className="opacity-50 text-[10px]">המראה משקפת</span>
+          </div>
+          <div className="text-[11px] font-medium opacity-70 mb-0.5">אתה שוקל:</div>
+          <div className="text-sm font-semibold leading-snug" style={{ color: LuxuryTheme.text.primary }}>
+            {dilemma || 'טרם הוגדרה דילמה'}
+          </div>
+        </div>
+      </div>
 
       {/* 02. מטרות ומחירים */}
       {Boolean(goalsPrices) && (
-        <View style={styles.nodeRow}>
-          <View style={styles.badgeCol}>
-            <View style={styles.stepBadge}>
-              <Text style={styles.stepNum}>02</Text>
-            </View>
-            <View style={styles.verticalSpine} />
-          </View>
+        <div className="flex flex-row items-start gap-2.5">
+          <div className="flex flex-col items-center w-7 shrink-0">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold border bg-white/[0.04] border-white/10"
+                 style={{ color: LuxuryTheme.text.tertiary }}>
+              02
+            </div>
+            <div className="w-[1px] flex-1 min-h-[28px] mt-1 -mb-2" style={{ backgroundColor: 'rgba(212, 175, 55, 0.2)' }}></div>
+          </div>
 
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardHeaderTag}>מטרות ומחירים (Trade-offs)</Text>
-            </View>
-            <Text style={styles.cardSecondaryText}>{goalsPrices}</Text>
-          </View>
-        </View>
+          <div className="flex-1 p-3 rounded-xl border bg-white/[0.02] border-white/10">
+            <div className="flex justify-between items-center mb-1 text-[11px] opacity-80">
+              <span className="font-medium">מטרות ומחירים (Trade-offs)</span>
+            </div>
+            <div className="text-xs leading-relaxed opacity-90">{goalsPrices}</div>
+          </div>
+        </div>
       )}
 
       {/* 03. עובדות קשיחות */}
       {Boolean(facts) && (
-        <View style={styles.nodeRow}>
-          <View style={styles.badgeCol}>
-            <View style={styles.stepBadge}>
-              <Text style={styles.stepNum}>03</Text>
-            </View>
-            <View style={styles.verticalSpine} />
-          </View>
+        <div className="flex flex-row items-start gap-2.5">
+          <div className="flex flex-col items-center w-7 shrink-0">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold border bg-white/[0.04] border-white/10"
+                 style={{ color: LuxuryTheme.text.tertiary }}>
+              03
+            </div>
+            <div className="w-[1px] flex-1 min-h-[28px] mt-1 -mb-2" style={{ backgroundColor: 'rgba(212, 175, 55, 0.2)' }}></div>
+          </div>
 
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardHeaderTag}>עובדות קשיחות</Text>
-              <Text style={styles.cardHeaderSub}>ודאות</Text>
-            </View>
+          <div className="flex-1 p-3 rounded-xl border bg-white/[0.02] border-white/10">
+            <div className="flex justify-between items-center mb-1 text-[11px]">
+              <span className="font-medium">עובדות קשיחות</span>
+              <span className="opacity-40 text-[10px]">ודאות</span>
+            </div>
             {factBullets.length > 1 ? (
-              <View style={styles.bulletList}>
+              <div className="space-y-1 mt-1">
                 {factBullets.map((b, idx) => (
-                  <View key={idx} style={styles.bulletItem}>
-                    <View style={styles.bulletDot} />
-                    <Text style={styles.bulletText}>{b}</Text>
-                  </View>
+                  <div key={idx} className="flex items-start gap-1.5 text-xs">
+                    <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 bg-white/40"></span>
+                    <span className="leading-relaxed opacity-90">{b}</span>
+                  </div>
                 ))}
-              </View>
+              </div>
             ) : (
-              <Text style={styles.cardSecondaryText}>{facts}</Text>
+              <div className="text-xs leading-relaxed opacity-90">{facts}</div>
             )}
-          </View>
-        </View>
+          </div>
+        </div>
       )}
 
       {/* 04. הנחות ופרשנויות */}
       {Boolean(assumptions) && (
-        <View style={styles.nodeRow}>
-          <View style={styles.badgeCol}>
-            <View style={styles.stepBadge}>
-              <Text style={styles.stepNum}>04</Text>
-            </View>
-            <View style={styles.verticalSpine} />
-          </View>
+        <div className="flex flex-row items-start gap-2.5">
+          <div className="flex flex-col items-center w-7 shrink-0">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold border bg-white/[0.04] border-white/10"
+                 style={{ color: LuxuryTheme.text.tertiary }}>
+              04
+            </div>
+            <div className="w-[1px] flex-1 min-h-[28px] mt-1 -mb-2" style={{ backgroundColor: 'rgba(212, 175, 55, 0.2)' }}></div>
+          </div>
 
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardHeaderTag}>הנחות ופרשנויות</Text>
-              <Text style={styles.cardHeaderSub}>סובייקטיבי</Text>
-            </View>
+          <div className="flex-1 p-3 rounded-xl border bg-white/[0.02] border-white/10">
+            <div className="flex justify-between items-center mb-1 text-[11px]">
+              <span className="font-medium">הנחות ופרשנויות</span>
+              <span className="opacity-40 text-[10px]">סובייקטיבי</span>
+            </div>
             {assumptionBullets.length > 1 ? (
-              <View style={styles.bulletList}>
+              <div className="space-y-1 mt-1">
                 {assumptionBullets.map((b, idx) => (
-                  <View key={idx} style={styles.bulletItem}>
-                    <View style={styles.bulletDot} />
-                    <Text style={styles.bulletTextItalic}>"{b}"</Text>
-                  </View>
+                  <div key={idx} className="flex items-start gap-1.5 text-xs italic">
+                    <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: LuxuryTheme.accent.gold }}></span>
+                    <span className="leading-relaxed opacity-90">"{b}"</span>
+                  </div>
                 ))}
-              </View>
+              </div>
             ) : (
-              <Text style={styles.cardItalicText}>"{assumptions}"</Text>
+              <div className="text-xs italic leading-relaxed opacity-90">"{assumptions}"</div>
             )}
-          </View>
-        </View>
+          </div>
+        </div>
       )}
 
       {/* 05. שאלת חידוד (Intervention) */}
       {Boolean(question) && (
-        <View style={styles.nodeRow}>
-          <View style={styles.badgeCol}>
-            <View style={[styles.stepBadge, styles.stepBadgeActive]}>
-              <Text style={styles.stepIconActive}>✦</Text>
-            </View>
-            <View style={styles.verticalSpine} />
-          </View>
+        <div className="flex flex-row items-start gap-2.5">
+          <div className="flex flex-col items-center w-7 shrink-0">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] border"
+                 style={{ borderColor: LuxuryTheme.accent.gold, backgroundColor: '#151c28', color: LuxuryTheme.accent.gold }}>
+              ✦
+            </div>
+            <div className="w-[1px] flex-1 min-h-[28px] mt-1 -mb-2" style={{ backgroundColor: 'rgba(212, 175, 55, 0.2)' }}></div>
+          </div>
 
-          <View style={[styles.card, styles.cardElevated]}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardHeaderTagGold}>שאלת חידוד (נקודת מפנה)</Text>
-              <Text style={styles.cardHeaderSub}>Intervention</Text>
-            </View>
-            <Text style={styles.cardHighlightText}>"{question}"</Text>
-          </View>
-        </View>
+          <div className="flex-1 p-3 rounded-xl border"
+               style={{ backgroundColor: 'rgba(21, 28, 40, 0.85)', borderColor: 'rgba(212, 175, 55, 0.35)' }}>
+            <div className="flex justify-between items-center mb-1 text-[11px]">
+              <span className="font-bold" style={{ color: LuxuryTheme.accent.gold }}>שאלת חידוד (נקודת מפנה)</span>
+              <span className="opacity-50 text-[10px]">התערבות מכיילת</span>
+            </div>
+            <div className="text-xs font-medium italic leading-relaxed" style={{ color: LuxuryTheme.accent.gold }}>
+              "{question}"
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* 06. הפניה מהעבר (הד מהעבר - מותנה) */}
+      {/* 06. הפניה מהעבר (הד מהעבר - כרטיס EchoPastCard מלא) */}
       {pastEcho ? (
-        <View style={styles.nodeRow}>
-          <View style={styles.badgeCol}>
-            <View style={[styles.stepBadge, styles.stepBadgeDashed]}>
-              <Text style={styles.stepNumGold}>↺</Text>
-            </View>
-            <View style={styles.verticalSpine} />
-          </View>
+        <div className="flex flex-row items-start gap-2.5">
+          <div className="flex flex-col items-center w-7 shrink-0">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] border border-dashed"
+                 style={{ borderColor: 'rgba(212, 175, 55, 0.5)', backgroundColor: 'rgba(212, 175, 55, 0.05)', color: LuxuryTheme.accent.gold }}>
+              ↺
+            </div>
+            <div className="w-[1px] flex-1 min-h-[28px] mt-1 -mb-2" style={{ backgroundColor: 'rgba(212, 175, 55, 0.2)' }}></div>
+          </div>
 
-          <View style={[styles.card, styles.cardDashed]}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardHeaderTagGold}>הד מהעבר {pastEcho.date ? `• ${pastEcho.date}` : ''}</Text>
-              <Text style={styles.cardHeaderSub}>תקדים דומה</Text>
-            </View>
-            <Text style={styles.pastTitle}>{pastEcho.title}:</Text>
-            <Text style={styles.cardSecondaryText}>{pastEcho.reason}</Text>
-          </View>
-        </View>
+          <div className="flex-1">
+            <EchoPastCard 
+              title={pastEcho.title} 
+              reason={pastEcho.reason} 
+              score={pastEcho.score ?? 0.85} 
+            />
+          </div>
+        </div>
       ) : null}
 
       {/* 07. תשובת הבהירות */}
       {Boolean(answer) && (
-        <View style={styles.nodeRow}>
-          <View style={styles.badgeCol}>
-            <View style={styles.stepBadge}>
-              <Text style={styles.stepNum}>07</Text>
-            </View>
-            <View style={styles.verticalSpine} />
-          </View>
+        <div className="flex flex-row items-start gap-2.5">
+          <div className="flex flex-col items-center w-7 shrink-0">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold border bg-white/[0.04] border-white/10"
+                 style={{ color: LuxuryTheme.text.tertiary }}>
+              07
+            </div>
+            <div className="w-[1px] flex-1 min-h-[28px] mt-1 -mb-2" style={{ backgroundColor: 'rgba(212, 175, 55, 0.2)' }}></div>
+          </div>
 
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardHeaderTag}>התשובה שהובילה לבהירות</Text>
-            </View>
-            <Text style={styles.cardSecondaryText}>{answer}</Text>
-          </View>
-        </View>
+          <div className="flex-1 p-3 rounded-xl border bg-white/[0.02] border-white/10">
+            <div className="flex justify-between items-center mb-1 text-[11px] opacity-80">
+              <span className="font-medium">התשובה שהובילה לבהירות</span>
+            </div>
+            <div className="text-xs leading-relaxed opacity-90">{answer}</div>
+          </div>
+        </div>
       )}
 
       {/* 08. מסקנה והצעד הבא */}
-      <View style={styles.nodeRow}>
-        <View style={styles.badgeCol}>
-          <View style={[styles.stepBadge, styles.stepBadgeDone]}>
-            <Text style={styles.stepIconDone}>✓</Text>
-          </View>
-        </View>
+      <div className="flex flex-row items-start gap-2.5">
+        <div className="flex flex-col items-center w-7 shrink-0">
+          <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black"
+               style={{ backgroundColor: LuxuryTheme.accent.gold, color: '#07080B' }}>
+            ✓
+          </div>
+        </div>
 
-        <View style={[styles.card, styles.cardFinal]}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardHeaderTagGold}>מסקנה והצעד הנבחר</Text>
-            <Text style={styles.doneBadge}>סגור לביצוע</Text>
-          </View>
-          <Text style={styles.cardConclusionTitle}>
+        <div className="flex-1 p-3 rounded-xl border"
+             style={{ backgroundColor: 'rgba(21, 28, 40, 0.95)', borderColor: LuxuryTheme.accent.gold }}>
+          <div className="flex justify-between items-center mb-1 text-[11px]">
+            <span className="font-bold" style={{ color: LuxuryTheme.accent.gold }}>מסקנה והצעד הנבחר</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-medium">סגור לביצוע</span>
+          </div>
+          <div className="text-xs font-semibold mb-2" style={{ color: LuxuryTheme.text.primary }}>
             {conclusion || 'החלטה מיושרת שיקול דעת'}
-          </Text>
+          </div>
           {Boolean(nextStep) && (
-            <View style={styles.nextStepBox}>
-              <Text style={styles.nextStepLabel}>הצעד הבא:</Text>
-              <Text style={styles.nextStepVal}>{nextStep}</Text>
-            </View>
+            <div className="p-2 rounded-lg border text-xs" style={{ backgroundColor: 'rgba(212, 175, 55, 0.08)', borderColor: 'rgba(212, 175, 55, 0.25)' }}>
+              <span className="font-bold ml-1" style={{ color: LuxuryTheme.accent.gold }}>הצעד הבא:</span>
+              <span>{nextStep}</span>
+            </div>
           )}
-        </View>
-      </View>
+        </div>
+      </div>
 
-    </View>
+    </div>
   );
 
   if (scrollable) {
     return (
-      <ScrollView
-        style={[styles.scrollArea, { maxHeight }]}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={true}
-        nestedScrollEnabled={true}
+      <div 
+        className="overflow-y-auto custom-scroll p-3 rounded-2xl border"
+        style={{ 
+          maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight,
+          borderColor: 'rgba(212, 175, 55, 0.15)',
+          backgroundColor: 'rgba(7, 8, 11, 0.65)'
+        }}
       >
         {content}
-      </ScrollView>
+      </div>
     );
   }
 
   return content;
 };
-
-const styles = StyleSheet.create({
-  scrollArea: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.15)',
-    backgroundColor: 'rgba(7, 8, 11, 0.65)'
-  },
-  scrollContent: {
-    padding: 12,
-    paddingBottom: 20
-  },
-  flowContainer: {
-    gap: 12
-  },
-  nodeRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'flex-start',
-    gap: 10
-  },
-  badgeCol: {
-    alignItems: 'center',
-    width: 28
-  },
-  stepBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 2
-  },
-  stepBadgeGoldBorder: {
-    borderColor: 'rgba(212, 175, 55, 0.4)',
-    backgroundColor: 'rgba(212, 175, 55, 0.06)'
-  },
-  stepBadgeActive: {
-    backgroundColor: '#151c28',
-    borderColor: LuxuryTheme.accent.gold,
-    shadowColor: LuxuryTheme.accent.gold,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6
-  },
-  stepBadgeDashed: {
-    borderStyle: 'dashed',
-    borderColor: 'rgba(212, 175, 55, 0.5)',
-    backgroundColor: 'rgba(212, 175, 55, 0.04)'
-  },
-  stepBadgeDone: {
-    backgroundColor: LuxuryTheme.accent.gold,
-    borderColor: LuxuryTheme.accent.gold
-  },
-  stepNum: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 10,
-    fontWeight: '600'
-  },
-  stepNumGold: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 10,
-    fontWeight: '700'
-  },
-  stepIconActive: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 11
-  },
-  stepIconDone: {
-    color: '#07080B',
-    fontSize: 11,
-    fontWeight: '900'
-  },
-  verticalSpine: {
-    width: 1,
-    flex: 1,
-    minHeight: 28,
-    backgroundColor: 'rgba(212, 175, 55, 0.2)',
-    marginTop: 2,
-    marginBottom: -8
-  },
-
-  // Cards
-  card: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.07)',
-    borderRadius: 12,
-    padding: 11
-  },
-  cardGoldTint: {
-    backgroundColor: 'rgba(212, 175, 55, 0.03)',
-    borderColor: 'rgba(212, 175, 55, 0.25)'
-  },
-  cardElevated: {
-    backgroundColor: 'rgba(21, 28, 40, 0.85)',
-    borderColor: 'rgba(212, 175, 55, 0.35)'
-  },
-  cardDashed: {
-    borderStyle: 'dashed',
-    borderColor: 'rgba(212, 175, 55, 0.25)',
-    backgroundColor: 'rgba(212, 175, 55, 0.02)'
-  },
-  cardFinal: {
-    backgroundColor: 'rgba(21, 28, 40, 0.95)',
-    borderColor: LuxuryTheme.accent.gold
-  },
-
-  // Card Content
-  cardHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4
-  },
-  cardHeaderTag: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 11,
-    fontWeight: '600'
-  },
-  cardHeaderTagGold: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 11,
-    fontWeight: '700'
-  },
-  cardHeaderSub: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 9
-  },
-  dimLabel: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 10,
-    marginBottom: 2,
-    textAlign: 'right'
-  },
-  cardMainText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 13,
-    fontWeight: '600',
-    lineHeight: 18,
-    textAlign: 'right'
-  },
-  cardSecondaryText: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 12,
-    lineHeight: 17,
-    textAlign: 'right'
-  },
-  cardItalicText: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 12,
-    lineHeight: 17,
-    fontStyle: 'italic',
-    textAlign: 'right'
-  },
-  cardHighlightText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 13,
-    fontWeight: '600',
-    lineHeight: 19,
-    textAlign: 'right'
-  },
-  pastTitle: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 11,
-    fontWeight: '600',
-    textAlign: 'right',
-    marginBottom: 2
-  },
-  cardConclusionTitle: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'right',
-    marginBottom: 6
-  },
-  doneBadge: {
-    color: LuxuryTheme.accent.gold,
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
-    fontSize: 9,
-    fontWeight: '700',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4
-  },
-  nextStepBox: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
-    paddingTop: 6,
-    marginTop: 2,
-    flexDirection: 'row-reverse',
-    gap: 6
-  },
-  nextStepLabel: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 11,
-    fontWeight: '700'
-  },
-  nextStepVal: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 11,
-    flex: 1,
-    textAlign: 'right'
-  },
-  bulletList: {
-    gap: 6,
-    marginTop: 3
-  },
-  bulletItem: {
-    flexDirection: 'row-reverse',
-    alignItems: 'flex-start',
-    gap: 8
-  },
-  bulletDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: LuxuryTheme.accent.gold,
-    marginTop: 6,
-    shadowColor: LuxuryTheme.accent.gold,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 3
-  },
-  bulletText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 12,
-    lineHeight: 18,
-    flex: 1,
-    textAlign: 'right'
-  },
-  bulletTextItalic: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 12,
-    lineHeight: 18,
-    fontStyle: 'italic',
-    flex: 1,
-    textAlign: 'right'
-  }
-});

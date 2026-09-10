@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
 import { LuxuryTheme } from '../theme/colors.js';
 
 interface EchoOrbProps {
@@ -7,25 +6,26 @@ interface EchoOrbProps {
   isProcessing?: boolean;
   size?: number;
   audioLevel?: number; // 0.0 to 1.0
+  onClick?: () => void;
 }
 
 export const EchoOrb: React.FC<EchoOrbProps> = ({
   isRecording = false,
   isProcessing = false,
-  size = 220,
-  audioLevel = 0
+  size = 280,
+  audioLevel = 0,
+  onClick
 }) => {
-  const canvasRef = useRef<any>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animFrameRef = useRef<number>(0);
   const smoothedAudioRef = useRef<number>(0);
   const animTimeRef = useRef<number>(0);
   const yawRotRef = useRef<number>(0);
 
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext ? canvas.getContext('2d') : null;
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     // Mathematical constants from Specification Section 4
@@ -128,64 +128,30 @@ export const EchoOrb: React.FC<EchoOrbProps> = ({
     };
   }, [isRecording, audioLevel, size]);
 
-  if (Platform.OS === 'web') {
-    return (
-      <View style={[styles.container, { width: size, height: size }]}>
-        <canvas
-          ref={canvasRef}
-          width={size}
-          height={size}
-          style={{ pointerEvents: 'none' } as any}
-        />
-      </View>
-    );
-  }
-
-  // Native fallback
   return (
-    <View style={[styles.container, { width: size, height: size }]}>
-      <View
-        style={[
-          styles.outerAura,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            backgroundColor: 'rgba(212, 175, 55, 0.08)'
-          }
-        ]}
+    <div 
+      onClick={onClick}
+      className={`relative flex items-center justify-center select-none cursor-pointer transition-transform active:scale-[0.98] ${isRecording ? 'scale-105' : ''}`}
+      style={{ width: size, height: size }}
+      title={isRecording ? 'האזנה פעילה... גע לסיום' : 'גע ללכידת דילמה בקול'}
+    >
+      {/* Ambient Halo */}
+      <div 
+        className="absolute rounded-full pointer-events-none transition-opacity duration-700 blur-2xl"
+        style={{
+          width: size,
+          height: size,
+          opacity: isRecording ? 0.45 : 0.2,
+          background: 'radial-gradient(circle, rgba(212, 175, 55, 0.18) 0%, transparent 70%)'
+        }}
       />
-      <View
-        style={[
-          styles.coreOrb,
-          {
-            width: size * 0.72,
-            height: size * 0.72,
-            borderRadius: (size * 0.72) / 2,
-            borderColor: LuxuryTheme.accent.gold,
-            borderWidth: 1.2
-          }
-        ]}
+      <canvas
+        ref={canvasRef}
+        width={size}
+        height={size}
+        className="relative z-10 pointer-events-none"
       />
-    </View>
+    </div>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative'
-  },
-  outerAura: {
-    position: 'absolute',
-    borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.08)'
-  },
-  coreOrb: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-    borderWidth: 1.2
-  }
-});

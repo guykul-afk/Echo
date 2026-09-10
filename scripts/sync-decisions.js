@@ -97,38 +97,52 @@ function categorizeDecision(d) {
 }
 
 async function fetchAllDecisionsFromFirestore(targetUser = 'guy_founder') {
-  let url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/users/${targetUser}/decisions?key=${FIRESTORE_API_KEY}&pageSize=100`;
-  const allDocs = [];
+  const usersToFetch = (targetUser === 'guy_founder' || targetUser === 'Guy_Kuleski' || targetUser === 'guy_kuleski')
+    ? ['Guy_Kuleski', 'guy_kuleski', 'guy_founder']
+    : [targetUser];
 
-  try {
-    while (url) {
-      const res = await fetch(url);
-      if (!res.ok) {
-        break;
+  const allDocsMap = new Map();
+
+  for (const u of usersToFetch) {
+    let url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/users/${encodeURIComponent(u)}/decisions?key=${FIRESTORE_API_KEY}&pageSize=100`;
+    try {
+      while (url) {
+        const res = await fetch(url);
+        if (!res.ok) break;
+        const data = await res.json();
+        if (data.documents && data.documents.length > 0) {
+          data.documents.forEach(doc => {
+            const decoded = decodeDoc(doc);
+            if (decoded && decoded.id && !allDocsMap.has(decoded.id)) {
+              allDocsMap.set(decoded.id, decoded);
+            }
+          });
+        }
+        if (data.nextPageToken) {
+          url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/users/${encodeURIComponent(u)}/decisions?key=${FIRESTORE_API_KEY}&pageSize=100&pageToken=${data.nextPageToken}`;
+        } else {
+          url = null;
+        }
       }
-      const data = await res.json();
-      if (data.documents && data.documents.length > 0) {
-        allDocs.push(...data.documents.map(decodeDoc));
-      }
-      if (data.nextPageToken) {
-        url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/users/${targetUser}/decisions?key=${FIRESTORE_API_KEY}&pageSize=100&pageToken=${data.nextPageToken}`;
-      } else {
-        url = null;
-      }
+    } catch (e) {
+      console.warn(`[Sync]: User ${u} fetch notice:`, e.message);
     }
-  } catch (e) {
-    console.warn('[Sync]: User-scoped fetch fallback:', e.message);
   }
 
-  // Fallback to legacy root decisions if user collection was empty
-  if (allDocs.length === 0) {
+  // Fallback to legacy root decisions if user collections were empty
+  if (allDocsMap.size === 0) {
     let legacyUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/decisions?key=${FIRESTORE_API_KEY}&pageSize=100`;
     while (legacyUrl) {
       const res = await fetch(legacyUrl);
       if (!res.ok) break;
       const data = await res.json();
       if (data.documents && data.documents.length > 0) {
-        allDocs.push(...data.documents.map(decodeDoc));
+        data.documents.forEach(doc => {
+          const decoded = decodeDoc(doc);
+          if (decoded && decoded.id && !allDocsMap.has(decoded.id)) {
+            allDocsMap.set(decoded.id, decoded);
+          }
+        });
       }
       if (data.nextPageToken) {
         legacyUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/decisions?key=${FIRESTORE_API_KEY}&pageSize=100&pageToken=${data.nextPageToken}`;
@@ -138,8 +152,7 @@ async function fetchAllDecisionsFromFirestore(targetUser = 'guy_founder') {
     }
   }
 
-  // Filter out invalid or empty docs, sort by timestamp
-  return allDocs.filter(d => d.userId === targetUser || !d.userId).sort((a, b) => (a.frozenAt || 0) - (b.frozenAt || 0));
+  return Array.from(allDocsMap.values()).sort((a, b) => (a.frozenAt || 0) - (b.frozenAt || 0));
 }
 
 function generateMarkdown(decisions, lastUpdatedIso) {

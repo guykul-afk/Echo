@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { LuxuryTheme } from '../theme/colors';
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
 import { DecisionFlowPipeline } from '../graphics/DecisionFlowPipeline';
@@ -12,7 +11,7 @@ interface DecisionRoomScreenProps {
   illuminationQuestion?: string;
   bespokeQuestion?: IlluminationQuestion;
   historicalQuestion?: IlluminationQuestion;
-  similarCaseAnalogy?: { title: string; reason: string; strength: string };
+  similarCaseAnalogy?: { title: string; reason: string; strength?: string; score?: number };
   initialRefinedInsight?: RefinedInsight;
   onAnswerSubmit: (answer: string, skip?: boolean) => void;
   onMirrorUpdate?: (updatedFields: FiveHumanDimensions) => void;
@@ -27,10 +26,9 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   similarCaseAnalogy,
   initialRefinedInsight,
   onAnswerSubmit,
-  onMirrorUpdate,
-  onMirrorFeedback
+  onMirrorUpdate
 }) => {
-  const scrollRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   // 5 Dimensions state
   const [consideration, setConsideration] = useState(decisionCase.dimConsideration || decisionCase.title);
@@ -41,12 +39,10 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
 
   const centralTension = decisionCase.centralTension || goalsPrices || 'השגת המטרה מול מחירים ואילוצים';
   const effectiveQuestion = bespokeQuestion?.questionText || illuminationQuestion || 'מהו הנתון היחיד שיכריע עבורך?';
-  const isSmartSilence = bespokeQuestion ? bespokeQuestion.shouldIntervene === false : false;
 
   const [userAnswer, setUserAnswer] = useState('');
   const [isVoiceRecording, setIsVoiceRecording] = useState(false);
   const [insight, setInsight] = useState<RefinedInsight | null>(initialRefinedInsight || null);
-  
   const [isContextExpanded, setIsContextExpanded] = useState(false);
 
   const startVoiceInput = (setter: (val: string) => void) => {
@@ -122,7 +118,9 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
     };
     setInsight(refined);
     onAnswerSubmit(finalAnswer, false);
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
+    setTimeout(() => {
+      containerRef.current?.scrollTo({ top: containerRef.current.scrollHeight, behavior: 'smooth' });
+    }, 150);
   };
 
   const handleSkip = () => {
@@ -133,160 +131,187 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
     };
     setInsight(refined);
     onAnswerSubmit('', true);
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
-  };
-
-  const toggleContext = () => {
-    setIsContextExpanded(!isContextExpanded);
+    setTimeout(() => {
+      containerRef.current?.scrollTo({ top: containerRef.current.scrollHeight, behavior: 'smooth' });
+    }, 150);
   };
 
   return (
-    <ScrollView 
-      ref={scrollRef}
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
+    <div 
+      ref={containerRef}
+      className="flex-1 w-full max-w-[395px] mx-auto p-4 sm:p-5 overflow-y-auto custom-scroll text-right space-y-6"
+      dir="rtl"
     >
       {/* ================= SECTION 1: Core Essence ================= */}
-      <View style={styles.coreSection}>
-        <Text style={styles.heroHeadline}>
+      <div className="space-y-4 pt-2">
+        <h1 className="font-editorial text-2xl font-bold leading-tight" style={{ color: LuxuryTheme.text.primary }}>
           {consideration}
-        </Text>
+        </h1>
 
-        <View style={styles.editBox}>
-          <View style={styles.editBoxHeader}>
-            <Text style={styles.editLabel}>הניסוח שלך:</Text>
-            <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('consideration', val))}>
-              <Text style={styles.micBtn}>🎙️ עדכן</Text>
-            </TouchableOpacity>
-          </View>
-          <TextInput
-            style={styles.largeInput}
-            multiline
+        <div className="p-3.5 rounded-2xl border bg-white/[0.03]" style={{ borderColor: 'rgba(212, 175, 55, 0.2)' }}>
+          <div className="flex justify-between items-center mb-1.5 text-xs">
+            <span className="opacity-70">הניסוח שלך:</span>
+            <button 
+              type="button" 
+              onClick={() => startVoiceInput(val => handleFieldChange('consideration', val))}
+              className="text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+              style={{ color: LuxuryTheme.accent.gold }}
+            >
+              🎙️ עדכן
+            </button>
+          </div>
+          <textarea
+            rows={2}
             value={consideration}
-            onChangeText={val => handleFieldChange('consideration', val)}
-            textAlign="right"
+            onChange={e => handleFieldChange('consideration', e.target.value)}
+            className="w-full bg-transparent text-sm leading-relaxed focus:outline-none resize-none font-medium"
+            style={{ color: LuxuryTheme.text.primary }}
           />
-        </View>
+        </div>
 
-        <Text style={styles.subPrompt}>מה עומד מול מה? ערכים, מטרות ומחירים:</Text>
-        <Text style={styles.editorialQuote}>{centralTension}</Text>
+        <div className="text-xs opacity-60">מה עומד מול מה? ערכים, מטרות ומחירים:</div>
+        <div className="font-editorial text-lg italic pr-2 border-r-2" style={{ borderColor: LuxuryTheme.accent.gold, color: LuxuryTheme.accent.gold }}>
+          "{centralTension}"
+        </div>
 
-        <View style={styles.editBox}>
-          <View style={styles.editBoxHeader}>
-            <Text style={styles.editLabel}>מטרות ומחירים שחשובים לך:</Text>
-            <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('goalsPrices', val))}>
-              <Text style={styles.micBtn}>🎙️ עדכן</Text>
-            </TouchableOpacity>
-          </View>
-          <TextInput
-            style={styles.largeInput}
-            multiline
+        <div className="p-3.5 rounded-2xl border bg-white/[0.03]" style={{ borderColor: 'rgba(212, 175, 55, 0.2)' }}>
+          <div className="flex justify-between items-center mb-1.5 text-xs">
+            <span className="opacity-70">מטרות ומחירים שחשובים לך:</span>
+            <button 
+              type="button" 
+              onClick={() => startVoiceInput(val => handleFieldChange('goalsPrices', val))}
+              className="text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+              style={{ color: LuxuryTheme.accent.gold }}
+            >
+              🎙️ עדכן
+            </button>
+          </div>
+          <textarea
+            rows={2}
             value={goalsPrices}
-            onChangeText={val => handleFieldChange('goalsPrices', val)}
+            onChange={e => handleFieldChange('goalsPrices', e.target.value)}
             placeholder="מה חשוב לך להשיג..."
-            placeholderTextColor={LuxuryTheme.text.tertiary}
-            textAlign="right"
+            className="w-full bg-transparent text-xs leading-relaxed focus:outline-none resize-none placeholder:opacity-40"
+            style={{ color: LuxuryTheme.text.primary }}
           />
-        </View>
-      </View>
+        </div>
+      </div>
 
       {/* ================= SECTION 2: Progressive Disclosure (Facts & Assumptions) ================= */}
-      <View style={styles.accordionWrapper}>
-        <TouchableOpacity style={styles.accordionHeader} onPress={toggleContext} activeOpacity={0.8}>
-          <Text style={styles.accordionTitle}>נתוני רקע והנחות עבודה</Text>
-          <Text style={styles.accordionIcon}>{isContextExpanded ? '▲' : '▼'}</Text>
-        </TouchableOpacity>
+      <div className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
+        <button 
+          type="button" 
+          onClick={() => setIsContextExpanded(!isContextExpanded)}
+          className="w-full p-3.5 flex justify-between items-center text-xs font-semibold cursor-pointer hover:bg-white/[0.02]"
+          style={{ backgroundColor: 'rgba(212, 175, 55, 0.03)', color: LuxuryTheme.text.secondary }}
+        >
+          <span>נתוני רקע והנחות עבודה</span>
+          <span style={{ color: LuxuryTheme.accent.gold }}>{isContextExpanded ? '▲' : '▼'}</span>
+        </button>
 
         {isContextExpanded && (
-          <View style={styles.accordionContent}>
-            <View style={[styles.editBox, { borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }]}>
-              <View style={styles.editBoxHeader}>
-                <Text style={[styles.editLabel, { color: LuxuryTheme.accent.gold, fontWeight: '600' }]}>עובדות מוצקות:</Text>
-                <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('facts', val))}>
-                  <Text style={styles.micBtn}>🎙️ עדכן</Text>
-                </TouchableOpacity>
-              </View>
-              <TextInput
-                style={[styles.largeInput, { minHeight: 70 }]}
-                multiline
+          <div className="p-3.5 space-y-3 border-t border-white/5">
+            <div className="p-3 rounded-xl border" style={{ borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }}>
+              <div className="flex justify-between items-center mb-1 text-xs">
+                <span className="font-semibold" style={{ color: LuxuryTheme.accent.gold }}>עובדות מוצקות:</span>
+                <button type="button" onClick={() => startVoiceInput(val => handleFieldChange('facts', val))} className="text-[10px] text-amber-300">🎙️ עדכן</button>
+              </div>
+              <textarea
+                rows={2}
                 value={facts}
-                onChangeText={val => handleFieldChange('facts', val)}
+                onChange={e => handleFieldChange('facts', e.target.value)}
                 placeholder="נתונים ועובדות..."
-                placeholderTextColor={LuxuryTheme.text.tertiary}
-                textAlign="right"
+                className="w-full bg-transparent text-xs focus:outline-none resize-none placeholder:opacity-40"
               />
-            </View>
+            </div>
 
-            <View style={[styles.editBox, { borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)', marginTop: 12 }]}>
-              <View style={styles.editBoxHeader}>
-                <Text style={[styles.editLabel, { color: LuxuryTheme.accent.gold, fontWeight: '600' }]}>ההנחה שמובילה אותך:</Text>
-                <TouchableOpacity onPress={() => startVoiceInput(val => handleFieldChange('assumptions', val))}>
-                  <Text style={styles.micBtn}>🎙️ עדכן</Text>
-                </TouchableOpacity>
-              </View>
-              <TextInput
-                style={[styles.largeInput, { minHeight: 70 }]}
-                multiline
+            <div className="p-3 rounded-xl border" style={{ borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }}>
+              <div className="flex justify-between items-center mb-1 text-xs">
+                <span className="font-semibold" style={{ color: LuxuryTheme.accent.gold }}>ההנחה שמובילה אותך:</span>
+                <button type="button" onClick={() => startVoiceInput(val => handleFieldChange('assumptions', val))} className="text-[10px] text-amber-300">🎙️ עדכן</button>
+              </div>
+              <textarea
+                rows={2}
                 value={assumptions}
-                onChangeText={val => handleFieldChange('assumptions', val)}
+                onChange={e => handleFieldChange('assumptions', e.target.value)}
                 placeholder="השערות, ציפיות..."
-                placeholderTextColor={LuxuryTheme.text.tertiary}
-                textAlign="right"
+                className="w-full bg-transparent text-xs focus:outline-none resize-none placeholder:opacity-40"
               />
-            </View>
-          </View>
+            </div>
+          </div>
         )}
-      </View>
+      </div>
 
-      {/* ================= SECTION 3: Echo from the Past ================= */}
+      {/* ================= SECTION 3: Echo from the Past (EchoPastCard) ================= */}
       {(historicalQuestion || similarCaseAnalogy) && (
         <EchoPastCard
           title={similarCaseAnalogy?.title || 'תקדים עבר רלוונטי'}
           reason={similarCaseAnalogy?.reason || historicalQuestion?.questionText || ''}
-          score={0.85}
+          score={similarCaseAnalogy?.score ?? 0.85}
         />
       )}
 
       {/* ================= SECTION 4: Bespoke Question ================= */}
-      <View style={styles.questionSection}>
-        <Text style={styles.questionText}>
+      <div className="p-4 rounded-2xl border space-y-3 text-center"
+           style={{ backgroundColor: 'rgba(212, 175, 55, 0.04)', borderColor: 'rgba(212, 175, 55, 0.2)' }}>
+        <div className="font-editorial text-lg font-semibold italic leading-snug px-2" style={{ color: LuxuryTheme.accent.gold }}>
           "{effectiveQuestion}"
-        </Text>
+        </div>
 
-        <TouchableOpacity
-          style={[styles.bigVoiceBtn, isVoiceRecording && styles.bigVoiceBtnRecording]}
-          onPress={() => startVoiceInput(setUserAnswer)}
+        <button
+          type="button"
+          onClick={() => startVoiceInput(setUserAnswer)}
+          className={`w-full py-3.5 px-4 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold cursor-pointer transition-all ${
+            isVoiceRecording 
+              ? 'border-rose-500 bg-rose-500/20 text-rose-200 animate-pulse' 
+              : 'border-amber-400 bg-amber-500/15 text-amber-200 hover:bg-amber-500/25'
+          }`}
         >
-          <Text style={styles.bigVoiceBtnText}>
-            {isVoiceRecording ? '● מקשיב... לחץ לסיום' : '🎙️ הקלט תשובה בקול (דיבור חופשי)'}
-          </Text>
-        </TouchableOpacity>
+          <span>{isVoiceRecording ? '● מקשיב... לחץ לסיום' : '🎙️ הקלט תשובה בקול (דיבור חופשי)'}</span>
+        </button>
 
-        <TextInput
-          style={styles.answerInput}
-          multiline
+        <textarea
+          rows={2}
           placeholder="או הקלד תשובה ידנית..."
-          placeholderTextColor={LuxuryTheme.text.tertiary}
           value={userAnswer}
-          onChangeText={setUserAnswer}
-          textAlign="right"
+          onChange={e => setUserAnswer(e.target.value)}
+          className="w-full p-2.5 rounded-xl border border-white/10 bg-white/[0.02] text-xs text-right focus:outline-none resize-none placeholder:opacity-40"
+          style={{ color: LuxuryTheme.text.primary }}
         />
 
-        <TouchableOpacity style={styles.continueBtn} onPress={() => handleProceedWithAnswer()}>
-          <Text style={styles.continueBtnText}>המשך עם המענה ←</Text>
-        </TouchableOpacity>
+        <div className="space-y-2 pt-1">
+          <button
+            type="button"
+            onClick={() => handleProceedWithAnswer()}
+            className="w-full py-3 rounded-xl border text-xs font-bold cursor-pointer transition-all active:scale-[0.98]"
+            style={{ 
+              borderColor: LuxuryTheme.accent.gold, 
+              backgroundColor: 'rgba(212, 175, 55, 0.2)', 
+              color: LuxuryTheme.text.primary 
+            }}
+          >
+            המשך עם המענה ←
+          </button>
 
-        <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
-          <Text style={styles.skipBtnText}>מספיק לי לעכשיו — המשך ללא מענה</Text>
-        </TouchableOpacity>
-      </View>
+          <button
+            type="button"
+            onClick={handleSkip}
+            className="text-xs opacity-60 hover:opacity-100 underline cursor-pointer py-1 block mx-auto"
+          >
+            מספיק לי לעכשיו — המשך ללא מענה
+          </button>
+        </div>
+      </div>
 
       {/* ================= SECTION 5: Summary ================= */}
       {insight && (
-        <View style={styles.summarySection}>
-          <Text style={styles.heroHeadline}>שרשרת שיקול הדעת המזוקקת</Text>
-          <Text style={styles.subPrompt}>כל התהליך כפי שהתחדד מהדילמה ועד לצעד המעשי:</Text>
+        <div className="pt-4 border-t border-white/10 space-y-3">
+          <h2 className="font-editorial text-xl font-bold" style={{ color: LuxuryTheme.text.primary }}>
+            שרשרת שיקול הדעת המזוקקת
+          </h2>
+          <p className="text-xs opacity-60">
+            כל התהליך כפי שהתחדד מהדילמה ועד לצעד המעשי:
+          </p>
 
           <DecisionFlowPipeline
             dilemma={consideration}
@@ -298,12 +323,14 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
               similarCaseAnalogy
                 ? {
                     title: similarCaseAnalogy.title,
-                    reason: similarCaseAnalogy.reason
+                    reason: similarCaseAnalogy.reason,
+                    score: similarCaseAnalogy.score ?? 0.85
                   }
                 : historicalQuestion
                 ? {
                     title: 'תקדים עבר רלוונטי',
-                    reason: historicalQuestion.questionText
+                    reason: historicalQuestion.questionText,
+                    score: 0.85
                   }
                 : null
             }
@@ -313,201 +340,23 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
             scrollable={false}
           />
 
-          <TouchableOpacity 
-            style={styles.saveDecisionBtn}
-            onPress={handleSkip}
+          <button 
+            type="button"
+            onClick={handleSkip}
+            className="w-full py-3.5 rounded-xl border text-xs font-bold cursor-pointer active:scale-[0.98] mt-3"
+            style={{ 
+              borderColor: LuxuryTheme.accent.gold, 
+              backgroundColor: 'rgba(212, 175, 55, 0.25)', 
+              color: LuxuryTheme.text.primary 
+            }}
           >
-            <Text style={styles.saveDecisionBtnText}>שמור בזיכרון ההחלטות ←</Text>
-          </TouchableOpacity>
-        </View>
+            שמור בזיכרון ההחלטות ←
+          </button>
+        </div>
       )}
 
-      <View style={{ height: 60 }} />
-    </ScrollView>
+      <div className="h-10" />
+    </div>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: LuxuryTheme.background.base
-  },
-  content: {
-    padding: 24,
-    paddingTop: 40,
-    gap: 24
-  },
-  coreSection: {
-    gap: 16
-  },
-  heroHeadline: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 26,
-    fontWeight: '700',
-    lineHeight: 34,
-    textAlign: 'right',
-    fontFamily: 'serif'
-  },
-  subPrompt: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 15,
-    textAlign: 'right'
-  },
-  editorialQuote: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 20,
-    fontStyle: 'italic',
-    lineHeight: 28,
-    textAlign: 'right',
-    fontFamily: 'serif'
-  },
-  editBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.2)',
-    padding: 14
-  },
-  editBoxHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8
-  },
-  editLabel: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 15
-  },
-  micBtn: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 14,
-    fontWeight: '600'
-  },
-  largeInput: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 16,
-    lineHeight: 24,
-    minHeight: 50,
-    textAlignVertical: 'top'
-  },
-  accordionWrapper: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    overflow: 'hidden'
-  },
-  accordionHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: 'rgba(212, 175, 55, 0.03)'
-  },
-  accordionTitle: {
-    color: LuxuryTheme.text.secondary,
-    fontSize: 15,
-    fontWeight: '600'
-  },
-  accordionIcon: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 14
-  },
-  accordionContent: {
-    padding: 16,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)'
-  },
-  questionSection: {
-    marginTop: 12,
-    gap: 16,
-    padding: 20,
-    backgroundColor: 'rgba(212, 175, 55, 0.03)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.15)'
-  },
-  questionText: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 22,
-    fontWeight: '600',
-    fontStyle: 'italic',
-    textAlign: 'center',
-    lineHeight: 30,
-    fontFamily: 'serif',
-    marginBottom: 8
-  },
-  bigVoiceBtn: {
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
-    borderColor: LuxuryTheme.accent.gold,
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  bigVoiceBtnRecording: {
-    borderColor: '#F43F5E',
-    backgroundColor: 'rgba(244, 63, 94, 0.2)'
-  },
-  bigVoiceBtnText: {
-    color: LuxuryTheme.accent.gold,
-    fontSize: 14,
-    fontWeight: '700'
-  },
-  answerInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 12,
-    padding: 12,
-    color: LuxuryTheme.text.primary,
-    fontSize: 15,
-    minHeight: 50,
-    textAlignVertical: 'top'
-  },
-  continueBtn: {
-    backgroundColor: 'rgba(212, 175, 55, 0.2)',
-    borderWidth: 1,
-    borderColor: LuxuryTheme.accent.gold,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center'
-  },
-  continueBtnText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 14,
-    fontWeight: '600'
-  },
-  skipBtn: {
-    alignItems: 'center',
-    paddingVertical: 4
-  },
-  skipBtnText: {
-    color: LuxuryTheme.text.tertiary,
-    fontSize: 14,
-    textDecorationLine: 'underline'
-  },
-  summarySection: {
-    marginTop: 24,
-    gap: 16,
-    paddingTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)'
-  },
-  saveDecisionBtn: {
-    backgroundColor: 'rgba(212, 175, 55, 0.25)',
-    borderWidth: 1,
-    borderColor: LuxuryTheme.accent.gold,
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 12
-  },
-  saveDecisionBtnText: {
-    color: LuxuryTheme.text.primary,
-    fontSize: 15,
-    fontWeight: '700'
-  }
-});
