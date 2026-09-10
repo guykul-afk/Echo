@@ -714,6 +714,15 @@
           החלף מרחב / פתח משתמש חדש (נקי)
         </button>
 
+        <!-- Fast 1-Click Entry (Bypasses Google OAuth on localhost) -->
+        <button 
+          type="button"
+          onclick="currentUsername='guy_founder'; localStorage.setItem('echo_username', 'guy_founder'); addKnownUser('guy_founder'); updateUserDisplay(); closeSwitchUserModal(); resetToEmptyState(); loadUserDecisionHistory();"
+          class="w-full py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 border transition-all active:scale-[0.98] text-amber-300 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 shadow-md"
+        >
+          <span>⚡ כניסה מיידית למרחב (Guy Founder)</span>
+        </button>
+
         <!-- Social Sign-In (Google / Apple) -->
         <div class="pt-2 border-t border-white/10 space-y-1.5">
           <button 
@@ -3653,6 +3662,57 @@ ${pastSummary}
         .replace(/'/g, '&#039;');
     }
 
+    function formatBulletsHtml(rawText, accentColor = 'bg-amber-400') {
+      if (!rawText || rawText === '—') return '<p class="font-light opacity-60">—</p>';
+      
+      let items = [];
+      if (typeof rawText === 'string') {
+        if (rawText.includes('<p>') || rawText.includes('<li>')) {
+          const temp = document.createElement('div');
+          temp.innerHTML = rawText;
+          const pElements = temp.querySelectorAll('p, li');
+          if (pElements.length > 0) {
+            pElements.forEach(p => {
+              const t = p.textContent.trim().replace(/^[-•*]\s*/, '');
+              if (t) items.push(t);
+            });
+          }
+        }
+        
+        if (items.length === 0) {
+          if (rawText.includes('\n')) {
+            items = rawText.split('\n');
+          } else if (rawText.includes(' | ')) {
+            items = rawText.split(' | ');
+          } else if (rawText.includes('•')) {
+            items = rawText.split('•');
+          } else {
+            // Split by distinct sentences if multiple sentences ending in punctuation
+            const sentences = rawText.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g);
+            if (sentences && sentences.length > 1) {
+              items = sentences;
+            } else {
+              items = [rawText];
+            }
+          }
+        }
+      }
+
+      items = items.map(s => String(s).trim().replace(/^[-•*]\s*/, '')).filter(Boolean);
+      if (items.length === 0) return '<p class="font-light opacity-60">—</p>';
+
+      return `
+        <ul class="space-y-1.5 pt-1">
+          ${items.map(it => `
+            <li class="flex items-start gap-2 text-right">
+              <span class="w-1.5 h-1.5 rounded-full ${accentColor} shrink-0 mt-1.5 shadow-[0_0_5px_rgba(242,202,80,0.35)]"></span>
+              <span class="font-light leading-relaxed text-stone-200 text-[11px] flex-1">${escapeHtml(it)}</span>
+            </li>
+          `).join('')}
+        </ul>
+      `;
+    }
+
     function toggleDecisionDetails(decisionId) {
       const el = document.getElementById(`details-${decisionId}`);
       const text = document.getElementById(`detailsToggleText-${decisionId}`);
@@ -3800,41 +3860,71 @@ ${pastSummary}
               
               <!-- Consideration -->
               <div class="p-2.5 rounded-lg bg-white/[0.02] border border-stone-800 text-[11px] text-stone-300 space-y-1">
-                <span class="text-[10px] font-editorial block text-amber-300 font-semibold">אתה שוקל:</span>
-                <p class="font-light">${escapeHtml(d.consideration || d.rawVerbatim || '—')}</p>
+                <span class="text-[10px] font-editorial block text-amber-300 font-semibold">אתה שוקל (הדילמה):</span>
+                <p class="font-light leading-relaxed text-stone-100">${escapeHtml(d.consideration || d.rawVerbatim || '—')}</p>
               </div>
 
               <!-- Goals & Prices -->
               <div class="p-2.5 rounded-lg bg-white/[0.02] border border-stone-800 text-[11px] text-stone-300 space-y-1">
-                <span class="text-[10px] font-editorial block text-stone-300 font-semibold">להשיג ולשמור:</span>
-                <p class="font-light">${escapeHtml(d.goalsPrices || '—')}</p>
+                <span class="text-[10px] font-editorial block text-stone-300 font-semibold">להשיג ולשמור (מטרות ומחירים):</span>
+                ${formatBulletsHtml(d.goalsPrices || d.goal, 'bg-amber-300')}
               </div>
 
-              <!-- Core Reliance -->
+              <!-- Observations / Facts (if present) -->
+              ${(d.observations || d.facts || d.dimFacts) ? `
+                <div class="p-2.5 rounded-lg bg-white/[0.02] border border-stone-800 text-[11px] text-stone-300 space-y-1">
+                  <span class="text-[10px] font-editorial block text-sky-400 font-semibold">עובדות קשיחות (מה שידוע בבירור):</span>
+                  ${formatBulletsHtml(d.observations || d.facts || d.dimFacts, 'bg-sky-400')}
+                </div>
+              ` : ''}
+
+              <!-- Core Reliance / Assumptions as Clear Bullets -->
               <div class="p-2.5 rounded-lg bg-white/[0.02] border border-stone-800 text-[11px] text-stone-300 space-y-1">
-                <span class="text-[10px] font-editorial block text-amber-200 font-semibold">אתה נשען על (הנחת ציר):</span>
-                <p class="font-light">${escapeHtml(d.reliance || '—')}</p>
+                <span class="text-[10px] font-editorial block text-amber-200 font-semibold">אתה נשען על (הנחות ופרשנויות):</span>
+                ${formatBulletsHtml(d.assumptions || d.reliance || d.dimAssumptions, 'bg-amber-400')}
               </div>
 
-              <!-- Unknowns -->
+              <!-- Unknowns as Clear Bullets -->
               <div class="p-2.5 rounded-lg bg-white/[0.02] border border-stone-800 text-[11px] text-stone-300 space-y-1">
-                <span class="text-[10px] font-editorial block text-amber-300 font-semibold">עדיין לא ברור:</span>
-                <p class="font-light">${escapeHtml(d.unknowns || '—')}</p>
+                <span class="text-[10px] font-editorial block text-amber-300 font-semibold">עדיין לא ברור (פערי מידע):</span>
+                ${formatBulletsHtml(d.unknowns || d.missingInfo || d.dimMissingInfo, 'bg-amber-400')}
               </div>
 
               <!-- Socratic Question -->
               <div class="p-2.5 rounded-lg bg-amber-400/[0.03] border border-amber-400/20 text-[11px] text-stone-200">
                 <span class="text-[10px] font-editorial block text-amber-400 font-semibold">שאלת חידוד:</span>
-                <p class="font-editorial italic mt-0.5">${escapeHtml(d.question || '—')}</p>
+                <p class="font-editorial italic mt-0.5 leading-relaxed text-stone-100">${escapeHtml(d.question || '—')}</p>
               </div>
 
               <!-- User's Refinement Answer (if any) -->
               ${userAns ? `
                 <div class="p-2.5 rounded-lg bg-white/[0.02] border border-stone-800 text-[11px] text-stone-300">
-                  <span class="text-[10px] font-editorial block text-amber-300 font-semibold">מענה המשתמש:</span>
-                  <p class="font-light mt-0.5">${escapeHtml(userAns)}</p>
+                  <span class="text-[10px] font-editorial block text-amber-300 font-semibold">מענה המשתמש (תובנת הבהירות):</span>
+                  <p class="font-light mt-0.5 leading-relaxed text-stone-100">${escapeHtml(userAns)}</p>
                 </div>
               ` : ''}
+
+              <!-- [חדש] המסקנה המזוקקת הסופית -->
+              <div class="p-3 rounded-xl bg-amber-400/[0.05] border border-amber-400/30 text-[11px] text-stone-200 space-y-1 shadow-sm">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-editorial block text-amber-300 font-bold">המסקנה שהתחדדה (סיכום שיקול הדעת):</span>
+                  <span class="text-[9px] text-amber-400/80 font-mono">הכרעה סופית</span>
+                </div>
+                <p class="font-medium text-stone-100 mt-1 leading-relaxed text-xs">
+                  ${escapeHtml(d.insightNow || d.contractCriterion || d.conclusion || 'בירור ממוקד של הנחת הציר והערכת המציאות')}
+                </p>
+              </div>
+
+              <!-- [חדש] צעד הפעולה הנבחר -->
+              <div class="p-3 rounded-xl bg-emerald-500/[0.07] border border-emerald-400/40 text-[11px] text-stone-200 space-y-1 shadow-sm">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-editorial block text-emerald-300 font-bold">✓ פעולה נבחרת (סגור לביצוע):</span>
+                  <span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-medium">לביצוע</span>
+                </div>
+                <p class="font-medium text-stone-100 mt-1 leading-relaxed text-xs">
+                  ${escapeHtml(d.insightChosenStep || d.selectedCriterion || d.customCriterion || d.nextStep || 'יישום הצעד הנבחר ובחינת תוצאותיו')}
+                </p>
+              </div>
 
             </div>
 

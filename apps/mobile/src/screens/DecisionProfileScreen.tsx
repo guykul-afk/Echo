@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { LuxuryTheme } from '../theme/colors.js';
+import { DecisionFlowPipeline } from '../graphics/DecisionFlowPipeline.js';
 
 interface DecisionProfileScreenProps {
   onBack: () => void;
@@ -8,12 +9,50 @@ interface DecisionProfileScreenProps {
   closuresCount?: number;
 }
 
+const HISTORICAL_CASES = [
+  {
+    id: 'case-skeleton-contractor',
+    title: 'המשכיות עם קבלן השלד לעבודות הגמרים',
+    date: 'אוגוסט 2026',
+    status: 'סגור ומיושם',
+    dilemma: 'האם להמשיך עם קבלן השלד הנוכחי גם לעבודות הגמרים, או לפצל לקבלן ייעודי',
+    goalsPrices: 'השלמת הפרויקט באיכות גבוהה תוך שמירה על יעילות תקציבית וניהולית מול סכנת ליקויי גמר',
+    facts: 'הקבלן הוכיח עמידה בלוחות זמנים בשלד, אך טרם הציג עבודות גמרים דומות בפועל',
+    assumptions: 'קבלן המצטיין בעבודות שלד יחזיק במיומנות הנדרשת גם לעבודות גמר מדויקות',
+    question: 'איזה סוג מיומנות שנדרש בגמרים אינו בא לידי ביטוי בעבודת השלד?',
+    pastEcho: {
+      title: 'פרויקט כנרת (2024)',
+      reason: 'שימוש באותו קבלן לשני השלבים יצר פשרות אסתטיות שלא ניתן היה לתקן בדיעבד',
+      date: 'מאי 2024'
+    },
+    answer: 'עבודות גמר דורשות פדנטיות וסבלנות שונה לחלוטין מעבודת שלד מאסיבית',
+    conclusion: 'הפרדת עבודות הגמרים ומכרז מול 2 קבלנים ייעודיים',
+    nextStep: 'קבלת שתי הצעות מחיר מקבלני גמר וביקור בדירות מאוכלסות שלהם'
+  },
+  {
+    id: 'case-concrete-supply',
+    title: 'בחירת אסטרטגיית אספקת בטון לפרויקט קטרוני',
+    date: 'יולי 2026',
+    status: 'סגור ומיושם',
+    dilemma: 'האם לפצל את אספקת הבטון בין כמה ספקים כגיבוי, או להישאר עם ספק בלעדי עם אמינות בינונית',
+    goalsPrices: 'הבטחת רציפות אספקה ללא השבתת יציקות, מול פגיעה ביעילות חשבונית ומחירי כמות',
+    facts: 'עיכוב של יום יציקה עולה כ-45,000 ש"ח; עלות פיצול הספקים היא תוספת של כ-4%',
+    assumptions: 'אמינות אספקה בינונית של ספק יחיד תביא בהכרח לשיבוש בפרויקט',
+    question: 'מהי נקודת השוויון שבה נזק מעיכוב אפשרי עולה על עלות הפרמיה של פיצול ספקים?',
+    pastEcho: null,
+    answer: 'הסיכון להשבתת משאבה ויציקה עולה פי 3 על תוספת המחיר של פיצול הספקים',
+    conclusion: 'פיצול האספקה: 70% לספק עיקרי ו-30% כגיבוי מובטח לספק משני',
+    nextStep: 'חתימת נספח זמינות מול הספק המשני'
+  }
+];
+
 export const DecisionProfileScreen: React.FC<DecisionProfileScreenProps> = ({
   onBack,
   capturesCount = 2,
   closuresCount = 1
 }) => {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [selectedHistoryCaseId, setSelectedHistoryCaseId] = useState<string | null>('case-skeleton-contractor');
 
   const toggleSection = (id: string) => {
     setExpandedSection(prev => (prev === id ? null : id));
@@ -259,6 +298,64 @@ export const DecisionProfileScreen: React.FC<DecisionProfileScreenProps> = ({
           <Text style={styles.loopAlertText}>
             קבעת חלונות ביקורת קצרים של 3–7 ימים גם עבור תהליכים מורכבים (כמו הסתגלות ילד בבית ספר או שינויי מחיר בנדל"ן). מומלץ להאריך את חלון הביקורת ל-30–60 יום כדי לקבל משוב אמיתי מהמציאות.
           </Text>
+        </View>
+      </View>
+
+      {/* 5. כרטיסיית "היסטוריית החלטות (שרשרת שיקול הדעת)" */}
+      <View style={styles.card}>
+        <View style={styles.cardHeaderRow}>
+          <View style={styles.badgePurple}>
+            <Text style={styles.badgeTextPurple}>ארכיון החלטות</Text>
+          </View>
+          <Text style={styles.cardTitle}>שרשרת שיקול הדעת בהיסטוריה</Text>
+        </View>
+
+        <Text style={styles.cardDesc}>
+          עיון בשרשרת קבלת ההחלטה המלאה של דילמות עבר – מהדילמה המקורית ועד לצעד שנבחר:
+        </Text>
+
+        <View style={styles.historyList}>
+          {HISTORICAL_CASES.map(item => {
+            const isExpanded = selectedHistoryCaseId === item.id;
+            return (
+              <View key={item.id} style={styles.historyCard}>
+                <TouchableOpacity 
+                  style={styles.historyCardHeader} 
+                  onPress={() => setSelectedHistoryCaseId(isExpanded ? null : item.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.historyMetaRow}>
+                    <Text style={styles.historyDate}>{item.date}</Text>
+                    <Text style={styles.historyBadge}>{item.status}</Text>
+                  </View>
+                  <Text style={styles.historyTitle}>{item.title}</Text>
+                  <View style={styles.historyToggleRow}>
+                    <Text style={styles.historyToggleText}>
+                      {isExpanded ? '▲ סגור תרשים זרימה' : '▼ צפה בתרשים הזרימה המלא'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {isExpanded && (
+                  <View style={styles.pipelineWrapper}>
+                    <DecisionFlowPipeline
+                      dilemma={item.dilemma}
+                      goalsPrices={item.goalsPrices}
+                      facts={item.facts}
+                      assumptions={item.assumptions}
+                      question={item.question}
+                      pastEcho={item.pastEcho}
+                      answer={item.answer}
+                      conclusion={item.conclusion}
+                      nextStep={item.nextStep}
+                      scrollable={true}
+                      maxHeight={360}
+                    />
+                  </View>
+                )}
+              </View>
+            );
+          })}
         </View>
       </View>
     </ScrollView>
@@ -684,5 +781,62 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: 'right',
     lineHeight: 16
+  },
+  historyList: {
+    gap: 12
+  },
+  historyCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.2)',
+    overflow: 'hidden'
+  },
+  historyCardHeader: {
+    padding: 14,
+    backgroundColor: 'rgba(21, 28, 40, 0.6)'
+  },
+  historyMetaRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6
+  },
+  historyDate: {
+    color: LuxuryTheme.text.tertiary,
+    fontSize: 10
+  },
+  historyBadge: {
+    color: LuxuryTheme.accent.gold,
+    backgroundColor: 'rgba(212, 175, 55, 0.12)',
+    fontSize: 10,
+    fontWeight: '600',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4
+  },
+  historyTitle: {
+    color: LuxuryTheme.text.primary,
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'right',
+    marginBottom: 8
+  },
+  historyToggleRow: {
+    alignItems: 'center',
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)'
+  },
+  historyToggleText: {
+    color: LuxuryTheme.accent.gold,
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  pipelineWrapper: {
+    padding: 10,
+    backgroundColor: '#07080B',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(212, 175, 55, 0.15)'
   }
 });

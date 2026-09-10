@@ -15,6 +15,8 @@ function cleanAndParseJson<T>(raw: string): T {
     return JSON.parse(cleaned) as T;
   } catch (err: any) {
     let sanitized = cleaned
+      .replace(/([א-ת])"([א-ת])/g, '$1״$2')
+      .replace(/([א-ת])"(\s)/g, '$1״$2')
       .replace(/,\s*([\]}])/g, '$1')
       .replace(/[\x00-\x1F\x7F-\x9F]/g, ' ');
     try {

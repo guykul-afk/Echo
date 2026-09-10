@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { LuxuryTheme } from '../theme/colors.js';
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
+import { DecisionFlowPipeline } from '../graphics/DecisionFlowPipeline.js';
 
 const SCREEN_HEIGHT = 700;
 
@@ -349,33 +350,34 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         </View>
 
         <View style={styles.centerContent}>
-          <Text style={styles.heroHeadline}>סיכום ההחלטה</Text>
-          <Text style={styles.subPrompt}>המסקנה המזוקקת והצעד המעשי שנקבע:</Text>
+          <Text style={styles.heroHeadline}>שרשרת שיקול הדעת המזוקקת</Text>
+          <Text style={styles.subPrompt}>כל התהליך כפי שהתחדד מהדילמה ועד לצעד המעשי:</Text>
 
-          <View style={styles.insightBox}>
-            <View style={styles.insightRow}>
-              <Text style={styles.insightLabel}>נקודת המוצא:</Text>
-              <Text style={styles.insightVal}>{insight?.before || consideration}</Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.insightRow}>
-              <Text style={[styles.insightLabel, { color: LuxuryTheme.accent.gold }]}>המסקנה כעת:</Text>
-              <Text style={[styles.insightVal, { color: LuxuryTheme.accent.gold, fontWeight: '600' }]}>
-                {insight?.now || userAnswer || 'הבנת את גורם המפתח להכרעה'}
-              </Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.insightRow}>
-              <Text style={[styles.insightLabel, { color: LuxuryTheme.accent.gold }]}>הצעד שנבחר:</Text>
-              <Text style={[styles.insightVal, { color: LuxuryTheme.accent.gold, fontWeight: '700' }]}>
-                {insight?.chosenStep || 'בירור מוקדם לפני הכרעה'}
-              </Text>
-            </View>
-          </View>
+          <DecisionFlowPipeline
+            dilemma={consideration}
+            goalsPrices={goalsPrices}
+            facts={facts}
+            assumptions={assumptions}
+            question={effectiveQuestion}
+            pastEcho={
+              similarCaseAnalogy
+                ? {
+                    title: similarCaseAnalogy.title,
+                    reason: similarCaseAnalogy.reason
+                  }
+                : historicalQuestion
+                ? {
+                    title: 'תקדים עבר רלוונטי',
+                    reason: historicalQuestion.questionText
+                  }
+                : null
+            }
+            answer={userAnswer || undefined}
+            conclusion={insight?.now || userAnswer || 'הבנת את גורם המפתח להכרעה'}
+            nextStep={insight?.chosenStep || 'בירור מוקדם לפני הכרעה'}
+            scrollable={true}
+            maxHeight={360}
+          />
 
           <TouchableOpacity 
             style={styles.saveDecisionBtn}
