@@ -232,18 +232,37 @@ const HEBREW_STOPWORDS = new Set([
   'לגבי', 'בגלל', 'מתוך', 'אצל', 'כמו', 'בין', 'שאתה', 'שאני', 'אולי', 'שוקל', 'שוקלת', 'מתלבט', 'מתלבטת'
 ]);
 
-// 3. OKF Tri-Factor Semantic Precedent Matching Engine
-export function findBestOKFPrecedent(
+export interface RelatedPrecedentItem {
+  id: string;
+  title: string;
+  date?: string;
+  score: number;
+  matchReason: string;
+  lesson: string;
+  historicalQuestion?: string;
+}
+
+export interface RelatedPastEchoesResult {
+  primaryEcho: RelatedPrecedentItem | null;
+  allRelatedEchoes: RelatedPrecedentItem[];
+  insightsSummary: string;
+}
+
+// 3. OKF Tri-Factor Semantic Precedent Matching Engine (Expanded)
+export function findRelatedOKFPrecedents(
   rawCaptureText: string,
   consideration: string,
   deepMechanisms?: {
     operatingPrinciples?: string[];
     tradeoffs?: Array<{ protectedValue: string; sacrificedValue: string }>;
   },
-  userId: string = 'Guy_Kuleski'
-): PrecedentMatchResult | null {
+  userId: string = 'Guy_Kuleski',
+  excludeId?: string
+): RelatedPastEchoesResult {
   const allDecisions = getAllUserDecisions(userId);
-  if (!allDecisions || allDecisions.length === 0) return null;
+  if (!allDecisions || allDecisions.length === 0) {
+    return { primaryEcho: null, allRelatedEchoes: [], insightsSummary: '' };
+  }
 
   const combinedCurrent = (rawCaptureText + ' ' + consideration).toLowerCase();
   const currentTokens = new Set(
@@ -253,11 +272,16 @@ export function findBestOKFPrecedent(
       .filter(w => w.length >= 3 && !HEBREW_STOPWORDS.has(w))
   );
 
-  let bestMatch: CatalogPrecedent | null = null;
-  let highestScore = 0;
-  let bestReason = '';
+  const scoredMatches: RelatedPrecedentItem[] = [];
 
   for (const dec of allDecisions) {
+    // Exclude current decision from matching itself
+    if (excludeId) {
+      const cleanEx = excludeId.replace(/^dc-/, '');
+      const cleanDec = dec.id.replace(/^dc-/, '');
+      if (cleanEx === cleanDec || dec.id === excludeId) continue;
+    }
+
     let score = 0;
     const matchReasons: string[] = [];
 
@@ -315,33 +339,71 @@ export function findBestOKFPrecedent(
       }
     }
 
-    if (overlapCount >= 2) {
-      score += Math.min(0.35, overlapCount * 0.1);
-      matchReasons.push('חפיפה קונספטואלית ישירה (' + overlapCount + ' מונחים)');
+    if (overlapCount >= 1) {
+      score += Math.min(0.35, overlapCount * 0.12);
+      matchReasons.push('חפיפה קונספטואלית (' + overlapCount + ' מונחים)');
     }
 
-    // Normalize max score to 0.96
     const normalizedScore = Math.min(0.96, score);
 
-    if (normalizedScore > highestScore) {
-      highestScore = normalizedScore;
-      bestMatch = dec;
-      bestReason = matchReasons.join(' · ');
+    // Threshold for related precedent candidate: >= 0.3
+    if (normalizedScore >= 0.3) {
+      const lessonText = dec.lesson || dec.conclusion || dec.outcome || dec.dilemma;
+      scoredMatches.push({
+        id: dec.id,
+        title: dec.title,
+        date: dec.date,
+        score: normalizedScore,
+        matchReason: matchReasons.join(' · ') || 'התאמה קונספטואלית לתקדים העבר',
+        lesson: lessonText,
+        historicalQuestion: dec.historicalQuestion || ('בהחלטה לגבי "' + dec.title + '" למדת ש: "' + lessonText + '". האם לקח זה מנחה אותך גם כעת?')
+      });
     }
   }
 
-  // Threshold: Only return authentic match if score >= 0.65
-  if (bestMatch && highestScore >= 0.65) {
-    const questionText = bestMatch.historicalQuestion || 
-      ('בעבר בהחלטה לגבי "' + bestMatch.title + '" למדת ש: "' + (bestMatch.lesson || bestMatch.conclusion) + '". האם לקח זה רלוונטי לדילמה הנוכחית?');
+  scoredMatches.sort((a, b) => b.score - a.score);
 
-    return {
-      matchedPrecedent: bestMatch,
-      score: highestScore,
-      matchReason: bestReason || 'זוהה תקדים עבר עם מתח מרכזי דומה מתוך קטלוג הלכידות',
-      suggestedQuestion: questionText
-    };
+  const topMatches = scoredMatches.slice(0, 4);
+  const primaryEcho = topMatches.length > 0 && topMatches[0].score >= 0.35 ? topMatches[0] : null;
+
+  let insightsSummary = '';
+  if (topMatches.length > 0) {
+    if (topMatches.length === 1) {
+      insightsSummary = `תובנת מפתח מתוך "${topMatches[0].title}": ${topMatches[0].lesson}`;
+    } else {
+      const parts = topMatches.slice(0, 2).map((m, idx) => `(${idx + 1}) ${m.title}: ${m.lesson}`);
+      insightsSummary = `סינתזת לקחים מ-${topMatches.length} תקדימי עבר קשורים: ${parts.join(' | ')}`;
+    }
   }
 
+  return {
+    primaryEcho,
+    allRelatedEchoes: topMatches,
+    insightsSummary
+  };
+}
+
+export function findBestOKFPrecedent(
+  rawCaptureText: string,
+  consideration: string,
+  deepMechanisms?: {
+    operatingPrinciples?: string[];
+    tradeoffs?: Array<{ protectedValue: string; sacrificedValue: string }>;
+  },
+  userId: string = 'Guy_Kuleski'
+): PrecedentMatchResult | null {
+  const related = findRelatedOKFPrecedents(rawCaptureText, consideration, deepMechanisms, userId);
+  if (related.primaryEcho && related.primaryEcho.score >= 0.35) {
+    const allDecs = getAllUserDecisions(userId);
+    const matched = allDecs.find(d => d.id === related.primaryEcho!.id);
+    if (matched) {
+      return {
+        matchedPrecedent: matched,
+        score: related.primaryEcho.score,
+        matchReason: related.primaryEcho.matchReason,
+        suggestedQuestion: related.primaryEcho.historicalQuestion || ''
+      };
+    }
+  }
   return null;
 }

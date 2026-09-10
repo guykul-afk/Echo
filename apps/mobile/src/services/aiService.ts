@@ -1,6 +1,5 @@
-// Real-time Epistemic & Cognitive Analysis Service using Gemini 3.6 Flash
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
-import { findBestOKFPrecedent, PrecedentMatchResult } from './decisionCatalog.js';
+import { findBestOKFPrecedent, findRelatedOKFPrecedents, RelatedPrecedentItem, PrecedentMatchResult } from './decisionCatalog.js';
 
 export function getActiveGeminiKey(): string {
   if (typeof window !== 'undefined') {
@@ -45,7 +44,14 @@ export interface AnalysisSessionResult {
   illuminationQuestion: string;
   bespokeQuestion: IlluminationQuestion;
   historicalQuestion?: IlluminationQuestion;
-  similarCaseAnalogy?: { title: string; reason: string; strength: string; score?: number };
+  similarCaseAnalogy?: {
+    title: string;
+    reason: string;
+    strength: string;
+    score?: number;
+    allRelatedEchoes?: RelatedPrecedentItem[];
+    insightsSummary?: string;
+  };
   refinedInsight: RefinedInsight;
   proposedSteps?: string[];
 }
@@ -178,7 +184,7 @@ export async function analyzeCapturedDilemma(
   }
 
   // Authentic OKF Precedent Matching against User's Historical Decisions Catalog
-  const precedentMatch = findBestOKFPrecedent(
+  const relatedPrecedents = findRelatedOKFPrecedents(
     rawText,
     parsed.consideration,
     {
@@ -189,17 +195,24 @@ export async function analyzeCapturedDilemma(
   );
 
   let mockHistorical: IlluminationQuestion | undefined = undefined;
-  let analogyData: { title: string; reason: string; strength: string; score?: number } | undefined = undefined;
+  let analogyData: { 
+    title: string; 
+    reason: string; 
+    strength: string; 
+    score?: number;
+    allRelatedEchoes?: RelatedPrecedentItem[];
+    insightsSummary?: string;
+  } | undefined = undefined;
 
   // ONLY show precedent if there is an authentic semantic/OKF match!
-  if (precedentMatch) {
+  if (relatedPrecedents.primaryEcho) {
     mockHistorical = {
       id: `hist-${now}`,
       caseId: `dc-${now}`,
       strategy: 'outcome_contract_anchor',
       origin: 'historical_precedent',
-      questionText: precedentMatch.suggestedQuestion,
-      triggerReason: precedentMatch.matchReason,
+      questionText: relatedPrecedents.primaryEcho.historicalQuestion || '',
+      triggerReason: relatedPrecedents.primaryEcho.matchReason,
       shouldIntervene: true,
       isSecondary: true,
       canSkip: true,
@@ -209,10 +222,12 @@ export async function analyzeCapturedDilemma(
     };
 
     analogyData = {
-      title: precedentMatch.matchedPrecedent.title,
-      reason: precedentMatch.matchedPrecedent.lesson || precedentMatch.matchedPrecedent.conclusion || precedentMatch.matchedPrecedent.dilemma,
+      title: relatedPrecedents.primaryEcho.title,
+      reason: relatedPrecedents.primaryEcho.lesson,
       strength: 'strong',
-      score: precedentMatch.score
+      score: relatedPrecedents.primaryEcho.score,
+      allRelatedEchoes: relatedPrecedents.allRelatedEchoes,
+      insightsSummary: relatedPrecedents.insightsSummary
     };
   }
 

@@ -7,6 +7,15 @@ export interface PastEchoItem {
   reason: string;
   date?: string;
   score?: number;
+  allRelatedEchoes?: Array<{
+    id: string;
+    title: string;
+    date?: string;
+    score?: number;
+    matchReason?: string;
+    lesson?: string;
+  }>;
+  insightsSummary?: string;
 }
 
 export interface DecisionFlowPipelineProps {
@@ -209,6 +218,8 @@ export const DecisionFlowPipeline: React.FC<DecisionFlowPipelineProps> = ({
               title={pastEcho.title} 
               reason={pastEcho.reason} 
               score={pastEcho.score ?? 0.85} 
+              allRelatedEchoes={pastEcho.allRelatedEchoes}
+              insightsSummary={pastEcho.insightsSummary}
             />
           </div>
         </div>

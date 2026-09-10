@@ -18,6 +18,20 @@ export interface DecisionSaveData {
   conclusion: string;
   nextStep: string;
   proposedSteps: string[];
+  pastEcho?: {
+    title: string;
+    reason: string;
+    score?: number;
+    allRelatedEchoes?: any[];
+    insightsSummary?: string;
+  } | null;
+  analogy?: {
+    title: string;
+    reason: string;
+    score?: number;
+  } | null;
+  allRelatedEchoes?: any[];
+  insightsSummary?: string;
 }
 
 interface DecisionRoomScreenProps {
@@ -27,7 +41,14 @@ interface DecisionRoomScreenProps {
   illuminationQuestion?: string;
   bespokeQuestion?: IlluminationQuestion;
   historicalQuestion?: IlluminationQuestion;
-  similarCaseAnalogy?: { title: string; reason: string; strength?: string; score?: number };
+  similarCaseAnalogy?: {
+    title: string;
+    reason: string;
+    strength?: string;
+    score?: number;
+    allRelatedEchoes?: any[];
+    insightsSummary?: string;
+  };
   initialRefinedInsight?: RefinedInsight;
   initialProposedSteps?: string[];
   onAnswerSubmit: (answer: string, skip?: boolean) => void;
@@ -322,7 +343,21 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         answer: currentAnswer,
         conclusion: currentConclusion,
         nextStep: currentNextStep,
-        proposedSteps
+        proposedSteps,
+        pastEcho: similarCaseAnalogy ? {
+          title: similarCaseAnalogy.title,
+          reason: similarCaseAnalogy.reason,
+          score: similarCaseAnalogy.score,
+          allRelatedEchoes: similarCaseAnalogy.allRelatedEchoes,
+          insightsSummary: similarCaseAnalogy.insightsSummary
+        } : null,
+        analogy: similarCaseAnalogy ? {
+          title: similarCaseAnalogy.title,
+          reason: similarCaseAnalogy.reason,
+          score: similarCaseAnalogy.score
+        } : null,
+        allRelatedEchoes: similarCaseAnalogy?.allRelatedEchoes,
+        insightsSummary: similarCaseAnalogy?.insightsSummary
       });
     } else {
       onAnswerSubmit(currentAnswer, false);
@@ -482,6 +517,8 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
           title={similarCaseAnalogy?.title || 'תקדים עבר רלוונטי'}
           reason={similarCaseAnalogy?.reason || historicalQuestion?.questionText || ''}
           score={similarCaseAnalogy?.score ?? 0.85}
+          allRelatedEchoes={similarCaseAnalogy?.allRelatedEchoes}
+          insightsSummary={similarCaseAnalogy?.insightsSummary}
         />
       )}
 
@@ -698,7 +735,9 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
                   ? {
                       title: similarCaseAnalogy.title,
                       reason: similarCaseAnalogy.reason,
-                      score: similarCaseAnalogy.score ?? 0.85
+                      score: similarCaseAnalogy.score ?? 0.85,
+                      allRelatedEchoes: similarCaseAnalogy.allRelatedEchoes,
+                      insightsSummary: similarCaseAnalogy.insightsSummary
                     }
                   : historicalQuestion
                   ? {

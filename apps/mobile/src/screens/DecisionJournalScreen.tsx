@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LuxuryTheme } from '../theme/colors.js';
 import { syncUserDecisionsFromCloud, saveDecisionToCloud } from '../services/firestoreSync.js';
 import { DecisionFlowPipeline } from '../graphics/DecisionFlowPipeline.js';
+import { findRelatedOKFPrecedents } from '../services/decisionCatalog.js';
 import { OutcomeModal } from './OutcomeModal.js';
 import { QuickLoopStatus } from '@echo/shared';
 
@@ -56,12 +57,16 @@ interface StoredDecision {
     reason: string;
     date?: string;
     score?: number;
+    allRelatedEchoes?: any[];
+    insightsSummary?: string;
   } | null;
   analogy?: {
     title: string;
     reason: string;
     score?: number;
   } | null;
+  allRelatedEchoes?: any[];
+  insightsSummary?: string;
   status?: string;
   sealed?: boolean;
   followUps?: Array<{
@@ -392,19 +397,57 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
                       </span>
                     </div>
 
-                    <DecisionFlowPipeline
-                      dilemma={cleanHtml(d.dimConsideration || d.consideration || d.rawVerbatim || d.rawCaptureText || d.title)}
-                      goalsPrices={cleanHtml(d.dimGoalsPrices || d.goalsPrices || d.goal || d.centralTension)}
-                      facts={cleanHtml(d.dimFacts || d.facts || d.observations)}
-                      assumptions={cleanHtml(d.dimAssumptions || d.assumptions || d.dimReliance || d.reliance)}
-                      question={cleanHtml(d.question || d.keyHinge)}
-                      pastEcho={d.pastEcho || (d.analogy ? { title: d.analogy.title, reason: d.analogy.reason, score: d.analogy.score } : null)}
-                      answer={cleanHtml(d.userAnswer || d.actionAnswer || d.answer)}
-                      proposedSteps={Array.isArray(d.proposedSteps) ? d.proposedSteps : undefined}
-                      conclusion={cleanHtml(d.insightNow || d.contractCriterion || d.conclusion || d.selectedCriterion || 'בירור ממוקד של הנחת הציר')}
-                      nextStep={cleanHtml(d.chosenNextStep || d.nextStep || d.insightChosenStep || d.refinedAction || 'יישום הצעד הנבחר')}
-                      scrollable={false}
-                    />
+                    {(() => {
+                      const effectiveEcho = (() => {
+                        if (d.pastEcho && d.pastEcho.title && d.pastEcho.allRelatedEchoes && d.pastEcho.allRelatedEchoes.length > 0) {
+                          return d.pastEcho;
+                        }
+                        const dilemmaText = cleanHtml(d.dimConsideration || d.consideration || d.rawVerbatim || d.rawCaptureText || d.title);
+                        const related = findRelatedOKFPrecedents(dilemmaText, cleanHtml(d.centralTension || d.title), undefined, currentUserId, d.id);
+                        if (related.primaryEcho) {
+                          return {
+                            title: related.primaryEcho.title,
+                            reason: related.primaryEcho.lesson,
+                            score: related.primaryEcho.score,
+                            allRelatedEchoes: related.allRelatedEchoes,
+                            insightsSummary: related.insightsSummary
+                          };
+                        }
+                        if (d.pastEcho && d.pastEcho.title) {
+                          return {
+                            ...d.pastEcho,
+                            allRelatedEchoes: d.pastEcho.allRelatedEchoes || related.allRelatedEchoes,
+                            insightsSummary: d.pastEcho.insightsSummary || related.insightsSummary
+                          };
+                        }
+                        if (d.analogy && d.analogy.title) {
+                          return {
+                            title: d.analogy.title,
+                            reason: d.analogy.reason,
+                            score: d.analogy.score,
+                            allRelatedEchoes: related.allRelatedEchoes,
+                            insightsSummary: related.insightsSummary
+                          };
+                        }
+                        return null;
+                      })();
+
+                      return (
+                        <DecisionFlowPipeline
+                          dilemma={cleanHtml(d.dimConsideration || d.consideration || d.rawVerbatim || d.rawCaptureText || d.title)}
+                          goalsPrices={cleanHtml(d.dimGoalsPrices || d.goalsPrices || d.goal || d.centralTension)}
+                          facts={cleanHtml(d.dimFacts || d.facts || d.observations)}
+                          assumptions={cleanHtml(d.dimAssumptions || d.assumptions || d.dimReliance || d.reliance)}
+                          question={cleanHtml(d.question || d.keyHinge)}
+                          pastEcho={effectiveEcho}
+                          answer={cleanHtml(d.userAnswer || d.actionAnswer || d.answer)}
+                          proposedSteps={Array.isArray(d.proposedSteps) ? d.proposedSteps : undefined}
+                          conclusion={cleanHtml(d.insightNow || d.contractCriterion || d.conclusion || d.selectedCriterion || 'בירור ממוקד של הנחת הציר')}
+                          nextStep={cleanHtml(d.chosenNextStep || d.nextStep || d.insightChosenStep || d.refinedAction || 'יישום הצעד הנבחר')}
+                          scrollable={false}
+                        />
+                      );
+                    })()}
 
                     {/* Results Section (סגירת מעגל ותוצאות) */}
                     <div className="pt-3 border-t space-y-2.5" style={{ borderColor: LuxuryTheme.background.border }}>

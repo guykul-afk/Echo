@@ -24,7 +24,14 @@ export const App: React.FC = () => {
   const [illuminationQuestion, setIlluminationQuestion] = useState<string>('');
   const [bespokeQuestion, setBespokeQuestion] = useState<IlluminationQuestion | undefined>(undefined);
   const [historicalQuestion, setHistoricalQuestion] = useState<IlluminationQuestion | undefined>(undefined);
-  const [similarCaseAnalogy, setSimilarCaseAnalogy] = useState<{ title: string; reason: string; strength: string; score?: number } | undefined>(undefined);
+  const [similarCaseAnalogy, setSimilarCaseAnalogy] = useState<{ 
+    title: string; 
+    reason: string; 
+    strength: string; 
+    score?: number;
+    allRelatedEchoes?: any[];
+    insightsSummary?: string;
+  } | undefined>(undefined);
   const [refinedInsight, setRefinedInsight] = useState<RefinedInsight | undefined>(undefined);
   const [chosenNextStep, setChosenNextStep] = useState<string>('');
   const [currentUserId, setCurrentUserId] = useState<string>(() => {
@@ -152,6 +159,20 @@ export const App: React.FC = () => {
       conclusion: saveData.conclusion,
       nextStep: saveData.nextStep,
       proposedSteps: saveData.proposedSteps || proposedSteps,
+      pastEcho: saveData.pastEcho || (similarCaseAnalogy ? {
+        title: similarCaseAnalogy.title,
+        reason: similarCaseAnalogy.reason,
+        score: similarCaseAnalogy.score,
+        allRelatedEchoes: similarCaseAnalogy.allRelatedEchoes,
+        insightsSummary: similarCaseAnalogy.insightsSummary
+      } : null),
+      analogy: saveData.analogy || (similarCaseAnalogy ? {
+        title: similarCaseAnalogy.title,
+        reason: similarCaseAnalogy.reason,
+        score: similarCaseAnalogy.score
+      } : null),
+      allRelatedEchoes: saveData.allRelatedEchoes || similarCaseAnalogy?.allRelatedEchoes || [],
+      insightsSummary: saveData.insightsSummary || similarCaseAnalogy?.insightsSummary || '',
       followUps: []
     };
 
