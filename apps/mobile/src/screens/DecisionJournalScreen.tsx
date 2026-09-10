@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { LuxuryTheme } from '../theme/colors.js';
 import { syncUserDecisionsFromCloud, saveDecisionToCloud } from '../services/firestoreSync.js';
 import { DecisionFlowPipeline } from '../graphics/DecisionFlowPipeline.js';
-import { findRelatedOKFPrecedents } from '../services/decisionCatalog.js';
 import { OutcomeModal } from './OutcomeModal.js';
 import { QuickLoopStatus } from '@echo/shared';
 
@@ -402,31 +401,16 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
                         if (d.pastEcho && d.pastEcho.title && d.pastEcho.allRelatedEchoes && d.pastEcho.allRelatedEchoes.length > 0) {
                           return d.pastEcho;
                         }
-                        const dilemmaText = cleanHtml(d.dimConsideration || d.consideration || d.rawVerbatim || d.rawCaptureText || d.title);
-                        const related = findRelatedOKFPrecedents(dilemmaText, cleanHtml(d.centralTension || d.title), undefined, currentUserId, d.id);
-                        if (related.primaryEcho) {
-                          return {
-                            title: related.primaryEcho.title,
-                            reason: related.primaryEcho.lesson,
-                            score: related.primaryEcho.score,
-                            allRelatedEchoes: related.allRelatedEchoes,
-                            insightsSummary: related.insightsSummary
-                          };
-                        }
                         if (d.pastEcho && d.pastEcho.title) {
                           return {
-                            ...d.pastEcho,
-                            allRelatedEchoes: d.pastEcho.allRelatedEchoes || related.allRelatedEchoes,
-                            insightsSummary: d.pastEcho.insightsSummary || related.insightsSummary
+                            ...d.pastEcho
                           };
                         }
                         if (d.analogy && d.analogy.title) {
                           return {
                             title: d.analogy.title,
                             reason: d.analogy.reason,
-                            score: d.analogy.score,
-                            allRelatedEchoes: related.allRelatedEchoes,
-                            insightsSummary: related.insightsSummary
+                            score: d.analogy.score
                           };
                         }
                         return null;

@@ -5,3 +5,4 @@ export * from './recordOutcome.js';
 export * from './recordMirrorFeedback.js';
 
 export * from './cognitiveTrackerTriggers.js';
+export * from './retrievePrecedents.js';

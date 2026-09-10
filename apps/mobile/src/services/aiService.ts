@@ -1,5 +1,5 @@
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
-import { findBestOKFPrecedent, findRelatedOKFPrecedents, RelatedPrecedentItem, PrecedentMatchResult } from './decisionCatalog.js';
+import { RelatedPrecedentItem } from './decisionCatalog.js';
 
 export function getActiveGeminiKey(): string {
   if (typeof window !== 'undefined') {
@@ -183,17 +183,7 @@ export async function analyzeCapturedDilemma(
     throw new Error('מנוע ה-AI לא הפיק ניתוח עבור הדילמה שנלכדה. אנא נסה שוב.');
   }
 
-  // Authentic OKF Precedent Matching against User's Historical Decisions Catalog
-  const relatedPrecedents = findRelatedOKFPrecedents(
-    rawText,
-    parsed.consideration,
-    {
-      operatingPrinciples: parsed.operatingPrinciples,
-      tradeoffs: parsed.tradeoffs
-    },
-    currentUserId
-  );
-
+  // Authentic OKF Precedent Matching against Backend
   let mockHistorical: IlluminationQuestion | undefined = undefined;
   let analogyData: { 
     title: string; 
@@ -204,32 +194,60 @@ export async function analyzeCapturedDilemma(
     insightsSummary?: string;
   } | undefined = undefined;
 
-  // ONLY show precedent if there is an authentic semantic/OKF match!
-  if (relatedPrecedents.primaryEcho) {
-    mockHistorical = {
-      id: `hist-${now}`,
-      caseId: `dc-${now}`,
-      strategy: 'outcome_contract_anchor',
-      origin: 'historical_precedent',
-      questionText: relatedPrecedents.primaryEcho.historicalQuestion || '',
-      triggerReason: relatedPrecedents.primaryEcho.matchReason,
-      shouldIntervene: true,
-      isSecondary: true,
-      canSkip: true,
-      responseWidget: 'confirmation',
-      responseOptions: ['כן, לקח רלוונטי', 'לא, הנסיבות שונות'],
-      createdAt: now
-    };
+  try {
+    const fb = (window as any).firebase;
+    if (fb && fb.functions) {
+      const retrievePrecedents = fb.functions().httpsCallable('retrievePrecedents');
+      const backendRes = await retrievePrecedents({
+        rawText,
+        consideration: parsed.consideration,
+        deepMechanisms: {
+          operatingPrinciples: parsed.operatingPrinciples,
+          tradeoffs: parsed.tradeoffs
+        }
+      });
+      
+      const memoryCheck = backendRes.data?.result;
+      if (memoryCheck && memoryCheck.assertions && memoryCheck.assertions.length > 0) {
+        const primaryAssertion = memoryCheck.assertions[0];
+        
+        mockHistorical = {
+          id: `hist-${now}`,
+          caseId: `dc-${now}`,
+          strategy: 'outcome_contract_anchor',
+          origin: 'historical_precedent',
+          questionText: memoryCheck.confirmationQuestion || memoryCheck.memoryPreamble || `בעבר ציינת ש"${primaryAssertion.statement}". האם זה עדיין תקף?`,
+          triggerReason: memoryCheck.retrievalReason || 'התאמה קונספטואלית לתקדים העבר',
+          shouldIntervene: true,
+          isSecondary: true,
+          canSkip: true,
+          responseWidget: memoryCheck.shouldConvertToConfirmation ? 'confirmation' : 'text',
+          responseOptions: memoryCheck.shouldConvertToConfirmation ? ['כן, לקח רלוונטי', 'לא, הנסיבות שונות'] : undefined,
+          createdAt: now
+        };
 
-    analogyData = {
-      title: relatedPrecedents.primaryEcho.title,
-      reason: relatedPrecedents.primaryEcho.lesson,
-      strength: 'strong',
-      score: relatedPrecedents.primaryEcho.score,
-      allRelatedEchoes: relatedPrecedents.allRelatedEchoes,
-      insightsSummary: relatedPrecedents.insightsSummary
-    };
+        analogyData = {
+          title: "תקדים מהעבר",
+          reason: primaryAssertion.statement,
+          strength: 'strong',
+          score: memoryCheck.retrievalScore || 0.8,
+          allRelatedEchoes: memoryCheck.assertions.map((a: any) => ({
+            id: a.id,
+            title: "תקדים מהעבר",
+            score: memoryCheck.retrievalScore || 0.8,
+            matchReason: memoryCheck.retrievalReason || '',
+            lesson: a.statement
+          })),
+          insightsSummary: memoryCheck.memoryPreamble
+        };
+      }
+    } else {
+      console.warn('Firebase functions not initialized. Skipping backend retrieval.');
+    }
+  } catch (err) {
+    console.warn('Failed to retrieve precedents from backend', err);
   }
+
 
   const decisionCase: DecisionCase = {
     id: `dc-${now}`,
