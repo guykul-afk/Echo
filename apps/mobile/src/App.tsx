@@ -34,6 +34,7 @@ export const App: React.FC = () => {
   const [closuresCount, setClosuresCount] = useState<number>(8);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [lastRawCapture, setLastRawCapture] = useState<string>('');
+  const [proposedSteps, setProposedSteps] = useState<string[]>([]);
 
   const loadUserMetrics = (user: string) => {
     try {
@@ -103,6 +104,9 @@ export const App: React.FC = () => {
       setHistoricalQuestion(result.historicalQuestion);
       setSimilarCaseAnalogy(result.similarCaseAnalogy);
       setRefinedInsight(result.refinedInsight);
+      if (result.proposedSteps) {
+        setProposedSteps(result.proposedSteps);
+      }
 
       setStep('decision_room');
     } catch (err: any) {
@@ -147,6 +151,7 @@ export const App: React.FC = () => {
       answer: saveData.answer,
       conclusion: saveData.conclusion,
       nextStep: saveData.nextStep,
+      proposedSteps: saveData.proposedSteps || proposedSteps,
       followUps: []
     };
 
@@ -307,6 +312,7 @@ export const App: React.FC = () => {
               bespokeQuestion={bespokeQuestion}
               historicalQuestion={historicalQuestion}
               initialRefinedInsight={refinedInsight}
+              initialProposedSteps={proposedSteps}
               similarCaseAnalogy={similarCaseAnalogy}
               onAnswerSubmit={handleDecisionAnswer}
               onSaveDecision={handleSaveDecision}

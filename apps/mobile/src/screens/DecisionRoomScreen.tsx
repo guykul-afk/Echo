@@ -4,6 +4,7 @@ import { DecisionCase, Option, DecisionSignature, RefinedInsight, FiveHumanDimen
 import { DecisionFlowPipeline } from '../graphics/DecisionFlowPipeline';
 import { EchoPastCard } from '../components/EchoPastCard';
 import { transcribeAudioWithGemini } from '../services/voiceService.js';
+import { refineAnswerWithGemini } from '../services/aiService.js';
 
 export interface DecisionSaveData {
   consideration: string;
@@ -16,6 +17,7 @@ export interface DecisionSaveData {
   answer: string;
   conclusion: string;
   nextStep: string;
+  proposedSteps: string[];
 }
 
 interface DecisionRoomScreenProps {
@@ -27,6 +29,7 @@ interface DecisionRoomScreenProps {
   historicalQuestion?: IlluminationQuestion;
   similarCaseAnalogy?: { title: string; reason: string; strength?: string; score?: number };
   initialRefinedInsight?: RefinedInsight;
+  initialProposedSteps?: string[];
   onAnswerSubmit: (answer: string, skip?: boolean) => void;
   onSaveDecision?: (data: DecisionSaveData) => void;
   onMirrorUpdate?: (updatedFields: FiveHumanDimensions) => void;
@@ -40,6 +43,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   historicalQuestion,
   similarCaseAnalogy,
   initialRefinedInsight,
+  initialProposedSteps,
   onAnswerSubmit,
   onSaveDecision,
   onMirrorUpdate
@@ -61,6 +65,11 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   const [insight, setInsight] = useState<RefinedInsight | null>(initialRefinedInsight || null);
   const [isContextExpanded, setIsContextExpanded] = useState(false);
   const [isTranscribingField, setIsTranscribingField] = useState<string | null>(null);
+  const [proposedSteps, setProposedSteps] = useState<string[]>(initialProposedSteps || []);
+  const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(0);
+  const [customStepText, setCustomStepText] = useState<string>('');
+  const [isAnalyzingAnswer, setIsAnalyzingAnswer] = useState<boolean>(false);
+  const [analysisErrorNotice, setAnalysisErrorNotice] = useState<string | null>(null);
 
   // Dual-engine Audio References
   const recognitionRef = useRef<any>(null);
@@ -219,19 +228,55 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
     }
   };
 
-  const handleProceedWithAnswer = (answerText?: string) => {
+  const effectiveNextStep = customStepText.trim()
+    ? customStepText.trim()
+    : (selectedStepIndex !== null && proposedSteps[selectedStepIndex])
+    ? proposedSteps[selectedStepIndex]
+    : (insight?.chosenStep || 'בירור מוקדם לפני הכרעה');
+
+  const handleAnalyzeAnswer = async (answerText?: string) => {
     const finalAnswer = answerText !== undefined ? answerText : userAnswer;
-    const effectiveAnswer = finalAnswer.trim() || 'המסקנה המרכזית הוגדרה';
-    const refined: RefinedInsight = {
-      before: consideration,
-      now: effectiveAnswer,
-      chosenStep: effectiveAnswer.slice(0, 80) || 'בירור מוקדם לפני הכרעה'
-    };
-    setInsight(refined);
-    onAnswerSubmit(effectiveAnswer, false);
-    setTimeout(() => {
-      containerRef.current?.scrollTo({ top: containerRef.current.scrollHeight, behavior: 'smooth' });
-    }, 150);
+    if (!finalAnswer || !finalAnswer.trim()) {
+      return;
+    }
+    const cleanAnswer = finalAnswer.trim();
+    setUserAnswer(cleanAnswer);
+    setIsAnalyzingAnswer(true);
+    setAnalysisErrorNotice(null);
+
+    try {
+      const result = await refineAnswerWithGemini({
+        dilemma: consideration,
+        centralTension,
+        goalsPrices,
+        facts,
+        assumptions,
+        missingInfo,
+        question: effectiveQuestion,
+        answerText: cleanAnswer
+      });
+
+      const refined: RefinedInsight = {
+        before: consideration,
+        now: result.conclusion,
+        chosenStep: result.chosenStep
+      };
+      setInsight(refined);
+      setProposedSteps(result.proposedSteps);
+      setSelectedStepIndex(0);
+      setCustomStepText('');
+
+      onAnswerSubmit(cleanAnswer, false);
+
+      setTimeout(() => {
+        containerRef.current?.scrollTo({ top: containerRef.current.scrollHeight, behavior: 'smooth' });
+      }, 150);
+    } catch (err: any) {
+      console.warn('[DecisionRoom Refine Answer Error]:', err);
+      setAnalysisErrorNotice(err?.message || 'שגיאת תקשורת בניתוח המענה מול מנוע ה-AI. אנא נסה שוב.');
+    } finally {
+      setIsAnalyzingAnswer(false);
+    }
   };
 
   const handleSkip = () => {
@@ -249,7 +294,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   const handleSaveToJournal = () => {
     const currentAnswer = userAnswer.trim();
     const currentConclusion = insight?.now || currentAnswer || consideration;
-    const currentNextStep = insight?.chosenStep || 'בירור מוקדם לפני הכרעה';
+    const currentNextStep = effectiveNextStep;
 
     if (onSaveDecision) {
       onSaveDecision({
@@ -262,7 +307,8 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         question: effectiveQuestion,
         answer: currentAnswer,
         conclusion: currentConclusion,
-        nextStep: currentNextStep
+        nextStep: currentNextStep,
+        proposedSteps
       });
     } else {
       onAnswerSubmit(currentAnswer, false);
@@ -454,16 +500,30 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         <div className="space-y-2 pt-1">
           <button
             type="button"
-            onClick={() => handleProceedWithAnswer()}
-            className="w-full py-3 rounded-xl border text-xs font-bold cursor-pointer transition-all active:scale-[0.98]"
+            onClick={() => handleAnalyzeAnswer()}
+            disabled={isAnalyzingAnswer}
+            className="w-full py-3.5 rounded-xl border text-xs font-bold cursor-pointer transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(212,175,55,0.15)]"
             style={{ 
               borderColor: LuxuryTheme.accent.gold, 
-              backgroundColor: 'rgba(212, 175, 55, 0.2)', 
+              backgroundColor: isAnalyzingAnswer ? 'rgba(212, 175, 55, 0.1)' : 'rgba(212, 175, 55, 0.25)', 
               color: LuxuryTheme.text.primary 
             }}
           >
-            המשך עם המענה ←
+            {isAnalyzingAnswer ? (
+              <>
+                <span className="animate-spin">⚙️</span>
+                <span>מנתח ומזקק צעדי פעולה (Gemini)...</span>
+              </>
+            ) : (
+              <span>שמור ונתח מענה ←</span>
+            )}
           </button>
+
+          {analysisErrorNotice && (
+            <div className="text-[11px] text-rose-300 p-2 rounded-lg bg-rose-950/40 border border-rose-500/20 text-center">
+              {analysisErrorNotice}
+            </div>
+          )}
 
           <button
             type="button"
@@ -477,7 +537,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
 
       {/* ================= SECTION 5: Summary ================= */}
       {insight && (
-        <div className="pt-4 border-t border-white/10 space-y-3">
+        <div className="pt-4 border-t border-white/10 space-y-4">
           <h2 className="font-editorial text-xl font-bold" style={{ color: LuxuryTheme.text.primary }}>
             שרשרת שיקול הדעת המזוקקת
           </h2>
@@ -507,15 +567,76 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
                 : null
             }
             answer={userAnswer.trim() || undefined}
-            conclusion={insight.now || userAnswer.trim() || 'הבנת את גורם המפתח להכרעה'}
-            nextStep={insight.chosenStep || 'בירור מוקדם לפני הכרעה'}
+            proposedSteps={proposedSteps}
+            conclusion={insight.now || 'הבנת את גורם המפתח להכרעה'}
+            nextStep={effectiveNextStep}
             scrollable={false}
           />
+
+          {/* Restored CARD: Proposed Steps Selection (פעולות מומלצות והגדרת הצעד הבא) */}
+          <div 
+            className="p-4 rounded-2xl border space-y-3"
+            style={{ backgroundColor: 'rgba(212, 175, 55, 0.03)', borderColor: 'rgba(212, 175, 55, 0.25)' }}
+          >
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="font-bold text-amber-300">הצעד הבא שנבחר:</span>
+              <span className="text-[9px] opacity-70 px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-200">
+                הצעת המערכת · ניתן לבחירה או עריכה
+              </span>
+            </div>
+            
+            <p className="text-[11px] opacity-75 leading-relaxed">
+              בחר את הפעולה המומלצת המתאימה ביותר, או הגדר צעד משלך:
+            </p>
+
+            {/* Selectable Proposed Steps List */}
+            {proposedSteps.length > 0 && (
+              <div className="space-y-2 pt-1">
+                {proposedSteps.map((stepText, idx) => {
+                  const isSelected = selectedStepIndex === idx && !customStepText.trim();
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setSelectedStepIndex(idx);
+                        setCustomStepText('');
+                      }}
+                      className={`w-full p-2.5 rounded-xl border text-right text-xs leading-relaxed flex items-start gap-2.5 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-amber-400 bg-amber-500/20 text-white font-medium shadow-[0_0_12px_rgba(212,175,55,0.15)]'
+                          : 'border-white/10 bg-white/[0.02] text-stone-300 hover:bg-white/[0.05]'
+                      }`}
+                    >
+                      <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 text-[9px] ${
+                        isSelected ? 'border-amber-400 bg-amber-400 text-black font-bold' : 'border-white/30 text-transparent'
+                      }`}>
+                        ✓
+                      </span>
+                      <span className="flex-1">{stepText}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Custom User Step Input */}
+            <div className="pt-2.5 border-t border-white/5 space-y-1.5">
+              <label className="block text-[10px] text-amber-300/80">או הזן החלטה / צעד מותאם אישית משלך:</label>
+              <input
+                type="text"
+                value={customStepText}
+                onChange={e => setCustomStepText(e.target.value)}
+                placeholder="הקלד כאן החלטה או צעד משלך (אופציונלי)..."
+                className="w-full bg-white/[0.03] border border-amber-500/25 rounded-xl px-3 py-2 text-xs text-right text-stone-100 placeholder:opacity-40 focus:outline-none focus:border-amber-400 font-light"
+              />
+            </div>
+          </div>
 
           <button 
             type="button"
             onClick={handleSaveToJournal}
-            className="w-full py-3.5 rounded-xl border text-xs font-bold cursor-pointer active:scale-[0.98] mt-3"
+            className="w-full py-3.5 rounded-xl border text-xs font-bold cursor-pointer active:scale-[0.98] mt-2 shadow-[0_0_25px_rgba(212,175,55,0.2)]"
             style={{ 
               borderColor: LuxuryTheme.accent.gold, 
               backgroundColor: 'rgba(212, 175, 55, 0.25)', 

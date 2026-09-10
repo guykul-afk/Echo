@@ -49,6 +49,7 @@ interface StoredDecision {
   missingInfo?: string;
   contractCriterion?: string;
   conclusion?: string;
+  proposedSteps?: string[];
   customCriterion?: string;
   pastEcho?: {
     title: string;
@@ -399,6 +400,7 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
                       question={cleanHtml(d.question || d.keyHinge)}
                       pastEcho={d.pastEcho || (d.analogy ? { title: d.analogy.title, reason: d.analogy.reason, score: d.analogy.score } : null)}
                       answer={cleanHtml(d.userAnswer || d.actionAnswer || d.answer)}
+                      proposedSteps={Array.isArray(d.proposedSteps) ? d.proposedSteps : undefined}
                       conclusion={cleanHtml(d.insightNow || d.contractCriterion || d.conclusion || d.selectedCriterion || 'בירור ממוקד של הנחת הציר')}
                       nextStep={cleanHtml(d.chosenNextStep || d.nextStep || d.insightChosenStep || d.refinedAction || 'יישום הצעד הנבחר')}
                       scrollable={false}

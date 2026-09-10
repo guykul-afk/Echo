@@ -17,6 +17,7 @@ export interface DecisionFlowPipelineProps {
   question?: string;
   pastEcho?: PastEchoItem | null;
   answer?: string;
+  proposedSteps?: string[];
   conclusion?: string;
   nextStep?: string;
   scrollable?: boolean;
@@ -49,6 +50,7 @@ export const DecisionFlowPipeline: React.FC<DecisionFlowPipelineProps> = ({
   question,
   pastEcho,
   answer,
+  proposedSteps,
   conclusion,
   nextStep,
   scrollable = true,
@@ -228,6 +230,34 @@ export const DecisionFlowPipeline: React.FC<DecisionFlowPipelineProps> = ({
               <span className="font-medium">התשובה שהובילה לבהירות</span>
             </div>
             <div className="text-xs leading-relaxed opacity-90">{answer}</div>
+          </div>
+        </div>
+      )}
+
+      {/* 07b. פעולות מומלצות (הצעת המערכת) */}
+      {Boolean(proposedSteps && proposedSteps.length > 0) && (
+        <div className="flex flex-row items-start gap-2.5">
+          <div className="flex flex-col items-center w-7 shrink-0">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold border bg-white/[0.04] border-white/10"
+                 style={{ color: LuxuryTheme.accent.gold }}>
+              ★
+            </div>
+            <div className="w-[1px] flex-1 min-h-[28px] mt-1 -mb-2" style={{ backgroundColor: 'rgba(212, 175, 55, 0.2)' }}></div>
+          </div>
+
+          <div className="flex-1 p-3 rounded-xl border bg-white/[0.02]" style={{ borderColor: 'rgba(212, 175, 55, 0.25)' }}>
+            <div className="flex justify-between items-center mb-1.5 text-[11px]">
+              <span className="font-bold" style={{ color: LuxuryTheme.accent.gold }}>פעולות מומלצות</span>
+              <span className="opacity-50 text-[10px]">הצעת המערכת</span>
+            </div>
+            <div className="space-y-1.5">
+              {proposedSteps!.map((stepText, idx) => (
+                <div key={idx} className="flex items-start gap-1.5 text-xs text-[#E6E8EE] leading-relaxed">
+                  <span className="text-amber-400 font-bold shrink-0">•</span>
+                  <span>{stepText}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

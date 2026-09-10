@@ -42,6 +42,7 @@ export interface AnalysisSessionResult {
   historicalQuestion?: IlluminationQuestion;
   similarCaseAnalogy?: { title: string; reason: string; strength: string; score?: number };
   refinedInsight: RefinedInsight;
+  proposedSteps?: string[];
 }
 
 // Precedent database for authentic Tri-Factor matching (NO irrelevant fallback!)
@@ -321,6 +322,106 @@ export async function analyzeCapturedDilemma(
     bespokeQuestion,
     historicalQuestion: mockHistorical,
     similarCaseAnalogy: analogyData,
-    refinedInsight
+    refinedInsight,
+    proposedSteps: parsed.proposedSteps
   };
+}
+
+export interface AnswerRefinementResult {
+  conclusion: string;
+  proposedSteps: string[];
+  chosenStep: string;
+}
+
+export async function refineAnswerWithGemini(params: {
+  dilemma: string;
+  centralTension?: string;
+  goalsPrices?: string;
+  facts?: string;
+  assumptions?: string;
+  missingInfo?: string;
+  question: string;
+  answerText: string;
+}): Promise<AnswerRefinementResult> {
+  const apiKey = getActiveGeminiKey();
+  if (!apiKey) {
+    throw new Error('לא נמצא מפתח API פעיל עבור Gemini.');
+  }
+
+  const prompt = `אתה מנוע הניתוח האפיסטמי של Echo (הד) - עוזר המאפשר לאדם להבין את שיקול הדעת שלו ולזקק פעולה קונקרטית.
+נתוני הדילמה שנלכדו:
+- הדילמה (אתה שוקל): """${params.dilemma}"""
+- המתח המרכזי: """${params.centralTension || ''}"""
+- מטרות ומחירים: """${params.goalsPrices || ''}"""
+- עובדות קשיחות: """${params.facts || ''}"""
+- הנחות המוצא: """${params.assumptions || ''}"""
+- פער המידע / ציר ההכרעה: """${params.missingInfo || ''}"""
+- שאלת החידוד שנשאלה: """${params.question}"""
+- מענה המשתמש לשאלה: """${params.answerText}"""
+
+כללי ברזל קריטיים (Strict Grounding, Anti-Hallucination & Anti-Parroting):
+1. איסור מוחלט על חזרה שטחית (תוכי) על מילות המשתמש! אל תעתיק פשוט את המענה שלו לשדה המסקנה או לשדה הצעד הנבחר.
+2. ב-"conclusion" (מסקנה מזוקקת): בצע עיבוד מעמיק של התשובה מול הדילמה המקורית והעובדות. נסח במשפט אחד או שניים חדים ובהירים מה התחדד, הוכרע או השתנה בהבנת המצב לאור תשובתו של המשתמש.
+3. ב-"proposedSteps" (פעולות מומלצות): הצע בין 1 ל-3 חלופות קונקרטיות, מעשיות ויישומיות לפעולה מיידית או לבירור ממוקד שהמערכת מציעה (הצעת המערכת). הצעדים חייבים להיגזר ישירות מהדילמה וממענה המשתמש (למשל: תיאום ציפיות, בדיקת תשתית, התקנת עמדה, פיילוט מתוחם).
+4. ב-"chosenStep" (הצעד הנבחר): בחר את הצעד המומלץ והמידי ביותר מבין הפעולות המומלצות, או נסח צעד פעולה קונקרטי יחיד ומדויק לביצוע.
+
+חלץ פלט JSON מדויק בעברית לפי המבנה הבא:
+{
+  "conclusion": "משפט חד ומזוקק המסביר מה הוכרע והתחדד בשיקול הדעת...",
+  "proposedSteps": [
+    "חלופה 1 לפעולה קונקרטית...",
+    "חלופה 2 לפעולה קונקרטית..."
+  ],
+  "chosenStep": "הצעד הקונקרטי והמידי שנבחר לביצוע"
+}`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.2
+          }
+        })
+      }
+    );
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      throw new Error(`שגיאת שרת בניתוח מענה (${response.status}): ${errText.slice(0, 100)}`);
+    }
+
+    const data = await response.json();
+    const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (rawJson) {
+      const clean = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(clean);
+
+      const steps: string[] = Array.isArray(parsed.proposedSteps) && parsed.proposedSteps.length > 0
+        ? parsed.proposedSteps.slice(0, 3)
+        : [parsed.chosenStep || 'בירור ממוקד לפני הכרעה'];
+
+      return {
+        conclusion: parsed.conclusion || `התחדד כי: ${params.answerText}`,
+        proposedSteps: steps,
+        chosenStep: parsed.chosenStep || steps[0] || 'בירור ממוקד לפני הכרעה'
+      };
+    }
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    console.error('[Echo AI Service] Refine answer error:', err);
+    throw new Error(err?.message || 'שגיאה בניתוח המענה מול Gemini.');
+  }
+
+  throw new Error('לא התקבל ניתוח מענה תקין ממנוע ה-AI.');
 }
