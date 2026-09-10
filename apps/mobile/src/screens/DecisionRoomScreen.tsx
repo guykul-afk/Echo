@@ -70,6 +70,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   const [customStepText, setCustomStepText] = useState<string>('');
   const [isAnalyzingAnswer, setIsAnalyzingAnswer] = useState<boolean>(false);
   const [analysisErrorNotice, setAnalysisErrorNotice] = useState<string | null>(null);
+  const [isDecisionSummarized, setIsDecisionSummarized] = useState<boolean>(false);
 
   // Dual-engine Audio References
   const recognitionRef = useRef<any>(null);
@@ -265,6 +266,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
       setProposedSteps(result.proposedSteps);
       setSelectedStepIndex(0);
       setCustomStepText('');
+      setIsDecisionSummarized(true);
 
       onAnswerSubmit(cleanAnswer, false);
 
@@ -286,6 +288,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
       chosenStep: 'בירור מוקדם לפני הכרעה'
     };
     setInsight(refined);
+    setIsDecisionSummarized(true);
     setTimeout(() => {
       containerRef.current?.scrollTo({ top: containerRef.current.scrollHeight, behavior: 'smooth' });
     }, 150);
@@ -536,42 +539,49 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
       </div>
 
       {/* ================= SECTION 5: Summary ================= */}
-      {insight && (
+      {isDecisionSummarized && insight && (
         <div className="pt-4 border-t border-white/10 space-y-4">
-          <h2 className="font-editorial text-xl font-bold" style={{ color: LuxuryTheme.text.primary }}>
-            שרשרת שיקול הדעת המזוקקת
-          </h2>
-          <p className="text-xs opacity-60">
-            כל התהליך כפי שהתחדד מהדילמה ועד לצעד המעשי:
-          </p>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-editorial font-semibold tracking-widest text-amber-300">סיכום ההחלטה</span>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono border border-amber-500/20">
+                מסקנה וצעד מעשי
+              </span>
+            </div>
+            <h2 className="font-editorial text-2xl font-bold" style={{ color: LuxuryTheme.text.primary }}>
+              סיכום ההחלטה
+            </h2>
+            <p className="text-xs opacity-60">
+              המסקנה המזוקקת והצעד המעשי שנקבע:
+            </p>
+          </div>
 
-          <DecisionFlowPipeline
-            dilemma={consideration}
-            goalsPrices={goalsPrices}
-            facts={facts}
-            assumptions={assumptions}
-            question={effectiveQuestion}
-            pastEcho={
-              similarCaseAnalogy
-                ? {
-                    title: similarCaseAnalogy.title,
-                    reason: similarCaseAnalogy.reason,
-                    score: similarCaseAnalogy.score ?? 0.85
-                  }
-                : historicalQuestion
-                ? {
-                    title: 'תקדים עבר רלוונטי',
-                    reason: historicalQuestion.questionText,
-                    score: 0.85
-                  }
-                : null
-            }
-            answer={userAnswer.trim() || undefined}
-            proposedSteps={proposedSteps}
-            conclusion={insight.now || 'הבנת את גורם המפתח להכרעה'}
-            nextStep={effectiveNextStep}
-            scrollable={false}
-          />
+          {/* CARD 1: INSIGHT SUMMARY (נקודת מוצא מול מסקנה מזוקקת) */}
+          <div 
+            className="p-4 rounded-2xl border space-y-3.5 backdrop-blur-sm" 
+            style={{ backgroundColor: 'rgba(212, 175, 55, 0.03)', borderColor: 'rgba(212, 175, 55, 0.25)' }}
+          >
+            {/* Before */}
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase font-mono tracking-wider opacity-60 text-stone-400">נקודת המוצא:</span>
+              <p className="text-xs font-light text-stone-300 leading-relaxed italic">
+                {insight.before || consideration}
+              </p>
+            </div>
+
+            <div className="h-[1px] bg-white/5 w-full" />
+
+            {/* Now */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-mono tracking-wider font-semibold text-amber-300">המסקנה כעת:</span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono">מסקנה מזוקקת</span>
+              </div>
+              <p className="text-xs font-medium text-amber-100 leading-relaxed">
+                {insight.now || 'בירור ממוקד של הנחת הציר'}
+              </p>
+            </div>
+          </div>
 
           {/* Restored CARD: Proposed Steps Selection (פעולות מומלצות והגדרת הצעד הבא) */}
           <div 
@@ -643,8 +653,51 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
               color: LuxuryTheme.text.primary 
             }}
           >
-            שמור בזיכרון ההחלטות ←
+            שמור בזיכרון ההחלטות וחתום למעקב ←
           </button>
+
+          {/* ================= שרשרת שיקול הדעת המלאה (רק לאחר סיכום ההחלטה) ================= */}
+          <div className="pt-5 border-t border-white/10 space-y-3">
+            <div className="flex items-center justify-between pb-1">
+              <span className="text-xs font-bold" style={{ color: LuxuryTheme.accent.gold }}>
+                שרשרת שיקול הדעת המלאה
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 font-medium border border-amber-500/20">
+                8 שלבי הכרעה
+              </span>
+            </div>
+            <p className="text-xs opacity-60">
+              כל התהליך כפי שהתחדד מהדילמה ועד לצעד המעשי:
+            </p>
+
+            <DecisionFlowPipeline
+              dilemma={consideration}
+              goalsPrices={goalsPrices}
+              facts={facts}
+              assumptions={assumptions}
+              question={effectiveQuestion}
+              pastEcho={
+                similarCaseAnalogy
+                  ? {
+                      title: similarCaseAnalogy.title,
+                      reason: similarCaseAnalogy.reason,
+                      score: similarCaseAnalogy.score ?? 0.85
+                    }
+                  : historicalQuestion
+                  ? {
+                      title: 'תקדים עבר רלוונטי',
+                      reason: historicalQuestion.questionText,
+                      score: 0.85
+                    }
+                  : null
+              }
+              answer={userAnswer.trim() || undefined}
+              proposedSteps={proposedSteps}
+              conclusion={insight.now || 'הבנת את גורם המפתח להכרעה'}
+              nextStep={effectiveNextStep}
+              scrollable={false}
+            />
+          </div>
         </div>
       )}
 
