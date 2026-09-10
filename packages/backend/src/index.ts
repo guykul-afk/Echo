@@ -8,4 +8,5 @@ export * from './services/delta.service.js';
 export * from './prompts/cognitive-engine.prompt.js';
 export * from './prompts/delta-engine.prompt.js';
 export * from './services/epistemicConsolidation.service.js';
+export * from './services/firestoreKnowledgeHydration.service.js';
 export * from './functions/index.js';
