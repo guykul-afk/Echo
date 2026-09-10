@@ -180,3 +180,38 @@ export async function syncUserDecisionsFromCloud(targetUsername: string): Promis
 
   return mergedList;
 }
+
+export async function saveDecisionToCloud(decision: any, targetUsername: string): Promise<boolean> {
+  if (!decision || !decision.id) return false;
+  const isFounder = (
+    targetUsername.toLowerCase().includes('kuleski') || 
+    targetUsername.toLowerCase().includes('guy') || 
+    targetUsername === 'Guy_Kuleski' || 
+    targetUsername === 'guy_founder'
+  );
+
+  const payload = {
+    ...decision,
+    userId: targetUsername,
+    lastSyncedAt: Date.now()
+  };
+
+  const fb = initFirebase();
+  if (fb && fb.firestore) {
+    try {
+      const db = fb.firestore();
+      await db.collection('users').doc(targetUsername).collection('decisions').doc(decision.id).set(payload, { merge: true });
+      if (isFounder) {
+        try {
+          await db.collection('decisions').doc(decision.id).set(payload, { merge: true });
+          await db.collection('users').doc('Guy_Kuleski').collection('decisions').doc(decision.id).set(payload, { merge: true });
+          await db.collection('users').doc('guy_founder').collection('decisions').doc(decision.id).set(payload, { merge: true });
+        } catch {}
+      }
+      return true;
+    } catch (e) {
+      console.warn('Firestore SDK save notice:', e);
+    }
+  }
+  return false;
+}

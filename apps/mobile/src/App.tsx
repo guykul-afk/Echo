@@ -344,6 +344,7 @@ export const App: React.FC = () => {
             <DecisionJournalScreen
               onBack={() => setStep('capture')}
               currentUserId={currentUserId}
+              onDecisionUpdated={() => loadUserMetrics(currentUserId)}
             />
           )}
 
