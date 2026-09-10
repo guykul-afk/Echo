@@ -36,6 +36,16 @@ interface DecisionRoomScreenProps {
   onMirrorFeedback?: (feedback: 'accurate' | 'inaccurate') => void;
 }
 
+const formatToBulletLines = (val: string): string => {
+  if (!val || !val.trim()) return '';
+  const items = val
+    .split(/\n| • | \u2022 /)
+    .map(s => s.replace(/^[•\-\*\s]+/, '').trim())
+    .filter(Boolean);
+  if (items.length === 0) return val;
+  return items.map(s => `• ${s}`).join('\n');
+};
+
 export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   decisionCase,
   illuminationQuestion,
@@ -46,15 +56,16 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   initialProposedSteps,
   onAnswerSubmit,
   onSaveDecision,
-  onMirrorUpdate
+  onMirrorUpdate,
+  onMirrorFeedback
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // 5 Dimensions state
   const [consideration, setConsideration] = useState(decisionCase.dimConsideration || decisionCase.title);
   const [goalsPrices, setGoalsPrices] = useState(decisionCase.dimGoalsPrices || '');
-  const [facts, setFacts] = useState(decisionCase.dimFacts || decisionCase.dimReliance || '');
-  const [assumptions, setAssumptions] = useState(decisionCase.dimAssumptions || '');
+  const [facts, setFacts] = useState(() => formatToBulletLines(decisionCase.dimFacts || decisionCase.dimReliance || ''));
+  const [assumptions, setAssumptions] = useState(() => formatToBulletLines(decisionCase.dimAssumptions || ''));
   const [missingInfo, setMissingInfo] = useState(decisionCase.dimMissingInfo || decisionCase.dimUnknowns || '');
 
   const centralTension = decisionCase.centralTension || goalsPrices || 'השגת המטרה מול מחירים ואילוצים';
@@ -379,84 +390,90 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         </div>
       </div>
 
-      {/* ================= SECTION 2: Progressive Disclosure (Facts & Assumptions) ================= */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
-        <button 
-          type="button" 
-          onClick={() => setIsContextExpanded(!isContextExpanded)}
-          className="w-full p-3.5 flex justify-between items-center text-xs font-semibold cursor-pointer hover:bg-white/[0.02]"
-          style={{ backgroundColor: 'rgba(212, 175, 55, 0.03)', color: LuxuryTheme.text.secondary }}
+      {/* ================= SECTION 2: Facts & Assumptions (Open with Bulleted Text) ================= */}
+      <div className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden space-y-0">
+        <div 
+          className="w-full p-3.5 flex justify-between items-center text-xs font-semibold"
+          style={{ backgroundColor: 'rgba(212, 175, 55, 0.04)', color: LuxuryTheme.accent.gold }}
         >
-          <span>נתוני רקע, הנחות ופערי מידע</span>
-          <span style={{ color: LuxuryTheme.accent.gold }}>{isContextExpanded ? '▲' : '▼'}</span>
-        </button>
+          <span className="font-bold flex items-center gap-1.5">
+            <span>⚖️</span>
+            <span>עובדות מוצקות והנחות מובילות</span>
+          </span>
+          <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono border border-amber-500/20">
+            תמונת מצב
+          </span>
+        </div>
 
-        {isContextExpanded && (
-          <div className="p-3.5 space-y-3 border-t border-white/5">
-            <div className="p-3 rounded-xl border" style={{ borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }}>
-              <div className="flex justify-between items-center mb-1 text-xs">
-                <span className="font-semibold" style={{ color: LuxuryTheme.accent.gold }}>עובדות מוצקות:</span>
-                <button 
-                  type="button" 
-                  onClick={() => startVoiceInput('facts', val => handleFieldChange('facts', val))} 
-                  className="text-[10px]"
-                  style={{ color: activeRecordingField === 'facts' ? '#f43f5e' : LuxuryTheme.accent.gold }}
-                >
-                  {activeRecordingField === 'facts' ? '● מקשיב...' : '🎙️ עדכן'}
-                </button>
-              </div>
-              <textarea
-                rows={2}
-                value={facts}
-                onChange={e => handleFieldChange('facts', e.target.value)}
-                placeholder="נתונים ועובדות..."
-                className="w-full bg-transparent text-xs focus:outline-none resize-none placeholder:opacity-40"
-              />
+        <div className="p-3.5 space-y-3 border-t border-white/5">
+          {/* Solid Facts */}
+          <div className="p-3 rounded-xl border" style={{ borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }}>
+            <div className="flex justify-between items-center mb-1 text-xs">
+              <span className="font-semibold" style={{ color: LuxuryTheme.accent.gold }}>עובדות מוצקות (מבוססות ודאות):</span>
+              <button 
+                type="button" 
+                onClick={() => startVoiceInput('facts', val => handleFieldChange('facts', formatToBulletLines(val)))} 
+                className="text-[10px] cursor-pointer"
+                style={{ color: activeRecordingField === 'facts' ? '#f43f5e' : LuxuryTheme.accent.gold }}
+              >
+                {activeRecordingField === 'facts' ? '● מקשיב...' : '🎙️ עדכן'}
+              </button>
             </div>
-
-            <div className="p-3 rounded-xl border" style={{ borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }}>
-              <div className="flex justify-between items-center mb-1 text-xs">
-                <span className="font-semibold" style={{ color: LuxuryTheme.accent.gold }}>ההנחה שמובילה אותך:</span>
-                <button 
-                  type="button" 
-                  onClick={() => startVoiceInput('assumptions', val => handleFieldChange('assumptions', val))} 
-                  className="text-[10px]"
-                  style={{ color: activeRecordingField === 'assumptions' ? '#f43f5e' : LuxuryTheme.accent.gold }}
-                >
-                  {activeRecordingField === 'assumptions' ? '● מקשיב...' : '🎙️ עדכן'}
-                </button>
-              </div>
-              <textarea
-                rows={2}
-                value={assumptions}
-                onChange={e => handleFieldChange('assumptions', e.target.value)}
-                placeholder="השערות, ציפיות..."
-                className="w-full bg-transparent text-xs focus:outline-none resize-none placeholder:opacity-40"
-              />
-            </div>
-
-            <div className="p-3 rounded-xl border" style={{ borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }}>
-              <div className="flex justify-between items-center mb-1 text-xs">
-                <span className="font-semibold" style={{ color: LuxuryTheme.accent.gold }}>פער המידע / ציר ההכרעה:</span>
-                <button 
-                  type="button" 
-                  onClick={() => startVoiceInput('missingInfo', val => handleFieldChange('missingInfo', val))} 
-                  className="text-[10px]"
-                  style={{ color: activeRecordingField === 'missingInfo' ? '#f43f5e' : LuxuryTheme.accent.gold }}
-                >
-                  {activeRecordingField === 'missingInfo' ? '● מקשיב...' : '🎙️ עדכן'}
-                </button>
-              </div>
-              <textarea
-                rows={2}
-                value={missingInfo}
-                onChange={e => handleFieldChange('missingInfo', e.target.value)}
-                placeholder="מה חסר לך כדי לדעת בוודאות..."
-                className="w-full bg-transparent text-xs focus:outline-none resize-none placeholder:opacity-40"
-              />
-            </div>
+            <textarea
+              rows={Math.max(2, facts ? facts.split('\n').length : 2)}
+              value={facts}
+              onChange={e => handleFieldChange('facts', e.target.value)}
+              onBlur={() => setFacts(prev => formatToBulletLines(prev))}
+              placeholder="• נתונים ועובדות..."
+              className="w-full bg-transparent text-xs text-stone-100 leading-relaxed focus:outline-none resize-none placeholder:opacity-40 font-light"
+            />
           </div>
-        )}
+
+          {/* Guiding Assumptions */}
+          <div className="p-3 rounded-xl border" style={{ borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }}>
+            <div className="flex justify-between items-center mb-1 text-xs">
+              <span className="font-semibold" style={{ color: LuxuryTheme.accent.gold }}>ההנחות שמובילות אותך:</span>
+              <button 
+                type="button" 
+                onClick={() => startVoiceInput('assumptions', val => handleFieldChange('assumptions', formatToBulletLines(val)))} 
+                className="text-[10px] cursor-pointer"
+                style={{ color: activeRecordingField === 'assumptions' ? '#f43f5e' : LuxuryTheme.accent.gold }}
+              >
+                {activeRecordingField === 'assumptions' ? '● מקשיב...' : '🎙️ עדכן'}
+              </button>
+            </div>
+            <textarea
+              rows={Math.max(2, assumptions ? assumptions.split('\n').length : 2)}
+              value={assumptions}
+              onChange={e => handleFieldChange('assumptions', e.target.value)}
+              onBlur={() => setAssumptions(prev => formatToBulletLines(prev))}
+              placeholder="• השערות, ציפיות..."
+              className="w-full bg-transparent text-xs text-stone-100 leading-relaxed focus:outline-none resize-none placeholder:opacity-40 font-light"
+            />
+          </div>
+
+          {/* Missing Info / Core Hinge */}
+          <div className="p-3 rounded-xl border" style={{ borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }}>
+            <div className="flex justify-between items-center mb-1 text-xs">
+              <span className="font-semibold" style={{ color: LuxuryTheme.accent.gold }}>פער המידע / ציר ההכרעה:</span>
+              <button 
+                type="button" 
+                onClick={() => startVoiceInput('missingInfo', val => handleFieldChange('missingInfo', val))} 
+                className="text-[10px] cursor-pointer"
+                style={{ color: activeRecordingField === 'missingInfo' ? '#f43f5e' : LuxuryTheme.accent.gold }}
+              >
+                {activeRecordingField === 'missingInfo' ? '● מקשיב...' : '🎙️ עדכן'}
+              </button>
+            </div>
+            <textarea
+              rows={2}
+              value={missingInfo}
+              onChange={e => handleFieldChange('missingInfo', e.target.value)}
+              placeholder="מה חסר לך כדי לדעת בוודאות..."
+              className="w-full bg-transparent text-xs text-stone-100 leading-relaxed focus:outline-none resize-none placeholder:opacity-40 font-light"
+            />
+          </div>
+        </div>
       </div>
 
       {/* ================= SECTION 3: Echo from the Past (EchoPastCard) ================= */}

@@ -118,7 +118,7 @@ export async function analyzeCapturedDilemma(
   "consideration": "אתה שוקל...",
   "centralTension": "...",
   "goalsPrices": "הבנתי שחשוב לך...",
-  "facts": "...",
+  "facts": ["עובדה קשיחה 1", "עובדה קשיחה 2"],
   "assumptions": ["הנחה 1", "הנחה 2"],
   "missingInfo": "...",
   "question": "...",
@@ -153,22 +153,27 @@ export async function analyzeCapturedDilemma(
         const clean = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
         const obj = JSON.parse(clean);
         
-        let assumptionsText = '';
-        let assumptionsList = [];
-        if (Array.isArray(obj.assumptions)) {
-          assumptionsList = obj.assumptions;
-          assumptionsText = obj.assumptions.join(' • ');
-        } else if (typeof obj.assumptions === 'string') {
-          assumptionsText = obj.assumptions;
-          assumptionsList = [obj.assumptions];
-        }
+        const formatToBulletLines = (val: any): string => {
+          if (!val) return '';
+          if (Array.isArray(val)) {
+            return val
+              .map((s: any) => `• ${String(s).replace(/^[•\-\*\s]+/, '').trim()}`)
+              .filter(s => s.length > 2)
+              .join('\n');
+          }
+          if (typeof val === 'string') {
+            const items = val
+              .split(/\n| • | \u2022 /)
+              .map(s => s.replace(/^[•\-\*\s]+/, '').trim())
+              .filter(Boolean);
+            return items.map(s => `• ${s}`).join('\n');
+          }
+          return '';
+        };
 
-        let factsText = '';
-        if (Array.isArray(obj.facts)) {
-          factsText = obj.facts.join(' • ');
-        } else if (typeof obj.facts === 'string') {
-          factsText = obj.facts;
-        }
+        let assumptionsText = formatToBulletLines(obj.assumptions);
+        let assumptionsList = Array.isArray(obj.assumptions) ? obj.assumptions : [assumptionsText];
+        let factsText = formatToBulletLines(obj.facts);
 
         parsed = {
           title: obj.title || rawText.slice(0, 50),
