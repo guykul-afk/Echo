@@ -178,7 +178,30 @@ export const DecisionFlowPipeline: React.FC<DecisionFlowPipelineProps> = ({
         </div>
       )}
 
-      {/* 05. שאלת חידוד (Intervention) */}
+      {/* 05. הפניה מהעבר (הד מהעבר - כרטיס EchoPastCard מלא) */}
+      {pastEcho ? (
+        <div className="flex flex-row items-start gap-2.5">
+          <div className="flex flex-col items-center w-7 shrink-0">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] border border-dashed"
+                 style={{ borderColor: 'rgba(212, 175, 55, 0.5)', backgroundColor: 'rgba(212, 175, 55, 0.05)', color: LuxuryTheme.accent.gold }}>
+              ↺
+            </div>
+            <div className="w-[1px] flex-1 min-h-[28px] mt-1 -mb-2" style={{ backgroundColor: 'rgba(212, 175, 55, 0.2)' }}></div>
+          </div>
+
+          <div className="flex-1">
+            <EchoPastCard 
+              title={pastEcho.title} 
+              reason={pastEcho.reason} 
+              score={pastEcho.score ?? 0.85} 
+              allRelatedEchoes={pastEcho.allRelatedEchoes}
+              insightsSummary={pastEcho.insightsSummary}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {/* 06. שאלת חידוד (Intervention) */}
       {Boolean(question) && (
         <div className="flex flex-row items-start gap-2.5">
           <div className="flex flex-col items-center w-7 shrink-0">
@@ -201,29 +224,6 @@ export const DecisionFlowPipeline: React.FC<DecisionFlowPipelineProps> = ({
           </div>
         </div>
       )}
-
-      {/* 06. הפניה מהעבר (הד מהעבר - כרטיס EchoPastCard מלא) */}
-      {pastEcho ? (
-        <div className="flex flex-row items-start gap-2.5">
-          <div className="flex flex-col items-center w-7 shrink-0">
-            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] border border-dashed"
-                 style={{ borderColor: 'rgba(212, 175, 55, 0.5)', backgroundColor: 'rgba(212, 175, 55, 0.05)', color: LuxuryTheme.accent.gold }}>
-              ↺
-            </div>
-            <div className="w-[1px] flex-1 min-h-[28px] mt-1 -mb-2" style={{ backgroundColor: 'rgba(212, 175, 55, 0.2)' }}></div>
-          </div>
-
-          <div className="flex-1">
-            <EchoPastCard 
-              title={pastEcho.title} 
-              reason={pastEcho.reason} 
-              score={pastEcho.score ?? 0.85} 
-              allRelatedEchoes={pastEcho.allRelatedEchoes}
-              insightsSummary={pastEcho.insightsSummary}
-            />
-          </div>
-        </div>
-      ) : null}
 
       {/* 07. תשובת הבהירות */}
       {Boolean(answer) && (
