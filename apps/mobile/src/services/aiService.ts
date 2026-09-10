@@ -35,6 +35,7 @@ export interface EpistemicAnalysisOutput {
   operatingPrinciples?: string[];
   tradeoffs?: Array<{ protectedValue: string; sacrificedValue: string }>;
   boundaryConditions?: string[];
+  keyEntities?: Array<{ name: string; type: string }>;
 }
 
 export interface AnalysisSessionResult {
@@ -86,6 +87,7 @@ export async function analyzeCapturedDilemma(
 10. 'operatingPrinciples': בין 1 ל-2 עקרונות פעולה או כללי אצבע של שיקול דעת המופעלים בדילמה זו (מערך מיתרים).
 11. 'tradeoffs': ויתורים מודעים בין ערך מוגן (protectedValue - מה שומרים בכל מחיר) לבין ערך מוקרב (sacrificedValue - על מה מוותרים או מסתכנים).
 12. 'boundaryConditions': סייגים ותנאי סף לקיום ההנחות ("ההנחה תקפה רק אם...").
+13. 'keyEntities': מערך של ישויות מרכזיות שהוזכרו במפורש (אנשים, חברות, בנקים, פרויקטים) בפורמט: [{"name": "שם הישות", "type": "person"|"company"|"project"|"concept"}]. אם אין ישות ספציפית, החזר [].
 
 חלץ פלט JSON מדויק בעברית לפי המבנה הבא:
 {
@@ -101,7 +103,8 @@ export async function analyzeCapturedDilemma(
   "proposedCriteria": ["קריטריון מעקב"],
   "operatingPrinciples": ["עקרון פעולה..."],
   "tradeoffs": [{"protectedValue": "ערך מוגן", "sacrificedValue": "ערך מוקרב"}],
-  "boundaryConditions": ["סייג..."]
+  "boundaryConditions": ["סייג..."],
+  "keyEntities": [{"name": "שם הישות", "type": "person"}]
 }`;
 
     const controller = new AbortController();
@@ -167,7 +170,8 @@ export async function analyzeCapturedDilemma(
           proposedCriteria: Array.isArray(obj.proposedCriteria) ? obj.proposedCriteria : ['בדיקת תוצאות ההכרעה'],
           operatingPrinciples: Array.isArray(obj.operatingPrinciples) ? obj.operatingPrinciples : [],
           tradeoffs: Array.isArray(obj.tradeoffs) ? obj.tradeoffs : [],
-          boundaryConditions: Array.isArray(obj.boundaryConditions) ? obj.boundaryConditions : []
+          boundaryConditions: Array.isArray(obj.boundaryConditions) ? obj.boundaryConditions : [],
+          keyEntities: Array.isArray(obj.keyEntities) ? obj.keyEntities : []
         };
       }
     } else {
@@ -270,9 +274,10 @@ export async function analyzeCapturedDilemma(
     dimUnknowns: parsed.missingInfo,
     centralTension: parsed.centralTension,
     keyHinge: parsed.missingInfo,
+    keyEntities: parsed.keyEntities,
     createdAt: now,
     updatedAt: now
-  };
+  } as any;
 
   const bespokeQuestion: IlluminationQuestion = {
     id: `illum-${now}`,

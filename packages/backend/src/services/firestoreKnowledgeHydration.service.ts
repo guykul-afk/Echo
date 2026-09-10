@@ -1,4 +1,5 @@
 import { KnowledgeGraphService } from './knowledgeGraph.service.js';
+import { DynamicEntityExtractorService } from './dynamicEntityExtractor.service.js';
 import { GraphAssertion, KnowledgeEntity } from '@echo/shared';
 
 const DEFAULT_PROJECT_ID = 'echo-guy-2026';
@@ -40,6 +41,7 @@ export class FirestoreKnowledgeHydrationService {
 
   constructor(
     private knowledgeGraphService: KnowledgeGraphService = new KnowledgeGraphService(),
+    private entityExtractor: DynamicEntityExtractorService = new DynamicEntityExtractorService(),
     private projectId: string = DEFAULT_PROJECT_ID,
     private apiKey: string = API_KEY
   ) {}
@@ -103,42 +105,43 @@ export class FirestoreKnowledgeHydrationService {
       const decTime = dec.frozenAt || dec.createdAt || dec.timestamp || now;
       const title = dec.title || '';
       const consideration = dec.dimConsideration || dec.consideration || dec.rawCaptureText || dec.rawVerbatim || '';
-      const textToExtract = `${title} ${consideration}`;
-
-      // Extract & register Key Entities (Projects, Partners, People, Key Domains)
-      const candidates = [
-        'בנק הפועלים', 'זיו', 'כנרת', 'איתן', 'נוה', 'פינס', 'קטרוני', 'סלומון',
-        'בטון', 'רכב חשמלי', 'היברידי', 'רכב', 'קבלן', 'שלד', 'גמרים',
-        'שחייה', 'צליחה', 'ספורט', 'בית ספר', 'לימודים', 'אבא', 'אביך'
-      ];
+      // Dynamic Entity Extraction (zero hardcoded static lists)
+      const extracted = this.entityExtractor.extractEntities(consideration, title);
 
       let primaryEntityId: string | undefined = undefined;
       let primaryEntityName: string | undefined = undefined;
 
-      for (const cand of candidates) {
-        if (textToExtract.includes(cand)) {
-          const entId = `ent-${Buffer.from(cand).toString('hex').slice(0, 12)}`;
-          if (!primaryEntityId) {
-            primaryEntityId = entId;
-            primaryEntityName = cand;
-          }
-
-          if (!knownEntities.has(cand)) {
-            knownEntities.add(cand);
-            const isPerson = ['זיו', 'איתן', 'נוה', 'כנרת'].includes(cand);
-            const isCompany = ['בנק הפועלים'].includes(cand);
-            await this.knowledgeGraphService.saveEntity({
-              id: entId,
-              userId,
-              name: cand,
-              type: isPerson ? 'person' : isCompany ? 'company' : 'project',
-              relatedDecisions: [decId],
-              activeAssertions: [],
-              createdAt: decTime,
-              updatedAt: decTime
-            });
-          }
+      for (const ent of extracted) {
+        const entId = `ent-${Buffer.from(ent.name).toString('hex').slice(0, 12)}`;
+        if (!primaryEntityId && ent.confidence >= 0.85) {
+          primaryEntityId = entId;
+          primaryEntityName = ent.name;
         }
+
+        const existingEntity = await this.knowledgeGraphService.findEntityByName(userId, ent.name);
+        if (existingEntity) {
+          if (!existingEntity.relatedDecisions.includes(decId)) {
+            existingEntity.relatedDecisions.push(decId);
+            existingEntity.updatedAt = decTime;
+            await this.knowledgeGraphService.saveEntity(existingEntity);
+          }
+        } else {
+          await this.knowledgeGraphService.saveEntity({
+            id: entId,
+            userId,
+            name: ent.name,
+            type: ent.type,
+            relatedDecisions: [decId],
+            activeAssertions: [],
+            createdAt: decTime,
+            updatedAt: decTime
+          });
+        }
+      }
+
+      if (!primaryEntityId && extracted.length > 0) {
+        primaryEntityId = `ent-${Buffer.from(extracted[0].name).toString('hex').slice(0, 12)}`;
+        primaryEntityName = extracted[0].name;
       }
 
       // 1. Process FollowUps / Closed Loops (Outcomes)

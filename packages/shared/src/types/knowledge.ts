@@ -37,7 +37,7 @@ export interface GraphAssertion {
   createdAt: number;
 }
 
-export type EntityType = 'person' | 'company' | 'project' | 'goal' | 'constraint';
+export type EntityType = 'person' | 'company' | 'project' | 'goal' | 'constraint' | 'concept';
 
 export interface KnowledgeEntity {
   id: string;
