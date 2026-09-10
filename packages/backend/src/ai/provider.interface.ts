@@ -53,7 +53,7 @@ export interface IAiProvider {
    */
   extractEpistemicSchema(rawText: string, activeEraContext?: string): Promise<EpistemicExtractionResult>;
 
-  extractCognitiveEngine?(rawText: string, recentQuestions?: string[]): Promise<CognitiveAnalysisResult>;
+  extractCognitiveEngine?(rawText: string, recentQuestions?: string[], userContext?: { name?: string; gender?: 'male' | 'female' }): Promise<CognitiveAnalysisResult>;
   extractDelta?(
     rawCapture: string,
     humanDimensions: FiveHumanDimensions,

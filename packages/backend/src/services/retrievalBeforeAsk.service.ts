@@ -57,8 +57,15 @@ export class RetrievalBeforeAskService {
       e.name && e.name.trim().length >= 2 && inputLower.includes(e.name.toLowerCase().trim())
     );
 
-    // 2. Filter candidate assertions by Entity or Specific Concept Phrase Overlap
-    const candidateAssertions: GraphAssertion[] = [];
+    // 2. Filter candidate assertions by Entity, Specific Concept Phrase, or Thematic Assumption Overlap
+    const candidateAssertions: { assertion: GraphAssertion; score: number; reason: string }[] = [];
+    const inputWords = new Set(
+      inputLower
+        .split(/[\s,.:;״"()!?\-\/]+/)
+        .map(w => w.trim())
+        .filter(w => w.length >= 3 && !HEBREW_STOPWORDS.has(w))
+    );
+
     for (const assertion of activeAssertions) {
       const isEntityMatch = Boolean(
         assertion.entityId && relevantEntities.some(e => e.id === assertion.entityId)
@@ -71,8 +78,39 @@ export class RetrievalBeforeAskService {
       const stmtClean = assertion.statement.toLowerCase().trim();
       const isFullSubstring = stmtClean.length >= 8 && inputLower.includes(stmtClean);
 
-      if (isEntityMatch || hasConceptMatch || isFullSubstring) {
-        candidateAssertions.push(assertion);
+      // Keyword / thematic overlap
+      const stmtWords = stmtClean
+        .split(/[\s,.:;״"()!?\-\/]+/)
+        .map(w => w.trim())
+        .filter(w => w.length >= 3 && !HEBREW_STOPWORDS.has(w));
+      const sharedWords = stmtWords.filter(w => inputWords.has(w));
+
+      let score = 0;
+      let reason = '';
+
+      if (isEntityMatch) {
+        score = Math.max(score, 0.9);
+        reason = 'entity_match';
+      }
+      if (hasConceptMatch || isFullSubstring) {
+        score = Math.max(score, 0.85);
+        reason = reason ? `${reason}+concept_phrase` : 'concept_phrase_overlap';
+      }
+      if (sharedWords.length >= 2) {
+        const overlapScore = Math.min(0.8, 0.45 + (sharedWords.length * 0.1));
+        if (overlapScore > score) {
+          score = overlapScore;
+          reason = `thematic_keywords(${sharedWords.join(',')})`;
+        }
+      }
+
+      if (assertion.category === 'outcome' && score > 0) {
+        score = Math.min(0.99, score + 0.15);
+        reason += '+historical_outcome_precedent';
+      }
+
+      if (score >= 0.5) {
+        candidateAssertions.push({ assertion, score, reason });
       }
     }
 
@@ -82,13 +120,17 @@ export class RetrievalBeforeAskService {
         assertions: [],
         hasKnownAnswer: false,
         shouldConvertToConfirmation: false,
-        canSuppressIntervention: false
+        canSuppressIntervention: false,
+        retrievalScore: 0,
+        retrievalReason: 'no_candidate_overlap',
+        retrievedCandidatesCount: 0
       };
     }
 
-    // Sort candidates by freshness and confidence
-    const sorted = candidateAssertions.sort((a, b) => (b.confidenceLevel || 0) - (a.confidenceLevel || 0) || b.timestamp - a.timestamp);
-    const topAssertion = sorted[0];
+    // Sort candidates by score, confidence and freshness
+    candidateAssertions.sort((a, b) => b.score - a.score || (b.assertion.confidenceLevel || 0) - (a.assertion.confidenceLevel || 0) || b.assertion.timestamp - a.assertion.timestamp);
+    const topCandidate = candidateAssertions[0];
+    const topAssertion = topCandidate.assertion;
 
     // 3. Novelty Gate Evaluation
     // (a) If confirmed >= 2 times: pattern is firmly established, do not ask again.
@@ -133,7 +175,10 @@ export class RetrievalBeforeAskService {
         hasKnownAnswer: true,
         knownAnswerFact: topAssertion.statement,
         shouldConvertToConfirmation: false,
-        canSuppressIntervention: false // Keep bespoke question alive with memory context
+        canSuppressIntervention: false, // Keep bespoke question alive with memory context
+        retrievalScore: topCandidate.score,
+        retrievalReason: `novelty_gate_active(${topCandidate.reason})`,
+        retrievedCandidatesCount: candidateAssertions.length
       };
     }
 
@@ -155,7 +200,10 @@ export class RetrievalBeforeAskService {
         knownAnswerFact: topAssertion.statement,
         shouldConvertToConfirmation: true,
         confirmationQuestion: `בעבר ציינת ש"${topAssertion.statement}". האם זה עדיין תקף?`,
-        canSuppressIntervention: false
+        canSuppressIntervention: false,
+        retrievalScore: topCandidate.score,
+        retrievalReason: `confirmation_requested(${topCandidate.reason})`,
+        retrievedCandidatesCount: candidateAssertions.length
       };
     }
 
@@ -167,7 +215,10 @@ export class RetrievalBeforeAskService {
       hasKnownAnswer: true,
       knownAnswerFact: topAssertion.statement,
       shouldConvertToConfirmation: false,
-      canSuppressIntervention: false
+      canSuppressIntervention: false,
+      retrievalScore: topCandidate.score,
+      retrievalReason: `historical_context(${topCandidate.reason})`,
+      retrievedCandidatesCount: candidateAssertions.length
     };
   }
 }

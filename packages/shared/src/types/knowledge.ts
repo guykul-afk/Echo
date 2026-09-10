@@ -67,4 +67,7 @@ export interface RetrievalBeforeAskResult {
   shouldConvertToConfirmation: boolean;
   confirmationQuestion?: string;
   canSuppressIntervention: boolean;
+  retrievalScore?: number;
+  retrievalReason?: string;
+  retrievedCandidatesCount?: number;
 }

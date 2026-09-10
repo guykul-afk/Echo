@@ -1,3 +1,5 @@
+import { Outcome } from './outcome.js';
+
 export type DecisionStatus =
   | 'deliberating'
   | 'decided'
@@ -78,6 +80,7 @@ export interface DecisionCase {
   nextStep?: string;
   refinedInsight?: RefinedInsight | null;
 
+  outcome?: Outcome;
   resolvedAt?: number;
   vectorEmbedding?: number[];
   createdAt: number;

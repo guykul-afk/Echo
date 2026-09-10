@@ -4,6 +4,36 @@ import { EPISTEMIC_EXTRACTION_SYSTEM_PROMPT } from '../../prompts/epistemic-extr
 import { COGNITIVE_ENGINE_PROMPT, CognitiveAnalysisResult } from '../../prompts/cognitive-engine.prompt.js';
 import { DELTA_ENGINE_PROMPT, DeltaAnalysisResult } from '../../prompts/delta-engine.prompt.js';
 
+function sanitizeJsonString(jsonStr: string): string {
+  const lines = jsonStr.split('\n');
+  const sanitizedLines = lines.map(line => {
+    // Check if line matches a "key": "value..." property
+    const propMatch = line.match(/^(\s*"[^"]+"\s*:\s*")(.*)("\s*,?\s*)$/);
+    if (propMatch) {
+      const prefix = propMatch[1];
+      let val = propMatch[2];
+      const suffix = propMatch[3];
+      val = val.replace(/(?<!\\)"/g, '״');
+      return prefix + val + suffix;
+    }
+    // Check if line matches an array string element: "value",
+    const arrayMatch = line.match(/^(\s*")(.*)("\s*,?\s*)$/);
+    if (arrayMatch && !line.includes(':')) {
+      const prefix = arrayMatch[1];
+      let val = arrayMatch[2];
+      const suffix = arrayMatch[3];
+      val = val.replace(/(?<!\\)"/g, '״');
+      return prefix + val + suffix;
+    }
+    return line;
+  });
+
+  return sanitizedLines.join('\n')
+    .replace(/([א-ת0-9])"([א-ת0-9])/g, '$1״$2')
+    .replace(/,\s*([\]}])/g, '$1')
+    .replace(/[\x00-\x1F\x7F-\x9F]/g, ' ');
+}
+
 function cleanAndParseJson<T>(raw: string): T {
   let cleaned = raw.trim();
   if (cleaned.startsWith('```json')) {
@@ -14,11 +44,7 @@ function cleanAndParseJson<T>(raw: string): T {
   try {
     return JSON.parse(cleaned) as T;
   } catch (err: any) {
-    let sanitized = cleaned
-      .replace(/([א-ת])"([א-ת])/g, '$1״$2')
-      .replace(/([א-ת])"(\s)/g, '$1״$2')
-      .replace(/,\s*([\]}])/g, '$1')
-      .replace(/[\x00-\x1F\x7F-\x9F]/g, ' ');
+    const sanitized = sanitizeJsonString(cleaned);
     try {
       return JSON.parse(sanitized) as T;
     } catch (e2: any) {
@@ -30,7 +56,6 @@ function cleanAndParseJson<T>(raw: string): T {
           return JSON.parse(sub) as T;
         } catch (e3: any) {}
       }
-      // If trailing unclosed brackets/braces
       try {
         return JSON.parse(sanitized + '"}') as T;
       } catch (e4: any) {}
@@ -174,13 +199,23 @@ Extract the epistemic breakdown, decision signature, four human dimensions, and 
     return cleanAndParseJson<EpistemicExtractionResult>(candidateText);
   }
 
-  async extractCognitiveEngine(rawText: string, recentQuestions?: string[]): Promise<CognitiveAnalysisResult> {
+  async extractCognitiveEngine(
+    rawText: string,
+    recentQuestions?: string[],
+    userContext?: { name?: string; gender?: 'male' | 'female' }
+  ): Promise<CognitiveAnalysisResult> {
     if (!this.apiKey) {
       throw new Error('GEMINI_API_KEY is not configured.');
     }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.cognitiveModel}:generateContent?key=${this.apiKey}`;
     let userPrompt = `Raw capture: """${rawText}"""`;
+    if (userContext?.gender === 'female') {
+      userPrompt += `\n\nUSER PROFILE: The user is female (${userContext.name || 'מיכל'}). You MUST address her in feminine Hebrew ("את שוקלת", "את מתלבטת", "הבנתי שחשוב לך", "הנחת העבודה שלך").`;
+    } else if (userContext?.gender === 'male') {
+      userPrompt += `\n\nUSER PROFILE: The user is male. Address him in masculine Hebrew ("אתה שוקל", "הבנתי שחשוב לך", "הנחת העבודה שלך").`;
+    }
+
     if (recentQuestions && recentQuestions.length > 0) {
       userPrompt += `\n\nRECENT INTERVENTIONS TO AVOID REPEATING (Anti-Repetition Negative Constraints):
 The user was recently asked the following illumination questions in previous decisions:

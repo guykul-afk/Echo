@@ -7,7 +7,8 @@ import {
   IlluminationQuestion,
   FiveHumanDimensions,
   FourHumanDimensions,
-  RefinedInsight
+  RefinedInsight,
+  RetrievalBeforeAskResult
 } from '@echo/shared';
 import { AiProviderFactory } from '../ai/factory.js';
 import { IAiProvider } from '../ai/provider.interface.js';
@@ -23,6 +24,8 @@ export interface CreateCaseDTO {
   mimeType?: string;
   eraId?: string;
   frictionLevel?: 'quick' | 'focused' | 'deep';
+  userGender?: 'male' | 'female';
+  userName?: string;
 }
 
 export interface CaseSessionState {
@@ -36,6 +39,7 @@ export interface CaseSessionState {
   historicalQuestion?: IlluminationQuestion;
   humanDimensions?: FiveHumanDimensions;
   refinedInsight?: RefinedInsight;
+  retrievalTelemetry?: RetrievalBeforeAskResult;
 }
 
 export class DecisionService {
@@ -60,6 +64,13 @@ export class DecisionService {
 
   getRetrievalBeforeAskService(): RetrievalBeforeAskService {
     return this.retrievalBeforeAskService;
+  }
+
+  private ensureString(val: any): string {
+    if (!val) return '';
+    if (Array.isArray(val)) return val.map(String).join('; ');
+    if (typeof val === 'object') return JSON.stringify(val);
+    return String(val);
   }
 
   async createCase(dto: CreateCaseDTO): Promise<CaseSessionState> {
@@ -87,6 +98,7 @@ export class DecisionService {
     let epistemicState: EpistemicState | undefined;
     let bespokeQuestion: IlluminationQuestion | undefined;
     let historicalQuestion: IlluminationQuestion | undefined;
+    let memoryCheck: RetrievalBeforeAskResult | undefined;
     let humanDimensions: FiveHumanDimensions | undefined = extracted.fiveDimensions || (extracted.fourDimensions as FiveHumanDimensions);
 
     // Phase 2 (Adaptive Friction): Infer from commitmentGradient / rawCapture length if not explicitly passed
@@ -115,7 +127,12 @@ export class DecisionService {
         }
       }
 
-      const cognitiveResult = await this.aiProvider.extractCognitiveEngine(rawCapture, recentQuestions);
+      const userGender = dto.userGender || (dto.userId.toLowerCase().includes('michal') ? 'female' : undefined);
+      const cognitiveResult = await this.aiProvider.extractCognitiveEngine(
+        rawCapture,
+        recentQuestions,
+        userGender ? { name: dto.userName || 'מיכל', gender: userGender } : undefined
+      );
       humanDimensions = cognitiveResult.humanDimensions || humanDimensions;
 
       epistemicState = {
@@ -127,7 +144,7 @@ export class DecisionService {
       };
 
       // Phase 2 (Silence as a decision): Evaluate whether silence is warranted
-      const missingInfoText = (humanDimensions?.missingInfo || '').trim();
+      const missingInfoText = this.ensureString(humanDimensions?.missingInfo).trim();
       const isMissingInfoEmpty = !missingInfoText || 
         ['אין', 'אין מידע חסר', 'אין פערי מידע', 'הכל ברור', 'לא צוין', '-'].some(c => missingInfoText.includes(c));
 
@@ -167,7 +184,7 @@ export class DecisionService {
 
       // Question 2: שאלת עבר מותנית - מופעלת אך ורק אם מזוהה צורך אמיתי (תקדים, סתירה, או הנחה שברירית מהעבר)
       if (shouldIntervene) {
-        const memoryCheck = await this.retrievalBeforeAskService.checkBeforeAsk(
+        memoryCheck = await this.retrievalBeforeAskService.checkBeforeAsk(
           dto.userId,
           bespokeQuestion.questionText,
           rawCapture
@@ -254,15 +271,15 @@ export class DecisionService {
       rawAudioPath: dto.rawAudioPath,
       frozenAt,
       frictionLevel: effectiveFriction || 'focused',
-      dimConsideration: humanDimensions.consideration,
-      dimGoalsPrices: humanDimensions.goalsPrices,
-      dimFacts: humanDimensions.facts,
-      dimAssumptions: humanDimensions.assumptions,
-      dimMissingInfo: humanDimensions.missingInfo,
-      dimReliance: `${humanDimensions.facts || ''} | ${humanDimensions.assumptions || ''}`.trim(),
-      dimUnknowns: humanDimensions.missingInfo,
-      centralTension: humanDimensions.centralTension,
-      keyHinge: humanDimensions.keyHinge,
+      dimConsideration: this.ensureString(humanDimensions.consideration),
+      dimGoalsPrices: this.ensureString(humanDimensions.goalsPrices),
+      dimFacts: this.ensureString(humanDimensions.facts),
+      dimAssumptions: this.ensureString(humanDimensions.assumptions),
+      dimMissingInfo: this.ensureString(humanDimensions.missingInfo),
+      dimReliance: `${this.ensureString(humanDimensions.facts)} | ${this.ensureString(humanDimensions.assumptions)}`.trim(),
+      dimUnknowns: this.ensureString(humanDimensions.missingInfo),
+      centralTension: this.ensureString(humanDimensions.centralTension),
+      keyHinge: this.ensureString(humanDimensions.keyHinge),
       aiInterventionUsed: bespokeQuestion?.shouldIntervene !== false ? (bespokeQuestion?.questionText || extracted.illuminationQuestion) : undefined,
       historicalInterventionUsed: historicalQuestion?.shouldIntervene !== false ? historicalQuestion?.questionText : undefined,
       refinedInsight: undefined,
@@ -346,10 +363,54 @@ export class DecisionService {
       bespokeQuestion,
       historicalQuestion,
       humanDimensions,
-      refinedInsight: undefined
+      refinedInsight: undefined,
+      retrievalTelemetry: memoryCheck
     };
 
     DecisionService.casesCache.set(caseId, sessionState);
+
+    // Index extracted assumptions and key hinge to Knowledge Graph for future cross-case retrieval
+    if (humanDimensions?.assumptions) {
+      const rawAssumptions = humanDimensions.assumptions;
+      const assumptionsList: string[] = Array.isArray(rawAssumptions)
+        ? (rawAssumptions as any[]).map(String)
+        : typeof rawAssumptions === 'string'
+        ? (rawAssumptions as string).split(/[;\n]/)
+        : [];
+      const cleanedAssumptions = assumptionsList
+        .map(a => a.trim())
+        .filter(a => a.length >= 6);
+      for (let aIdx = 0; aIdx < cleanedAssumptions.length; aIdx++) {
+        const stmtText = cleanedAssumptions[aIdx];
+        const statement = stmtText.length > 120 ? stmtText.slice(0, 117) + '...' : stmtText;
+        await this.knowledgeGraphService.saveAssertion({
+          id: `asrt-${caseId}-assump-${aIdx}`,
+          userId: dto.userId,
+          caseId,
+          statement,
+          category: 'assumption',
+          sourceType: 'ai_inferred',
+          timestamp: now,
+          confidenceLevel: 80,
+          createdAt: now
+        });
+      }
+    }
+    if (decisionCase.keyHinge && decisionCase.keyHinge.length >= 8) {
+      const statement = decisionCase.keyHinge.length > 120 ? decisionCase.keyHinge.slice(0, 117) + '...' : decisionCase.keyHinge;
+      await this.knowledgeGraphService.saveAssertion({
+        id: `asrt-${caseId}-hinge`,
+        userId: dto.userId,
+        caseId,
+        statement,
+        category: 'assumption',
+        sourceType: 'ai_inferred',
+        timestamp: now,
+        confidenceLevel: 85,
+        createdAt: now
+      });
+    }
+
     return sessionState;
   }
 
@@ -362,10 +423,44 @@ export class DecisionService {
       throw new Error(`PERMISSION_DENIED: User ${requestingUserId} cannot access data belonging to ${session.decisionCase.userId}.`);
     }
 
-    if (updates.consideration) session.decisionCase.dimConsideration = updates.consideration;
-    if (updates.goalsPrices) session.decisionCase.dimGoalsPrices = updates.goalsPrices;
-    if (updates.facts) session.decisionCase.dimFacts = updates.facts;
-    if (updates.assumptions) session.decisionCase.dimAssumptions = updates.assumptions;
+    if (updates.consideration) session.decisionCase.dimConsideration = this.ensureString(updates.consideration);
+    if (updates.goalsPrices) session.decisionCase.dimGoalsPrices = this.ensureString(updates.goalsPrices);
+    if (updates.facts) {
+      session.decisionCase.dimFacts = this.ensureString(updates.facts);
+      const factStr = session.decisionCase.dimFacts;
+      const statement = factStr.length > 120 ? factStr.slice(0, 117) + '...' : factStr;
+      await this.knowledgeGraphService.saveAssertion({
+        id: `asrt-${caseId}-fact-${Date.now()}`,
+        userId: session.decisionCase.userId,
+        caseId,
+        statement,
+        category: 'fact',
+        sourceType: 'user_confirmed',
+        timestamp: Date.now(),
+        confidenceLevel: 95,
+        confirmedCount: 1,
+        lastConfirmedAt: Date.now(),
+        createdAt: Date.now()
+      });
+    }
+    if (updates.assumptions) {
+      session.decisionCase.dimAssumptions = this.ensureString(updates.assumptions);
+      const assumpStr = session.decisionCase.dimAssumptions;
+      const statement = assumpStr.length > 120 ? assumpStr.slice(0, 117) + '...' : assumpStr;
+      await this.knowledgeGraphService.saveAssertion({
+        id: `asrt-${caseId}-user-assump-${Date.now()}`,
+        userId: session.decisionCase.userId,
+        caseId,
+        statement,
+        category: 'assumption',
+        sourceType: 'user_confirmed',
+        timestamp: Date.now(),
+        confidenceLevel: 95,
+        confirmedCount: 1,
+        lastConfirmedAt: Date.now(),
+        createdAt: Date.now()
+      });
+    }
     if (updates.missingInfo) session.decisionCase.dimMissingInfo = updates.missingInfo;
     if (updates.reliance) session.decisionCase.dimReliance = updates.reliance;
     if (updates.unknowns) session.decisionCase.dimUnknowns = updates.unknowns;
