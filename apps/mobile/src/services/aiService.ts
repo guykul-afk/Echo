@@ -212,7 +212,9 @@ export async function analyzeCapturedDilemma(
       });
       
       const memoryCheck = backendRes.data?.result;
-      if (memoryCheck && memoryCheck.assertions && memoryCheck.assertions.length > 0) {
+      const score = memoryCheck?.retrievalScore || 0;
+      // STRICT QUALITY GATE: Only present past echo card if there is an authentic high-confidence match (>= 0.85)
+      if (memoryCheck && memoryCheck.assertions && memoryCheck.assertions.length > 0 && score >= 0.85) {
         const primaryAssertion = memoryCheck.assertions[0];
         
         mockHistorical = {
@@ -233,12 +235,12 @@ export async function analyzeCapturedDilemma(
         analogyData = {
           title: "תקדים מהעבר",
           reason: primaryAssertion.statement,
-          strength: 'strong',
-          score: memoryCheck.retrievalScore || 0.8,
+          strength: score >= 0.92 ? 'strong' : 'medium',
+          score,
           allRelatedEchoes: memoryCheck.assertions.map((a: any) => ({
             id: a.id,
             title: "תקדים מהעבר",
-            score: memoryCheck.retrievalScore || 0.8,
+            score,
             matchReason: memoryCheck.retrievalReason || '',
             lesson: a.statement
           })),

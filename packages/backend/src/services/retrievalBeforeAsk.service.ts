@@ -131,33 +131,47 @@ export class RetrievalBeforeAskService {
       const sharedWords = stmtWords.filter(w => inputWords.has(w));
 
       if (isEntityMatch) {
-        score = Math.max(score, 0.9);
+        score = Math.max(score, 0.92);
         reason = reason ? `${reason}+entity` : 'entity_match';
       }
       if (hasConceptMatch || isFullSubstring) {
-        score = Math.max(score, 0.85);
+        score = Math.max(score, 0.88);
         reason = reason ? `${reason}+concept` : 'concept_phrase_overlap';
       }
-      if (sharedWords.length >= 2) {
-        const overlapScore = Math.min(0.8, 0.45 + (sharedWords.length * 0.1));
+
+      // Substantial domain word overlap (strictly requires >= 4 significant keywords to avoid incidental noise)
+      if (sharedWords.length >= 4) {
+        const overlapScore = Math.min(0.86, 0.70 + (sharedWords.length * 0.04));
         if (overlapScore > score) {
           score = overlapScore;
-          reason = `thematic_keywords(${sharedWords.join(',')})`;
+          reason = `thematic_keywords(${sharedWords.slice(0, 5).join(',')})`;
         }
       }
 
-      if (assertion.category === 'outcome' && score > 0) {
-        score = Math.min(0.99, score + 0.15);
+      if (assertion.category === 'outcome' && score >= 0.80) {
+        score = Math.min(0.99, score + 0.12);
         reason += '+historical_outcome_precedent';
       }
 
       // Bonus for qualified condition presence (Horizon 2)
-      if (assertion.condition && score >= 0.6) {
+      if (assertion.condition && score >= 0.80) {
         score = Math.min(0.99, score + 0.05);
         reason += '+qualified_condition';
       }
 
-      if (score >= 0.5) {
+      // STRICT QUALITY GATE:
+      // Must have an authentic structural anchor:
+      // (1) Entity match, (2) Deep tradeoff/principle match, (3) Concrete bigram concept match,
+      // or (4) Substantial >= 4 keyword overlap with an outcome.
+      const hasAuthenticAnchor = isEntityMatch ||
+        reason.includes('deep_tradeoff_match') ||
+        reason.includes('operating_principle_match') ||
+        hasConceptMatch ||
+        isFullSubstring ||
+        (sharedWords.length >= 4 && assertion.category === 'outcome');
+
+      // Reject anything below 0.85 or lacking an authentic anchor
+      if (score >= 0.85 && hasAuthenticAnchor) {
         candidateAssertions.push({ assertion, score, reason });
       }
     }
@@ -175,8 +189,17 @@ export class RetrievalBeforeAskService {
       };
     }
 
-    // Sort candidates by score, confidence and freshness
-    candidateAssertions.sort((a, b) => b.score - a.score || (b.assertion.confidenceLevel || 0) - (a.assertion.confidenceLevel || 0) || b.assertion.timestamp - a.assertion.timestamp);
+    // Sort candidates:
+    // 1. Closed loop outcome assertions receive primary precedence
+    // 2. Retrieval Score
+    // 3. Confidence level and freshness
+    candidateAssertions.sort((a, b) => {
+      const aIsOutcome = a.assertion.category === 'outcome' ? 1 : 0;
+      const bIsOutcome = b.assertion.category === 'outcome' ? 1 : 0;
+      if (aIsOutcome !== bIsOutcome) return bIsOutcome - aIsOutcome;
+      if (b.score !== a.score) return b.score - a.score;
+      return (b.assertion.confidenceLevel || 0) - (a.assertion.confidenceLevel || 0) || b.assertion.timestamp - a.assertion.timestamp;
+    });
     const topCandidate = candidateAssertions[0];
     const topAssertion = topCandidate.assertion;
 
