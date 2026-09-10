@@ -8,6 +8,7 @@ import { DecisionJournalScreen } from './screens/DecisionJournalScreen.js';
 import { TopDrawer } from './components/TopDrawer.js';
 import { checkRedirectAuth } from './services/firebaseAuth.js';
 import { syncUserDecisionsFromCloud } from './services/firestoreSync.js';
+import { analyzeCapturedDilemma } from './services/aiService.js';
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, QuickLoopStatus, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
 
 type AppStep = 'capture' | 'decision_room' | 'outcome' | 'profile' | 'journal';
@@ -79,173 +80,32 @@ export const App: React.FC = () => {
     });
   }, []);
 
-  // Precedents database for real-time Tri-Factor matching
-  const PRECEDENTS_DATABASE = [
-    {
-      keywords: ['קבלן', 'שלד', 'גמרים', 'שיפוץ', 'בנייה', 'קבלנים'],
-      title: 'המשכיות עם קבלן השלד לעבודות הגמרים (2026)',
-      reason: 'שימוש באותו קבלן לשני השלבים בפרויקט קודם יצר פשרות אסתטיות שלא ניתן היה לתקן בדיעבד. הלקח: להפריד בין שלד לגמרים.',
-      question: 'בפרויקט כנרת למדת שקבלן שלד מצטיין אינו בהכרח פדנט בגמרים. האם נכון גם כאן לפצל?',
-      score: 0.88
-    },
-    {
-      keywords: ['בטון', 'ספק', 'אספקה', 'יציקה', 'מחיר', 'עלות', 'פיצול'],
-      title: 'אסטרטגיית אספקת בטון לפרויקט קטרוני (2026)',
-      reason: 'העדפת ספק יחיד זול יצרה סיכון השבתה של 45,000 ש"ח ליום יציקה. הלקח: פיצול 70/30 כביטוח שווה את הפרמיה.',
-      question: 'האם עלות פרמיית הגיבוי שווה את מניעת הסיכון להשבתה כפי שהוכח ביולי 2026?',
-      score: 0.91
-    },
-    {
-      keywords: ['תפקיד', 'שכר', 'עבודה', 'מנהל', 'ילדים', 'בית', 'קריירה', 'שעות', 'זמינות', 'job'],
-      title: 'מעבר תפקיד ניהולי וזמינות בערבים (2024)',
-      reason: 'במעבר הקודם ציינת בדיעבד שזמן הבית והנוכחות עם הילדים היו קריטיים בהרבה ממה שהערכת, וכי תיאום ציפיות מראש מנע שחיקה.',
-      question: 'במעבר התפקיד הקודם (2024) למדת שציפיות זמינות בערב חובה לברר לפני חתימה. האם הלקח הזה תקף להחלטה הנוכחית?',
-      score: 0.89
-    },
-    {
-      keywords: ['ספורט', 'גלישה', 'כנרת', 'גב', 'ריצה', 'פציעה', 'בריאות'],
-      title: 'חזרה לפעילות מאומצת מול סמנים סומטיים (2025)',
-      reason: 'נטילת סיכון גופני יתר על המידה הובילה להשבתה ממושכת פי 3. הלקח: כבוד לאיתותי הגוף לפני דחיפה.',
-      question: 'האם הרצון לחזור לפעילות גובר שוב על איתותי העומס כפי שקרה בפציעה הקודמת?',
-      score: 0.84
-    },
-    {
-      keywords: ['מחיר', 'דירות', 'תמחור', 'מכירה', 'מבצע', 'סלומון', 'נדל"ן'],
-      title: 'תמחור דירות קיטרוני וסלומון (2026)',
-      reason: 'הורדה גורפת פגעה במיצוב. הלקח: מבצע מתוחם בזמן ל-2 דירות בלבד שמר על ערך שאר הפרויקט (דרך שלישית).',
-      question: 'האם במקום הורדה גורפת ניתן לייצר פיילוט מתוחם כפי שפעל בהצלחה בסלומון?',
-      score: 0.87
-    }
-  ];
-
-  // 1. Handle Quick Capture with Real-Time Tri-Factor Precedent Retrieval
-  const handleCaptureSubmit = (rawText: string, frictionLevel: 'quick' | 'focused' | 'deep' = 'focused') => {
+  // 1. Handle Quick Capture with Real-Time Gemini Epistemic Analysis
+  const handleCaptureSubmit = async (rawText: string, frictionLevel: 'quick' | 'focused' | 'deep' = 'focused') => {
     if (!rawText || !rawText.trim()) {
       setIsLoading(false);
       return;
     }
     setIsLoading(true);
 
-    setTimeout(() => {
-      const now = Date.now();
-      const firstLine = rawText.split('\n')[0].trim();
-      const title = firstLine.slice(0, 50) + (firstLine.length > 50 ? '...' : '');
+    try {
+      const result = await analyzeCapturedDilemma(rawText, frictionLevel, currentUserId);
 
-      // Tri-Factor Keyword & Semantic Matcher
-      const lower = rawText.toLowerCase();
-      let matchedPrecedent: typeof PRECEDENTS_DATABASE[0] | null = null;
-      for (const prec of PRECEDENTS_DATABASE) {
-        if (prec.keywords.some(k => lower.includes(k))) {
-          matchedPrecedent = prec;
-          break;
-        }
-      }
+      setActiveCase(result.decisionCase);
+      setOptions(result.options);
+      setSignature(result.signature);
+      setIlluminationQuestion(result.illuminationQuestion);
+      setBespokeQuestion(result.bespokeQuestion);
+      setHistoricalQuestion(result.historicalQuestion);
+      setSimilarCaseAnalogy(result.similarCaseAnalogy);
+      setRefinedInsight(result.refinedInsight);
 
-      // Default fallback precedent if no exact keyword match
-      if (!matchedPrecedent && rawText.length > 15) {
-        matchedPrecedent = PRECEDENTS_DATABASE[0];
-      }
-
-      const mockCase: DecisionCase = {
-        id: `dc-${now}`,
-        userId: currentUserId,
-        title: title || 'דילמת שיקול דעת',
-        status: 'deliberating',
-        family: 'general_deliberation',
-        contextStakes: 'high',
-        contextReversibility: 'partially_reversible',
-        contextTimePressure: 'medium',
-        rawCaptureText: rawText.trim(),
-        frozenAt: now,
-        frictionLevel,
-        dimConsideration: rawText.trim(),
-        dimGoalsPrices: 'השגת המטרה באיכות גבוהה תוך שמירה על המשאבים ואי-ודאות מינימלית',
-        dimReliance: 'הנחות המוצא והעובדות שהוזנו במעמד הלכידה',
-        dimUnknowns: 'מידע חסר שטרם אומת בשטח מול הגורמים הרלוונטיים',
-        centralTension: 'השגת המטרה וההתקדמות מול מחירים נלווים וסיכונים',
-        keyHinge: 'בירור מוקדם של ההנחה המרכזית לפני התחייבות בלתי הפיכה',
-        createdAt: now,
-        updatedAt: now
-      };
-
-      const mockQuestion = matchedPrecedent?.question || 'אם אי אפשר לקבל את שני הצדדים במלואם, על מה פחות תרצה לוותר?';
-
-      const mockBespoke: IlluminationQuestion = {
-        id: `illum-${now}`,
-        caseId: mockCase.id,
-        strategy: frictionLevel === 'quick' ? ('no_intervention' as any) : ('clarification' as any),
-        questionText: frictionLevel === 'quick' ? '' : mockQuestion,
-        triggerReason: frictionLevel === 'quick' ? 'Quick flow selected' : 'High Expected Reflection Value intervention',
-        shouldIntervene: frictionLevel !== 'quick',
-        expectedReflectionValue: 0.88,
-        responseWidget: 'priority',
-        responseOptions: ['פשטות ומהירות', 'עמידות ואיכות לטווח ארוך'],
-        isSecondary: false,
-        origin: 'current_dilemma',
-        createdAt: now
-      };
-
-      let mockHistorical: IlluminationQuestion | undefined;
-      let analogyData: typeof similarCaseAnalogy = undefined;
-
-      if (matchedPrecedent) {
-        mockHistorical = {
-          id: `hist-${now}`,
-          caseId: mockCase.id,
-          strategy: 'outcome_contract_anchor',
-          origin: 'historical_precedent',
-          questionText: matchedPrecedent.question,
-          triggerReason: 'זוהה תקדים עבר ישיר בנושא דומה (Tri-Factor Engine)',
-          shouldIntervene: true,
-          isSecondary: true,
-          canSkip: true,
-          responseWidget: 'confirmation',
-          responseOptions: ['כן, לקח רלוונטי', 'לא, הנסיבות שונות'],
-          createdAt: now
-        };
-
-        analogyData = {
-          title: matchedPrecedent.title,
-          reason: matchedPrecedent.reason,
-          strength: 'strong',
-          score: matchedPrecedent.score
-        };
-      }
-
-      const mockInsight: RefinedInsight = {
-        before: title,
-        now: 'חדות סביב ציר ההכרעה וההנחות שעדיין לא אומתו',
-        chosenStep: 'בירור מוקדם לפני התחייבות'
-      };
-
-      const mockOptions: Option[] = [
-        { id: 'opt-1', caseId: mockCase.id, userId: currentUserId, title: 'המשך במתכונת המקורית', origin: 'proposed_by_user', wasSelected: false, createdAt: now },
-        { id: 'opt-2', caseId: mockCase.id, userId: currentUserId, title: 'גידור מוקדם באמצעות בירור ממוקד', origin: 'proposed_by_user', wasSelected: false, createdAt: now }
-      ];
-
-      const mockSignature: DecisionSignature = {
-        id: `sig-${now}`,
-        caseId: mockCase.id,
-        userId: currentUserId,
-        commitmentGradient: 0.82,
-        informationCostRatio: 0.88,
-        reversibilityDecayDays: 45,
-        principalAgentTension: 'sole_actor',
-        decisionTempo: 'tactical_weeks'
-      };
-
-      setActiveCase(mockCase);
-      setOptions(mockOptions);
-      setSignature(mockSignature);
-      setIlluminationQuestion(mockQuestion);
-      setBespokeQuestion(mockBespoke);
-      setHistoricalQuestion(mockHistorical);
-      setSimilarCaseAnalogy(analogyData);
-      setRefinedInsight(mockInsight);
-
-      setIsLoading(false);
       setStep('decision_room');
-    }, 800);
+    } catch (err) {
+      console.error('[Capture Analysis Error]:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // 2. Handle Decision Room Answer / Skip
