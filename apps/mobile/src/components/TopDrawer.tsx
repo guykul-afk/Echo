@@ -5,12 +5,14 @@ interface TopDrawerProps {
   currentUser: string;
   onSwitchUser: (newUser: string) => void;
   onOpenJournal: () => void;
+  onOpenCalibration: () => void;
 }
 
 export const TopDrawer: React.FC<TopDrawerProps> = ({
   currentUser,
   onSwitchUser,
-  onOpenJournal
+  onOpenJournal,
+  onOpenCalibration
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [apiKey, setApiKey] = useState<string>('');
@@ -70,7 +72,7 @@ export const TopDrawer: React.FC<TopDrawerProps> = ({
       {/* Expandable Technical Drawer Panel */}
       <div
         className={`w-full px-3 sm:px-4 overflow-hidden transition-all duration-300 ease-in-out ${
-          isOpen ? 'max-h-36 opacity-100 mb-2 pointer-events-auto' : 'max-h-0 opacity-0 pointer-events-none'
+          isOpen ? 'max-h-40 opacity-100 mb-2 pointer-events-auto' : 'max-h-0 opacity-0 pointer-events-none'
         }`}
       >
         <div
@@ -113,17 +115,29 @@ export const TopDrawer: React.FC<TopDrawerProps> = ({
             </span>
           </div>
 
-          {/* Row 2: Decision Journal */}
-          <div className="pt-1.5 border-t" style={{ borderColor: LuxuryTheme.background.border }}>
+          {/* Row 2: Separate Buttons for Journal & Calibration */}
+          <div className="pt-1.5 border-t grid grid-cols-2 gap-2" style={{ borderColor: LuxuryTheme.background.border }}>
             <button
               type="button"
               onClick={() => {
                 setIsOpen(false);
                 onOpenJournal();
               }}
-              className="w-full py-1.5 px-3 rounded-xl text-[11px] border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] transition-all font-medium flex items-center justify-center gap-1.5 cursor-pointer text-[#E6E8EE]"
+              className="py-1.5 px-3 rounded-xl text-[11px] border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] transition-all font-medium flex items-center justify-center gap-1 cursor-pointer text-[#E6E8EE]"
             >
-              <span>יומן החלטות ופרופיל כיול</span>
+              <span>יומן החלטות</span>
+              <span style={{ color: LuxuryTheme.accent.gold }}>←</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                onOpenCalibration();
+              }}
+              className="py-1.5 px-3 rounded-xl text-[11px] border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] transition-all font-medium flex items-center justify-center gap-1 cursor-pointer text-[#E6E8EE]"
+            >
+              <span>פרופיל כיול</span>
               <span style={{ color: LuxuryTheme.accent.gold }}>←</span>
             </button>
           </div>

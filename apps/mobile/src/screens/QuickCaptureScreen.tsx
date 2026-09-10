@@ -139,7 +139,10 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
         const capturedVoice = speechTextRef.current.trim();
         if (capturedVoice && capturedVoice.length >= 2) {
           setInputText(capturedVoice);
-          setRecordHint('ההקלטה נקלטה בהצלחה!');
+          setRecordHint('ההקלטה נקלטה בהצלחה! פותח תהליך החלטה...');
+          setTimeout(() => {
+            onCaptureSubmit(capturedVoice, frictionLevel);
+          }, 400);
           return;
         }
 
@@ -151,7 +154,10 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
             const transcript = await transcribeAudioWithGemini(audioBlob);
             if (transcript && transcript.length >= 2) {
               setInputText(transcript);
-              setRecordHint('ההקלטה נקלטה בהצלחה!');
+              setRecordHint('ההקלטה נקלטה בהצלחה! פותח תהליך החלטה...');
+              setTimeout(() => {
+                onCaptureSubmit(transcript, frictionLevel);
+              }, 400);
             } else {
               setRecordHint('לא זוהה דיבור ברור. ניתן להקליד ידנית');
             }
@@ -220,43 +226,34 @@ export const QuickCaptureScreen: React.FC<QuickCaptureScreenProps> = ({
       </div>
 
       {/* Input Text Box & Action */}
-      <div className="w-full space-y-3 pb-2 text-right">
+      <div className="w-full space-y-3 pb-3 text-right">
         <div className="relative">
           <textarea
             rows={3}
             placeholder="או הקלד כאן: מה הדילמה והשיקולים שעומדים בפניך כרגע?"
             value={inputText}
             onChange={e => setInputText(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey && inputText.trim()) {
+                e.preventDefault();
+                handleProceed();
+              }
+            }}
             className="w-full p-3.5 rounded-2xl border bg-white/[0.03] text-xs text-right focus:outline-none resize-none placeholder:opacity-35 leading-relaxed transition-all"
             style={{ borderColor: LuxuryTheme.background.border, color: LuxuryTheme.text.primary }}
           />
         </div>
 
-        <button
-          type="button"
-          disabled={!inputText.trim() || isLoading || isTranscribing}
-          onClick={handleProceed}
-          className={`w-full py-3.5 px-4 rounded-xl border text-xs font-semibold transition-all cursor-pointer text-center ${
-            !inputText.trim() || isLoading || isTranscribing
-              ? 'opacity-30 border-white/10 bg-white/[0.02] cursor-not-allowed'
-              : 'border-amber-400 bg-amber-500/20 text-amber-100 hover:bg-amber-500/30 active:scale-[0.98] shadow-lg'
-          }`}
-        >
-          {isLoading || isTranscribing ? 'מקפיא ומחלץ סכמה אפיסטמית...' : 'הקפא והאר את ההחלטה ←'}
-        </button>
-
-        {onOpenProfile && (
-          <div className="pt-1 flex justify-center">
-            <button
-              type="button"
-              onClick={onOpenProfile}
-              className="text-[11px] opacity-60 hover:opacity-100 transition-opacity flex items-center gap-1 cursor-pointer"
-              style={{ color: LuxuryTheme.accent.gold }}
-            >
-              <span>מעבר ליומן החלטות ופרופיל כיול</span>
-              <span>←</span>
-            </button>
-          </div>
+        {/* Action Button: Visible only when user has entered text or while processing */}
+        {(inputText.trim().length > 0 || isLoading || isTranscribing) && (
+          <button
+            type="button"
+            disabled={!inputText.trim() || isLoading || isTranscribing}
+            onClick={handleProceed}
+            className="w-full py-3.5 px-4 rounded-xl border border-amber-400 bg-amber-500/20 text-amber-100 hover:bg-amber-500/30 active:scale-[0.98] shadow-lg text-xs font-semibold transition-all cursor-pointer text-center"
+          >
+            {isLoading || isTranscribing ? 'פותח את התהליך...' : 'המשך לפתיחת התהליך ←'}
+          </button>
         )}
       </div>
 

@@ -1,6 +1,5 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { LuxuryTheme } from '../theme/colors.js';
-import { DecisionFlowPipeline } from '../graphics/DecisionFlowPipeline.js';
 
 interface DecisionProfileScreenProps {
   onBack: () => void;
@@ -9,73 +8,12 @@ interface DecisionProfileScreenProps {
   currentUserId?: string;
 }
 
-interface HistoricalCaseItem {
-  id: string;
-  title: string;
-  date: string;
-  status: string;
-  dilemma: string;
-  goalsPrices?: string;
-  facts?: string;
-  assumptions?: string;
-  question?: string;
-  pastEcho?: {
-    title: string;
-    reason: string;
-    date?: string;
-    score?: number;
-  } | null;
-  answer?: string;
-  conclusion?: string;
-  nextStep?: string;
-}
-
-const DEFAULT_HISTORICAL_CASES: HistoricalCaseItem[] = [
-  {
-    id: 'case-skeleton-contractor',
-    title: 'המשכיות עם קבלן השלד לעבודות הגמרים',
-    date: 'אוגוסט 2026',
-    status: 'סגור ומיושם',
-    dilemma: 'האם להמשיך עם קבלן השלד הנוכחי גם לעבודות הגמרים, או לפצל לקבלן ייעודי',
-    goalsPrices: 'השלמת הפרויקט באיכות גבוהה תוך שמירה על יעילות תקציבית וניהולית מול סכנת ליקויי גמר',
-    facts: 'הקבלן הוכיח עמידה בלוחות זמנים בשלד, אך טרם הציג עבודות גמרים דומות בפועל',
-    assumptions: 'קבלן המצטיין בעבודות שלד יחזיק במיומנות הנדרשת גם לעבודות גמר מדויקות',
-    question: 'איזה סוג מיומנות שנדרש בגמרים אינו בא לידי ביטוי בעבודת השלד?',
-    pastEcho: {
-      title: 'פרויקט כנרת (2024)',
-      reason: 'שימוש באותו קבלן לשני השלבים יצר פשרות אסתטיות שלא ניתן היה לתקן בדיעבד',
-      date: 'מאי 2024',
-      score: 0.88
-    },
-    answer: 'עבודות גמר דורשות פדנטיות וסבלנות שונה לחלוטין מעבודת שלד מאסיבית',
-    conclusion: 'הפרדת עבודות הגמרים ומכרז מול 2 קבלנים ייעודיים',
-    nextStep: 'קבלת שתי הצעות מחיר מקבלני גמר וביקור בדירות מאוכלסות שלהם'
-  },
-  {
-    id: 'case-concrete-supply',
-    title: 'בחירת אסטרטגיית אספקת בטון לפרויקט קטרוני',
-    date: 'יולי 2026',
-    status: 'סגור ומיושם',
-    dilemma: 'האם לפצל את אספקת הבטון בין כמה ספקים כגיבוי, או להישאר עם ספק בלעדי עם אמינות בינונית',
-    goalsPrices: 'הבטחת רציפות אספקה ללא השבתת יציקות, מול פגיעה ביעילות חשבונית ומחירי כמות',
-    facts: 'עיכוב של יום יציקה עולה כ-45,000 ש"ח; עלות פיצול הספקים היא תוספת של כ-4%',
-    assumptions: 'אמינות אספקה בינונית של ספק יחיד תביא בהכרח לשיבוש בפרויקט',
-    question: 'מהי נקודת השוויון שבה נזק מעיכוב אפשרי עולה על עלות הפרמיה של פיצול ספקים?',
-    pastEcho: null,
-    answer: 'הסיכון להשבתת משאבה ויציקה עולה פי 3 על תוספת המחיר של פיצול הספקים',
-    conclusion: 'פיצול האספקה: 70% לספק עיקרי ו-30% כגיבוי מובטח לספק משני',
-    nextStep: 'חתימת נספח זמינות מול הספק המשני'
-  }
-];
-
 export const DecisionProfileScreen: React.FC<DecisionProfileScreenProps> = ({
   onBack,
   capturesCount = 35,
   closuresCount = 8
 }) => {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
-  const [selectedHistoryCaseId, setSelectedHistoryCaseId] = useState<string | null>('case-skeleton-contractor');
-  const [cases] = useState<HistoricalCaseItem[]>(DEFAULT_HISTORICAL_CASES);
 
   const toggleSection = (id: string) => {
     setExpandedSection(prev => (prev === id ? null : id));
@@ -99,9 +37,9 @@ export const DecisionProfileScreen: React.FC<DecisionProfileScreenProps> = ({
 
         <div className="text-right">
           <h2 className="font-editorial text-lg font-bold" style={{ color: LuxuryTheme.accent.gold }}>
-            פרופיל שיקול דעת
+            פרופיל כיול
           </h2>
-          <p className="text-[11px] opacity-60">כיול אישי וזיכרון אפיסטמי</p>
+          <p className="text-[11px] opacity-60">כיול אישי ואיכות שיקול דעת</p>
         </div>
       </div>
 
@@ -318,66 +256,6 @@ export const DecisionProfileScreen: React.FC<DecisionProfileScreenProps> = ({
           <p className="text-[11px] opacity-80 leading-relaxed">
             קבעת חלונות ביקורת קצרים של 3–7 ימים גם עבור תהליכים מורכבים. מומלץ להאריך את חלון הביקורת ל-30–60 יום לקבלת משוב מהימן.
           </p>
-        </div>
-      </div>
-
-      {/* 5. כרטיסיית "היסטוריית החלטות (שרשרת שיקול הדעת)" */}
-      <div className="p-4 rounded-2xl border bg-white/[0.02] border-white/10 space-y-3">
-        <div className="flex justify-between items-center">
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300">
-            ארכיון החלטות
-          </span>
-          <h3 className="text-xs font-semibold" style={{ color: LuxuryTheme.text.primary }}>
-            שרשרת שיקול הדעת בהיסטוריה
-          </h3>
-        </div>
-
-        <p className="text-xs font-light opacity-80 leading-relaxed">
-          עיון בשרשרת קבלת ההחלטה המלאה של דילמות עבר – מהדילמה המקורית ועד לצעד שנבחר:
-        </p>
-
-        <div className="space-y-3">
-          {cases.map(item => {
-            const isExpanded = selectedHistoryCaseId === item.id;
-            return (
-              <div key={item.id} className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
-                <button 
-                  type="button"
-                  onClick={() => setSelectedHistoryCaseId(isExpanded ? null : item.id)}
-                  className="w-full p-3 text-right focus:outline-none cursor-pointer flex flex-col gap-1 hover:bg-white/[0.02] transition-colors"
-                >
-                  <div className="flex justify-between items-center text-[10px] opacity-60">
-                    <span>{item.date}</span>
-                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-medium">{item.status}</span>
-                  </div>
-                  <div className="text-xs font-semibold" style={{ color: LuxuryTheme.text.primary }}>
-                    {item.title}
-                  </div>
-                  <div className="text-[10px] text-amber-400 font-medium mt-0.5">
-                    {isExpanded ? '▲ סגור תרשים זרימה' : '▼ צפה בתרשים הזרימה המלא'}
-                  </div>
-                </button>
-
-                {isExpanded && (
-                  <div className="p-3 pt-0 border-t border-white/5">
-                    <DecisionFlowPipeline
-                      dilemma={item.dilemma}
-                      goalsPrices={item.goalsPrices}
-                      facts={item.facts}
-                      assumptions={item.assumptions}
-                      question={item.question}
-                      pastEcho={item.pastEcho}
-                      answer={item.answer}
-                      conclusion={item.conclusion}
-                      nextStep={item.nextStep}
-                      scrollable={true}
-                      maxHeight={360}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
         </div>
       </div>
 

@@ -4,10 +4,11 @@ import { QuickCaptureScreen } from './screens/QuickCaptureScreen.js';
 import { DecisionRoomScreen } from './screens/DecisionRoomScreen.js';
 import { OutcomeModal } from './screens/OutcomeModal.js';
 import { DecisionProfileScreen } from './screens/DecisionProfileScreen.js';
+import { DecisionJournalScreen } from './screens/DecisionJournalScreen.js';
 import { TopDrawer } from './components/TopDrawer.js';
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, QuickLoopStatus, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
 
-type AppStep = 'capture' | 'decision_room' | 'outcome' | 'profile';
+type AppStep = 'capture' | 'decision_room' | 'outcome' | 'profile' | 'journal';
 
 export const App: React.FC = () => {
   const [step, setStep] = useState<AppStep>('capture');
@@ -250,12 +251,13 @@ export const App: React.FC = () => {
         <TopDrawer
           currentUser={currentUserId}
           onSwitchUser={handleSwitchUser}
-          onOpenJournal={() => setStep('profile')}
+          onOpenJournal={() => setStep('journal')}
+          onOpenCalibration={() => setStep('profile')}
         />
         
         {/* Navigation bar if not on capture */}
         {step !== 'capture' && (
-          <div className="w-full px-5 py-2.5 flex justify-between items-center border-b shrink-0 z-20" style={{ borderColor: 'rgba(212, 175, 55, 0.15)' }}>
+          <div className="w-full px-4 py-2.5 flex justify-between items-center border-b shrink-0 z-20" style={{ borderColor: 'rgba(212, 175, 55, 0.15)' }}>
             <button 
               onClick={() => setStep('capture')}
               className="text-xs px-2.5 py-1 rounded-lg border border-white/10 hover:bg-white/5 transition-all cursor-pointer"
@@ -266,13 +268,22 @@ export const App: React.FC = () => {
             <span className="text-xs font-editorial font-bold" style={{ color: LuxuryTheme.accent.gold }}>
               echo
             </span>
-            <button 
-              onClick={() => setStep('profile')}
-              className="text-xs px-2.5 py-1 rounded-lg border border-white/10 hover:bg-white/5 transition-all cursor-pointer"
-              style={{ color: step === 'profile' ? LuxuryTheme.accent.gold : LuxuryTheme.text.secondary }}
-            >
-              פרופיל כיול
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button 
+                onClick={() => setStep('journal')}
+                className="text-xs px-2 py-1 rounded-lg border border-white/10 hover:bg-white/5 transition-all cursor-pointer"
+                style={{ color: step === 'journal' ? LuxuryTheme.accent.gold : LuxuryTheme.text.secondary }}
+              >
+                יומן
+              </button>
+              <button 
+                onClick={() => setStep('profile')}
+                className="text-xs px-2 py-1 rounded-lg border border-white/10 hover:bg-white/5 transition-all cursor-pointer"
+                style={{ color: step === 'profile' ? LuxuryTheme.accent.gold : LuxuryTheme.text.secondary }}
+              >
+                כיול
+              </button>
+            </div>
           </div>
         )}
 
@@ -281,8 +292,14 @@ export const App: React.FC = () => {
           {step === 'capture' && (
             <QuickCaptureScreen
               onCaptureSubmit={handleCaptureSubmit}
-              onOpenProfile={() => setStep('profile')}
               isLoading={isLoading}
+            />
+          )}
+
+          {step === 'journal' && (
+            <DecisionJournalScreen
+              onBack={() => setStep('capture')}
+              currentUserId={currentUserId}
             />
           )}
 
