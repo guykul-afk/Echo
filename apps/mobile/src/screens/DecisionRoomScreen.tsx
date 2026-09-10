@@ -1,10 +1,51 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useLayoutEffect } from 'react';
 import { LuxuryTheme } from '../theme/colors';
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
-import { DecisionFlowPipeline } from '../graphics/DecisionFlowPipeline';
 import { EchoPastCard } from '../components/EchoPastCard';
 import { transcribeAudioWithGemini } from '../services/voiceService.js';
 import { refineAnswerWithGemini } from '../services/aiService.js';
+
+interface AutoResizeTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  value: string;
+}
+
+const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
+  value,
+  className,
+  rows = 1,
+  onChange,
+  style,
+  ...props
+}) => {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const adjustHeight = () => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = `${Math.max(el.scrollHeight, 28)}px`;
+    }
+  };
+
+  useLayoutEffect(() => {
+    adjustHeight();
+  }, [value]);
+
+  return (
+    <textarea
+      ref={textareaRef}
+      value={value}
+      rows={rows}
+      className={`overflow-hidden resize-none ${className || ''}`}
+      style={{ overflow: 'hidden', ...style }}
+      onChange={(e) => {
+        adjustHeight();
+        if (onChange) onChange(e);
+      }}
+      {...props}
+    />
+  );
+};
 
 export interface DecisionSaveData {
   consideration: string;
@@ -98,7 +139,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   const [isContextExpanded, setIsContextExpanded] = useState(false);
   const [isTranscribingField, setIsTranscribingField] = useState<string | null>(null);
   const [proposedSteps, setProposedSteps] = useState<string[]>(initialProposedSteps || []);
-  const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(0);
+  const [selectedStepIndices, setSelectedStepIndices] = useState<number[]>([0]);
   const [customStepText, setCustomStepText] = useState<string>('');
   const [isAnalyzingAnswer, setIsAnalyzingAnswer] = useState<boolean>(false);
   const [analysisErrorNotice, setAnalysisErrorNotice] = useState<string | null>(null);
@@ -161,8 +202,8 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
           }
         };
 
-        rec.onerror = (err: any) => {
-          console.warn('[DecisionRoom WebSpeech Notice]:', err);
+        rec.onerror = (e: any) => {
+          console.warn('[WebSpeech Error in Field]:', e);
         };
 
         rec.onend = () => {};
@@ -170,81 +211,69 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         rec.start();
         recognitionRef.current = rec;
       }
-    } catch (e) {
-      console.warn('[DecisionRoom WebSpeech Init Error]:', e);
+    } catch (err) {
+      console.warn('[WebSpeech Init Error in Field]:', err);
     }
 
-    // 2. MediaRecorder + Gemini STT Engine
+    // 2. Audio Capture for Gemini Voice Fallback
     try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-        });
-        mediaStreamRef.current = stream;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
 
-        let mimeType = '';
-        if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported) {
-          if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
-          else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
-          else if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
-          else if (MediaRecorder.isTypeSupported('audio/aac')) mimeType = 'audio/aac';
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
         }
+      };
 
-        const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-        mediaRecorderRef.current = recorder;
-
-        recorder.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) {
-            audioChunksRef.current.push(e.data);
-          }
-        };
-
-        recorder.onstop = async () => {
-          const actualMime = recorder.mimeType || mimeType || 'audio/webm';
-          const audioBlob = new Blob(audioChunksRef.current, { type: actualMime });
-
-          await new Promise(r => setTimeout(r, 200));
-
-          const capturedVoice = speechTextRef.current.trim();
-          if (capturedVoice && capturedVoice.length >= 2) {
-            setter(capturedVoice);
-            return;
-          }
-
-          if (audioBlob.size > 300) {
-            setIsTranscribingField(fieldKey);
-            try {
-              const transcript = await transcribeAudioWithGemini(audioBlob);
-              if (transcript && transcript.length >= 2) {
-                setter(transcript);
-              }
-            } catch (err) {
-              console.warn('[DecisionRoom Gemini STT Fallback]:', err);
-            } finally {
-              setIsTranscribingField(null);
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        if (!speechTextRef.current.trim() && audioBlob.size > 2000) {
+          setIsTranscribingField(fieldKey);
+          try {
+            const geminiText = await transcribeAudioWithGemini(audioBlob);
+            if (geminiText && geminiText.trim()) {
+              setter(geminiText.trim());
             }
+          } catch (e) {
+            console.error('[Gemini Field Transcription Fallback Error]:', e);
+          } finally {
+            setIsTranscribingField(null);
           }
-        };
+        }
+      };
 
-        recorder.start(500);
-      }
-    } catch (micErr) {
-      console.warn('[DecisionRoom Mic Access Error]:', micErr);
+      mediaRecorder.start(250);
+    } catch (err) {
+      console.warn('[MediaRecorder Init Error in Field]:', err);
     }
   };
 
-  const handleFieldChange = (field: 'consideration' | 'goalsPrices' | 'facts' | 'assumptions' | 'missingInfo', val: string) => {
+  const handleFieldChange = (field: 'consideration' | 'goalsPrices' | 'facts' | 'assumptions' | 'missingInfo', value: string) => {
     let nextConsideration = consideration;
     let nextGoalsPrices = goalsPrices;
     let nextFacts = facts;
     let nextAssumptions = assumptions;
     let nextMissingInfo = missingInfo;
 
-    if (field === 'consideration') { nextConsideration = val; setConsideration(val); }
-    if (field === 'goalsPrices') { nextGoalsPrices = val; setGoalsPrices(val); }
-    if (field === 'facts') { nextFacts = val; setFacts(val); }
-    if (field === 'assumptions') { nextAssumptions = val; setAssumptions(val); }
-    if (field === 'missingInfo') { nextMissingInfo = val; setMissingInfo(val); }
+    if (field === 'consideration') {
+      nextConsideration = value;
+      setConsideration(value);
+    } else if (field === 'goalsPrices') {
+      nextGoalsPrices = value;
+      setGoalsPrices(value);
+    } else if (field === 'facts') {
+      nextFacts = value;
+      setFacts(value);
+    } else if (field === 'assumptions') {
+      nextAssumptions = value;
+      setAssumptions(value);
+    } else if (field === 'missingInfo') {
+      nextMissingInfo = value;
+      setMissingInfo(value);
+    }
 
     if (onMirrorUpdate) {
       onMirrorUpdate({
@@ -261,11 +290,20 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
     }
   };
 
+  const toggleStepSelection = (idx: number) => {
+    setSelectedStepIndices(prev => 
+      prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+    );
+  };
+
+  const selectedStepsText = selectedStepIndices
+    .map(idx => proposedSteps[idx])
+    .filter(Boolean)
+    .join(' · ');
+
   const effectiveNextStep = customStepText.trim()
-    ? customStepText.trim()
-    : (selectedStepIndex !== null && proposedSteps[selectedStepIndex])
-    ? proposedSteps[selectedStepIndex]
-    : (insight?.chosenStep || 'בירור מוקדם לפני הכרעה');
+    ? (selectedStepsText ? `${selectedStepsText} · ${customStepText.trim()}` : customStepText.trim())
+    : (selectedStepsText || insight?.chosenStep || 'בירור מוקדם לפני הכרעה');
 
   const handleAnalyzeAnswer = async (answerText?: string) => {
     const finalAnswer = answerText !== undefined ? answerText : userAnswer;
@@ -296,7 +334,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
       };
       setInsight(refined);
       setProposedSteps(result.proposedSteps);
-      setSelectedStepIndex(0);
+      setSelectedStepIndices([0]);
       setCustomStepText('');
       setIsDecisionSummarized(true);
 
@@ -377,49 +415,47 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         </h1>
 
         <div className="p-3.5 rounded-2xl border bg-white/[0.03]" style={{ borderColor: 'rgba(212, 175, 55, 0.2)' }}>
-          <div className="flex justify-between items-center mb-1.5 text-xs">
-            <span className="opacity-70">הניסוח שלך:</span>
+          <div className="flex justify-between items-center mb-1.5 text-sm font-semibold">
+            <span className="opacity-80">הניסוח שלך:</span>
             <button 
               type="button" 
               onClick={() => startVoiceInput('consideration', val => handleFieldChange('consideration', val))}
-              className="text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold flex items-center gap-1 cursor-pointer"
               style={{ color: activeRecordingField === 'consideration' ? '#f43f5e' : LuxuryTheme.accent.gold }}
             >
               {activeRecordingField === 'consideration' ? '● מקשיב...' : (isTranscribingField === 'consideration' ? '⏳ מתמלל...' : '🎙️ עדכן')}
             </button>
           </div>
-          <textarea
-            rows={2}
+          <AutoResizeTextarea
             value={consideration}
             onChange={e => handleFieldChange('consideration', e.target.value)}
-            className="w-full bg-transparent text-sm leading-relaxed focus:outline-none resize-none font-medium"
+            className="w-full bg-transparent text-base leading-relaxed focus:outline-none font-semibold text-stone-100"
             style={{ color: LuxuryTheme.text.primary }}
           />
         </div>
 
-        <div className="text-xs opacity-60">מה עומד מול מה? ערכים, מטרות ומחירים:</div>
-        <div className="font-editorial text-lg italic pr-2 border-r-2" style={{ borderColor: LuxuryTheme.accent.gold, color: LuxuryTheme.accent.gold }}>
+        <div className="text-sm font-medium opacity-80">מה עומד מול מה? ערכים, מטרות ומחירים:</div>
+        <div className="font-editorial text-xl font-bold italic pr-2 border-r-2" style={{ borderColor: LuxuryTheme.accent.gold, color: LuxuryTheme.accent.gold }}>
           "{centralTension}"
         </div>
 
         <div className="p-3.5 rounded-2xl border bg-white/[0.03]" style={{ borderColor: 'rgba(212, 175, 55, 0.2)' }}>
-          <div className="flex justify-between items-center mb-1.5 text-xs">
-            <span className="opacity-70">מטרות ומחירים שחשובים לך:</span>
+          <div className="flex justify-between items-center mb-1.5 text-sm font-semibold">
+            <span className="opacity-80">מטרות ומחירים שחשובים לך:</span>
             <button 
               type="button" 
               onClick={() => startVoiceInput('goalsPrices', val => handleFieldChange('goalsPrices', val))}
-              className="text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold flex items-center gap-1 cursor-pointer"
               style={{ color: activeRecordingField === 'goalsPrices' ? '#f43f5e' : LuxuryTheme.accent.gold }}
             >
               {activeRecordingField === 'goalsPrices' ? '● מקשיב...' : (isTranscribingField === 'goalsPrices' ? '⏳ מתמלל...' : '🎙️ עדכן')}
             </button>
           </div>
-          <textarea
-            rows={2}
+          <AutoResizeTextarea
             value={goalsPrices}
             onChange={e => handleFieldChange('goalsPrices', e.target.value)}
             placeholder="מה חשוב לך להשיג..."
-            className="w-full bg-transparent text-xs leading-relaxed focus:outline-none resize-none placeholder:opacity-40"
+            className="w-full bg-transparent text-sm leading-relaxed focus:outline-none placeholder:opacity-50 font-medium text-stone-100"
             style={{ color: LuxuryTheme.text.primary }}
           />
         </div>
@@ -428,84 +464,81 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
       {/* ================= SECTION 2: Facts & Assumptions (Open with Bulleted Text) ================= */}
       <div className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden space-y-0">
         <div 
-          className="w-full p-3.5 flex justify-between items-center text-xs font-semibold"
+          className="w-full p-3.5 flex justify-between items-center text-sm font-bold"
           style={{ backgroundColor: 'rgba(212, 175, 55, 0.04)', color: LuxuryTheme.accent.gold }}
         >
           <span className="font-bold flex items-center gap-1.5">
             <span>⚖️</span>
             <span>עובדות מוצקות והנחות מובילות</span>
           </span>
-          <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono border border-amber-500/20">
+          <span className="text-xs px-2.5 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono border border-amber-500/20 font-semibold">
             תמונת מצב
           </span>
         </div>
 
-        <div className="p-3.5 space-y-3 border-t border-white/5">
+        <div className="p-3.5 space-y-3.5 border-t border-white/5">
           {/* Solid Facts */}
-          <div className="p-3 rounded-xl border" style={{ borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }}>
-            <div className="flex justify-between items-center mb-1 text-xs">
-              <span className="font-semibold" style={{ color: LuxuryTheme.accent.gold }}>עובדות מוצקות (מבוססות ודאות):</span>
+          <div className="p-3.5 rounded-xl border" style={{ borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }}>
+            <div className="flex justify-between items-center mb-1 text-sm">
+              <span className="font-bold" style={{ color: LuxuryTheme.accent.gold }}>עובדות מוצקות (מבוססות ודאות):</span>
               <button 
                 type="button" 
                 onClick={() => startVoiceInput('facts', val => handleFieldChange('facts', formatToBulletLines(val)))} 
-                className="text-[10px] cursor-pointer"
+                className="text-xs font-semibold cursor-pointer"
                 style={{ color: activeRecordingField === 'facts' ? '#f43f5e' : LuxuryTheme.accent.gold }}
               >
                 {activeRecordingField === 'facts' ? '● מקשיב...' : '🎙️ עדכן'}
               </button>
             </div>
-            <textarea
-              rows={Math.max(2, facts ? facts.split('\n').length : 2)}
+            <AutoResizeTextarea
               value={facts}
               onChange={e => handleFieldChange('facts', e.target.value)}
               onBlur={() => setFacts(prev => formatToBulletLines(prev))}
               placeholder="• נתונים ועובדות..."
-              className="w-full bg-transparent text-xs text-stone-100 leading-relaxed focus:outline-none resize-none placeholder:opacity-40 font-light"
+              className="w-full bg-transparent text-sm text-stone-100 leading-relaxed focus:outline-none placeholder:opacity-50 font-medium"
             />
           </div>
 
           {/* Guiding Assumptions */}
-          <div className="p-3 rounded-xl border" style={{ borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }}>
-            <div className="flex justify-between items-center mb-1 text-xs">
-              <span className="font-semibold" style={{ color: LuxuryTheme.accent.gold }}>ההנחות שמובילות אותך:</span>
+          <div className="p-3.5 rounded-xl border" style={{ borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }}>
+            <div className="flex justify-between items-center mb-1 text-sm">
+              <span className="font-bold" style={{ color: LuxuryTheme.accent.gold }}>ההנחות שמובילות אותך:</span>
               <button 
                 type="button" 
                 onClick={() => startVoiceInput('assumptions', val => handleFieldChange('assumptions', formatToBulletLines(val)))} 
-                className="text-[10px] cursor-pointer"
+                className="text-xs font-semibold cursor-pointer"
                 style={{ color: activeRecordingField === 'assumptions' ? '#f43f5e' : LuxuryTheme.accent.gold }}
               >
                 {activeRecordingField === 'assumptions' ? '● מקשיב...' : '🎙️ עדכן'}
               </button>
             </div>
-            <textarea
-              rows={Math.max(2, assumptions ? assumptions.split('\n').length : 2)}
+            <AutoResizeTextarea
               value={assumptions}
               onChange={e => handleFieldChange('assumptions', e.target.value)}
               onBlur={() => setAssumptions(prev => formatToBulletLines(prev))}
               placeholder="• השערות, ציפיות..."
-              className="w-full bg-transparent text-xs text-stone-100 leading-relaxed focus:outline-none resize-none placeholder:opacity-40 font-light"
+              className="w-full bg-transparent text-sm text-stone-100 leading-relaxed focus:outline-none placeholder:opacity-50 font-medium"
             />
           </div>
 
           {/* Missing Info / Core Hinge */}
-          <div className="p-3 rounded-xl border" style={{ borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }}>
-            <div className="flex justify-between items-center mb-1 text-xs">
-              <span className="font-semibold" style={{ color: LuxuryTheme.accent.gold }}>פער המידע / ציר ההכרעה:</span>
+          <div className="p-3.5 rounded-xl border" style={{ borderColor: 'rgba(212, 175, 55, 0.35)', backgroundColor: 'rgba(212, 175, 55, 0.03)' }}>
+            <div className="flex justify-between items-center mb-1 text-sm">
+              <span className="font-bold" style={{ color: LuxuryTheme.accent.gold }}>פער המידע / ציר ההכרעה:</span>
               <button 
                 type="button" 
                 onClick={() => startVoiceInput('missingInfo', val => handleFieldChange('missingInfo', val))} 
-                className="text-[10px] cursor-pointer"
+                className="text-xs font-semibold cursor-pointer"
                 style={{ color: activeRecordingField === 'missingInfo' ? '#f43f5e' : LuxuryTheme.accent.gold }}
               >
                 {activeRecordingField === 'missingInfo' ? '● מקשיב...' : '🎙️ עדכן'}
               </button>
             </div>
-            <textarea
-              rows={2}
+            <AutoResizeTextarea
               value={missingInfo}
               onChange={e => handleFieldChange('missingInfo', e.target.value)}
               placeholder="מה חסר לך כדי לדעת בוודאות..."
-              className="w-full bg-transparent text-xs text-stone-100 leading-relaxed focus:outline-none resize-none placeholder:opacity-40 font-light"
+              className="w-full bg-transparent text-sm text-stone-100 leading-relaxed focus:outline-none placeholder:opacity-50 font-medium"
             />
           </div>
         </div>
@@ -523,16 +556,16 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
       )}
 
       {/* ================= SECTION 4: Bespoke Question ================= */}
-      <div className="p-4 rounded-2xl border space-y-3 text-center"
+      <div className="p-4 sm:p-5 rounded-2xl border space-y-4 text-center"
            style={{ backgroundColor: 'rgba(212, 175, 55, 0.04)', borderColor: 'rgba(212, 175, 55, 0.2)' }}>
-        <div className="font-editorial text-lg font-semibold italic leading-snug px-2" style={{ color: LuxuryTheme.accent.gold }}>
+        <div className="font-editorial text-xl sm:text-2xl font-bold italic leading-snug px-2" style={{ color: LuxuryTheme.accent.gold }}>
           "{effectiveQuestion}"
         </div>
 
         <button
           type="button"
           onClick={() => startVoiceInput('answer', setUserAnswer)}
-          className={`w-full py-3.5 px-4 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold cursor-pointer transition-all ${
+          className={`w-full py-4 px-4 rounded-xl border flex items-center justify-center gap-2 text-sm font-bold cursor-pointer transition-all ${
             activeRecordingField === 'answer' 
               ? 'border-rose-500 bg-rose-500/20 text-rose-200 animate-pulse' 
               : 'border-amber-400 bg-amber-500/15 text-amber-200 hover:bg-amber-500/25'
@@ -545,12 +578,11 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
           </span>
         </button>
 
-        <textarea
-          rows={2}
+        <AutoResizeTextarea
           placeholder="או הקלד תשובה ידנית..."
           value={userAnswer}
           onChange={e => setUserAnswer(e.target.value)}
-          className="w-full p-2.5 rounded-xl border border-white/10 bg-white/[0.02] text-xs text-right focus:outline-none resize-none placeholder:opacity-40"
+          className="w-full p-3 rounded-xl border border-white/10 bg-white/[0.02] text-sm font-medium text-right focus:outline-none placeholder:opacity-50 text-stone-100"
           style={{ color: LuxuryTheme.text.primary }}
         />
 
@@ -559,7 +591,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
             type="button"
             onClick={() => handleAnalyzeAnswer()}
             disabled={isAnalyzingAnswer}
-            className="w-full py-3.5 rounded-xl border text-xs font-bold cursor-pointer transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(212,175,55,0.15)]"
+            className="w-full py-4 rounded-xl border text-sm font-bold cursor-pointer transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(212,175,55,0.15)]"
             style={{ 
               borderColor: LuxuryTheme.accent.gold, 
               backgroundColor: isAnalyzingAnswer ? 'rgba(212, 175, 55, 0.1)' : 'rgba(212, 175, 55, 0.25)', 
@@ -577,7 +609,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
           </button>
 
           {analysisErrorNotice && (
-            <div className="text-[11px] text-rose-300 p-2 rounded-lg bg-rose-950/40 border border-rose-500/20 text-center">
+            <div className="text-xs font-medium text-rose-300 p-2.5 rounded-lg bg-rose-950/40 border border-rose-500/20 text-center">
               {analysisErrorNotice}
             </div>
           )}
@@ -585,7 +617,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
           <button
             type="button"
             onClick={handleSkip}
-            className="text-xs opacity-60 hover:opacity-100 underline cursor-pointer py-1 block mx-auto"
+            className="text-sm font-medium opacity-70 hover:opacity-100 underline cursor-pointer py-1 block mx-auto"
           >
             מספיק לי לעכשיו — המשך ללא מענה
           </button>
@@ -597,15 +629,15 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         <div className="pt-4 border-t border-white/10 space-y-4">
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-editorial font-semibold tracking-widest text-amber-300">סיכום ההחלטה</span>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono border border-amber-500/20">
+              <span className="text-xs font-editorial font-bold tracking-widest text-amber-300">סיכום ההחלטה</span>
+              <span className="text-xs px-2.5 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono border border-amber-500/20 font-semibold">
                 מסקנה וצעד מעשי
               </span>
             </div>
             <h2 className="font-editorial text-2xl font-bold" style={{ color: LuxuryTheme.text.primary }}>
               סיכום ההחלטה
             </h2>
-            <p className="text-xs opacity-60">
+            <p className="text-sm font-medium opacity-75">
               המסקנה המזוקקת והצעד המעשי שנקבע:
             </p>
           </div>
@@ -617,8 +649,8 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
           >
             {/* Before */}
             <div className="space-y-1">
-              <span className="text-[10px] uppercase font-mono tracking-wider opacity-60 text-stone-400">נקודת המוצא:</span>
-              <p className="text-xs font-light text-stone-300 leading-relaxed italic">
+              <span className="text-xs uppercase font-mono tracking-wider opacity-75 text-stone-400 font-semibold">נקודת המוצא:</span>
+              <p className="text-sm font-normal text-stone-200 leading-relaxed italic">
                 {insight.before || consideration}
               </p>
             </div>
@@ -628,10 +660,10 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
             {/* Now */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase font-mono tracking-wider font-semibold text-amber-300">המסקנה כעת:</span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono">מסקנה מזוקקת</span>
+                <span className="text-xs uppercase font-mono tracking-wider font-bold text-amber-300">המסקנה כעת:</span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono font-bold">מסקנה מזוקקת</span>
               </div>
-              <p className="text-xs font-medium text-amber-100 leading-relaxed">
+              <p className="text-sm font-semibold text-amber-100 leading-relaxed">
                 {insight.now || 'בירור ממוקד של הנחת הציר'}
               </p>
             </div>
@@ -639,45 +671,42 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
 
           {/* Restored CARD: Proposed Steps Selection (פעולות מומלצות והגדרת הצעד הבא) */}
           <div 
-            className="p-4 rounded-2xl border space-y-3"
+            className="p-4 rounded-2xl border space-y-3.5"
             style={{ backgroundColor: 'rgba(212, 175, 55, 0.03)', borderColor: 'rgba(212, 175, 55, 0.25)' }}
           >
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="font-bold text-amber-300">הצעד הבא שנבחר:</span>
-              <span className="text-[9px] opacity-70 px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-200">
-                הצעת המערכת · ניתן לבחירה או עריכה
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-amber-300 text-sm">הצעדים שנבחרו:</span>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-200">
+                ניתן לבחור יותר מפעולה אחת
               </span>
             </div>
             
-            <p className="text-[11px] opacity-75 leading-relaxed">
-              בחר את הפעולה המומלצת המתאימה ביותר, או הגדר צעד משלך:
+            <p className="text-xs sm:text-sm font-medium opacity-85 leading-relaxed">
+              בחר את כל הפעולות המומלצות שברצונך לקדם, או הגדר צעד משלך:
             </p>
 
-            {/* Selectable Proposed Steps List */}
+            {/* Multi-Selectable Proposed Steps List */}
             {proposedSteps.length > 0 && (
-              <div className="space-y-2 pt-1">
+              <div className="space-y-2.5 pt-1">
                 {proposedSteps.map((stepText, idx) => {
-                  const isSelected = selectedStepIndex === idx && !customStepText.trim();
+                  const isSelected = selectedStepIndices.includes(idx);
                   return (
                     <button
                       key={idx}
                       type="button"
-                      onClick={() => {
-                        setSelectedStepIndex(idx);
-                        setCustomStepText('');
-                      }}
-                      className={`w-full p-2.5 rounded-xl border text-right text-xs leading-relaxed flex items-start gap-2.5 transition-all cursor-pointer ${
+                      onClick={() => toggleStepSelection(idx)}
+                      className={`w-full p-3 rounded-xl border text-right text-sm leading-relaxed flex items-start gap-3 transition-all cursor-pointer ${
                         isSelected
-                          ? 'border-amber-400 bg-amber-500/20 text-white font-medium shadow-[0_0_12px_rgba(212,175,55,0.15)]'
-                          : 'border-white/10 bg-white/[0.02] text-stone-300 hover:bg-white/[0.05]'
+                          ? 'border-amber-400 bg-amber-500/20 text-white font-semibold shadow-[0_0_12px_rgba(212,175,55,0.15)]'
+                          : 'border-white/10 bg-white/[0.02] text-stone-200 hover:bg-white/[0.05]'
                       }`}
                     >
-                      <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 text-[9px] ${
-                        isSelected ? 'border-amber-400 bg-amber-400 text-black font-bold' : 'border-white/30 text-transparent'
+                      <span className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold transition-all ${
+                        isSelected ? 'border-amber-400 bg-amber-400 text-black' : 'border-white/30 text-transparent'
                       }`}>
                         ✓
                       </span>
-                      <span className="flex-1">{stepText}</span>
+                      <span className="flex-1 font-medium">{stepText}</span>
                     </button>
                   );
                 })}
@@ -685,14 +714,14 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
             )}
 
             {/* Custom User Step Input */}
-            <div className="pt-2.5 border-t border-white/5 space-y-1.5">
-              <label className="block text-[10px] text-amber-300/80">או הזן החלטה / צעד מותאם אישית משלך:</label>
+            <div className="pt-3 border-t border-white/5 space-y-1.5">
+              <label className="block text-xs font-semibold text-amber-300/90">או הוסף החלטה / צעד מותאם אישית משלך:</label>
               <input
                 type="text"
                 value={customStepText}
                 onChange={e => setCustomStepText(e.target.value)}
                 placeholder="הקלד כאן החלטה או צעד משלך (אופציונלי)..."
-                className="w-full bg-white/[0.03] border border-amber-500/25 rounded-xl px-3 py-2 text-xs text-right text-stone-100 placeholder:opacity-40 focus:outline-none focus:border-amber-400 font-light"
+                className="w-full bg-white/[0.03] border border-amber-500/25 rounded-xl px-3.5 py-2.5 text-sm text-right text-stone-100 placeholder:opacity-50 focus:outline-none focus:border-amber-400 font-medium"
               />
             </div>
           </div>
@@ -700,7 +729,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
           <button 
             type="button"
             onClick={handleSaveToJournal}
-            className="w-full py-3.5 rounded-xl border text-xs font-bold cursor-pointer active:scale-[0.98] mt-2 shadow-[0_0_25px_rgba(212,175,55,0.2)]"
+            className="w-full py-4 rounded-xl border text-sm font-bold cursor-pointer active:scale-[0.98] mt-2 shadow-[0_0_25px_rgba(212,175,55,0.2)]"
             style={{ 
               borderColor: LuxuryTheme.accent.gold, 
               backgroundColor: 'rgba(212, 175, 55, 0.25)', 
@@ -709,51 +738,6 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
           >
             שמור בזיכרון ההחלטות וחתום למעקב ←
           </button>
-
-          {/* ================= שרשרת שיקול הדעת המלאה (רק לאחר סיכום ההחלטה) ================= */}
-          <div className="pt-5 border-t border-white/10 space-y-3">
-            <div className="flex items-center justify-between pb-1">
-              <span className="text-xs font-bold" style={{ color: LuxuryTheme.accent.gold }}>
-                שרשרת שיקול הדעת המלאה
-              </span>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 font-medium border border-amber-500/20">
-                8 שלבי הכרעה
-              </span>
-            </div>
-            <p className="text-xs opacity-60">
-              כל התהליך כפי שהתחדד מהדילמה ועד לצעד המעשי:
-            </p>
-
-            <DecisionFlowPipeline
-              dilemma={consideration}
-              goalsPrices={goalsPrices}
-              facts={facts}
-              assumptions={assumptions}
-              question={effectiveQuestion}
-              pastEcho={
-                similarCaseAnalogy
-                  ? {
-                      title: similarCaseAnalogy.title,
-                      reason: similarCaseAnalogy.reason,
-                      score: similarCaseAnalogy.score ?? 0.85,
-                      allRelatedEchoes: similarCaseAnalogy.allRelatedEchoes,
-                      insightsSummary: similarCaseAnalogy.insightsSummary
-                    }
-                  : historicalQuestion
-                  ? {
-                      title: 'תקדים עבר רלוונטי',
-                      reason: historicalQuestion.questionText,
-                      score: 0.85
-                    }
-                  : null
-              }
-              answer={userAnswer.trim() || undefined}
-              proposedSteps={proposedSteps}
-              conclusion={insight.now || 'הבנת את גורם המפתח להכרעה'}
-              nextStep={effectiveNextStep}
-              scrollable={false}
-            />
-          </div>
         </div>
       )}
 
@@ -761,4 +745,5 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
     </div>
   );
 };
+
 

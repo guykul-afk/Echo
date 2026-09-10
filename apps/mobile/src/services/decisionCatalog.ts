@@ -171,6 +171,16 @@ export const CANONICAL_PRECEDENTS: CatalogPrecedent[] = [
   }
 ];
 
+export const HEBREW_STOPWORDS = new Set([
+  'את', 'על', 'עם', 'של', 'לא', 'כן', 'זה', 'זו', 'אלה', 'אלו', 'היה', 'היו', 'תהיה', 'יהיה',
+  'אני', 'אתה', 'הוא', 'היא', 'אנחנו', 'אתם', 'הם', 'כל', 'רק', 'עוד', 'יותר', 'לפני', 'אחרי',
+  'כדי', 'אם', 'כי', 'או', 'גם', 'אבל', 'אך', 'כבר', 'שוב', 'שם', 'פה', 'כאן', 'מאוד', 'מה', 'מי',
+  'לגבי', 'בגלל', 'מתוך', 'אצל', 'כמו', 'בין', 'שאתה', 'שאני', 'אולי', 'שוקל', 'שוקלת', 'מתלבט', 'מתלבטת',
+  'דילמה', 'הדילמה', 'ההחלטה', 'החלטה', 'האם', 'להמשיך', 'לבחור', 'בפועל', 'עכשיו', 'רוצה', 'צריך',
+  'פרויקט', 'אפשרות', 'בנושא', 'טובה', 'פחות', 'מול', 'היום', 'כרגע', 'איך', 'כיצד', 'דרך', 'נושא',
+  'שלה', 'שלו', 'שלי', 'שלנו', 'שלהם', 'אותו', 'אותה', 'אותי', 'אותנו', 'אותם', 'אחת', 'אחד', 'שני', 'שניה'
+]);
+
 // 2. Fetch all user decisions from localStorage + canonical archive
 export function getAllUserDecisions(userId: string = 'Guy_Kuleski'): CatalogPrecedent[] {
   const mergedMap = new Map<string, CatalogPrecedent>();
@@ -197,7 +207,8 @@ export function getAllUserDecisions(userId: string = 'Guy_Kuleski'): CatalogPrec
                 const textToWords = (title + ' ' + (item.dilemma || '') + ' ' + (item.consideration || '') + ' ' + (item.facts || '') + ' ' + (item.assumptions || '')).toLowerCase();
                 const extractedKeywords = textToWords
                   .split(/[\s,.:;״"()!?\-\/]+/)
-                  .filter(w => w.length >= 3);
+                  .map(w => w.trim())
+                  .filter(w => w.length >= 3 && !HEBREW_STOPWORDS.has(w));
 
                 const existing = mergedMap.get(item.id);
                 mergedMap.set(item.id, {
@@ -224,13 +235,6 @@ export function getAllUserDecisions(userId: string = 'Guy_Kuleski'): CatalogPrec
 
   return Array.from(mergedMap.values());
 }
-
-const HEBREW_STOPWORDS = new Set([
-  'את', 'על', 'עם', 'של', 'לא', 'כן', 'זה', 'זו', 'אלה', 'אלו', 'היה', 'היו', 'תהיה', 'יהיה',
-  'אני', 'אתה', 'הוא', 'היא', 'אנחנו', 'אתם', 'הם', 'כל', 'רק', 'עוד', 'יותר', 'לפני', 'אחרי',
-  'כדי', 'אם', 'כי', 'או', 'גם', 'אבל', 'אך', 'כבר', 'שוב', 'שם', 'פה', 'כאן', 'מאוד', 'מה', 'מי',
-  'לגבי', 'בגלל', 'מתוך', 'אצל', 'כמו', 'בין', 'שאתה', 'שאני', 'אולי', 'שוקל', 'שוקלת', 'מתלבט', 'מתלבטת'
-]);
 
 export interface RelatedPrecedentItem {
   id: string;
@@ -285,8 +289,11 @@ export function findRelatedOKFPrecedents(
     let score = 0;
     const matchReasons: string[] = [];
 
-    // Layer 1: Specific keyword matching
-    const matchedKeywords = dec.keywords.filter(k => combinedCurrent.includes(k.toLowerCase()));
+    // Layer 1: Specific keyword matching (strictly excluding stopwords)
+    const matchedKeywords = dec.keywords.filter(k => 
+      !HEBREW_STOPWORDS.has(k.toLowerCase()) && 
+      combinedCurrent.includes(k.toLowerCase())
+    );
     if (matchedKeywords.length > 0) {
       const keywordRatio = Math.min(0.45, matchedKeywords.length * 0.15);
       score += keywordRatio;
@@ -294,6 +301,7 @@ export function findRelatedOKFPrecedents(
     }
 
     // Layer 2: Deep Mechanism Match (Trade-offs & Principles)
+    let hasTradeoffMatch = false;
     if (deepMechanisms?.tradeoffs && dec.tradeoffs) {
       for (const t of deepMechanisms.tradeoffs) {
         const curProt = (t.protectedValue || '').toLowerCase();
@@ -303,21 +311,25 @@ export function findRelatedOKFPrecedents(
 
         if (curProt && (pastProt.includes(curProt) || curProt.includes(pastProt))) {
           score += 0.35;
+          hasTradeoffMatch = true;
           matchReasons.push('סחרור משותף: שימור ' + t.protectedValue);
         }
         if (curSacr && (pastSacr.includes(curSacr) || curSacr.includes(pastSacr))) {
           score += 0.35;
+          hasTradeoffMatch = true;
           matchReasons.push('ויתור משותף: ' + t.sacrificedValue);
         }
       }
     }
 
+    let hasPrincipleMatch = false;
     if (deepMechanisms?.operatingPrinciples && dec.principles) {
       for (const p of deepMechanisms.operatingPrinciples) {
         const pLower = p.toLowerCase();
         const pastPrincipleHit = dec.principles.some(dp => dp.toLowerCase().includes(pLower) || pLower.includes(dp.toLowerCase()));
         if (pastPrincipleHit) {
           score += 0.4;
+          hasPrincipleMatch = true;
           matchReasons.push('עקרון פעולה חוזר: ' + p);
         }
       }
@@ -333,21 +345,29 @@ export function findRelatedOKFPrecedents(
     );
 
     let overlapCount = 0;
+    const overlappingWords: string[] = [];
     for (const token of currentTokens) {
       if (decTokens.has(token)) {
         overlapCount++;
+        overlappingWords.push(token);
       }
     }
 
     if (overlapCount >= 1) {
       score += Math.min(0.35, overlapCount * 0.12);
-      matchReasons.push('חפיפה קונספטואלית (' + overlapCount + ' מונחים)');
+      matchReasons.push('חפיפה קונספטואלית (' + overlappingWords.slice(0, 3).join(', ') + ')');
+    }
+
+    // Strict Domain Gate: Must have at least 1 real domain keyword OR OKF mechanism match!
+    const hasAnchor = matchedKeywords.length >= 1 || hasTradeoffMatch || hasPrincipleMatch;
+    if (!hasAnchor) {
+      continue; // Reject matches purely based on generic tokens
     }
 
     const normalizedScore = Math.min(0.96, score);
 
-    // Threshold for related precedent candidate: >= 0.3
-    if (normalizedScore >= 0.3) {
+    // Threshold for related precedent candidate: >= 0.40
+    if (normalizedScore >= 0.40) {
       const lessonText = dec.lesson || dec.conclusion || dec.outcome || dec.dilemma;
       scoredMatches.push({
         id: dec.id,
@@ -364,7 +384,7 @@ export function findRelatedOKFPrecedents(
   scoredMatches.sort((a, b) => b.score - a.score);
 
   const topMatches = scoredMatches.slice(0, 4);
-  const primaryEcho = topMatches.length > 0 && topMatches[0].score >= 0.35 ? topMatches[0] : null;
+  const primaryEcho = topMatches.length > 0 && topMatches[0].score >= 0.45 ? topMatches[0] : null;
 
   let insightsSummary = '';
   if (topMatches.length > 0) {
