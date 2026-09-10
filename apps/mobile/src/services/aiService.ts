@@ -1,5 +1,6 @@
 // Real-time Epistemic & Cognitive Analysis Service using Gemini 3.6 Flash
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
+import { findBestOKFPrecedent, PrecedentMatchResult } from './decisionCatalog.js';
 
 export function getActiveGeminiKey(): string {
   if (typeof window !== 'undefined') {
@@ -31,6 +32,10 @@ export interface EpistemicAnalysisOutput {
   question: string;
   proposedSteps: string[];
   proposedCriteria: string[];
+  // OKF Deep Decision Mechanisms (Horizon 2)
+  operatingPrinciples?: string[];
+  tradeoffs?: Array<{ protectedValue: string; sacrificedValue: string }>;
+  boundaryConditions?: string[];
 }
 
 export interface AnalysisSessionResult {
@@ -44,45 +49,6 @@ export interface AnalysisSessionResult {
   refinedInsight: RefinedInsight;
   proposedSteps?: string[];
 }
-
-// Precedent database for authentic Tri-Factor matching (NO irrelevant fallback!)
-const PRECEDENTS_DATABASE = [
-  {
-    keywords: ['קבלן', 'שלד', 'גמרים', 'שיפוץ', 'בנייה', 'קבלנים', 'קבלני'],
-    title: 'המשכיות עם קבלן השלד לעבודות הגמרים (2026)',
-    reason: 'שימוש באותו קבלן לשני השלבים בפרויקט קודם יצר פשרות אסתטיות שלא ניתן היה לתקן בדיעבד. הלקח: להפריד בין שלד לגמרים.',
-    question: 'בפרויקט כנרת למדת שקבלן שלד מצטיין אינו בהכרח פדנט בגמרים. האם נכון גם כאן לפצל?',
-    score: 0.88
-  },
-  {
-    keywords: ['בטון', 'ספק', 'אספקה', 'יציקה', 'מחיר בטון', 'פיצול ספקים'],
-    title: 'אסטרטגיית אספקת בטון לפרויקט קטרוני (2026)',
-    reason: 'העדפת ספק יחיד זול יצרה סיכון השבתה של 45,000 ש"ח ליום יציקה. הלקח: פיצול 70/30 כביטוח שווה את הפרמיה.',
-    question: 'האם עלות פרמיית הגיבוי שווה את מניעת הסיכון להשבתה כפי שהוכח ביולי 2026?',
-    score: 0.91
-  },
-  {
-    keywords: ['תפקיד', 'שכר', 'הצעת עבודה', 'מנהל', 'ילדים', 'שעות ערב', 'קריירה', 'זמינות בערב', 'job'],
-    title: 'מעבר תפקיד ניהולי וזמינות בערבים (2024)',
-    reason: 'במעבר הקודם ציינת בדיעבד שזמן הבית והנוכחות עם הילדים היו קריטיים בהרבה ממה שהערכת, וכי תיאום ציפיות מראש מנע שחיקה.',
-    question: 'במעבר התפקיד הקודם (2024) למדת שציפיות זמינות בערב חובה לברר לפני חתימה. האם הלקח הזה תקף להחלטה הנוכחית?',
-    score: 0.89
-  },
-  {
-    keywords: ['ספורט', 'גלישה', 'כנרת', 'גב', 'ריצה', 'פציעה', 'עומס גופני', 'כאב'],
-    title: 'חזרה לפעילות מאומצת מול סמנים סומטיים (2025)',
-    reason: 'נטילת סיכון גופני יתר על המידה הובילה להשבתה ממושכת פי 3. הלקח: כבוד לאיתותי הגוף לפני דחיפה.',
-    question: 'האם הרצון לחזור לפעילות גובר שוב על איתותי העומס כפי שקרה בפציעה הקודמת?',
-    score: 0.84
-  },
-  {
-    keywords: ['מחיר', 'דירות', 'תמחור דירות', 'מכירה', 'מבצע', 'סלומון', 'נדל"ן'],
-    title: 'תמחור דירות קיטרוני וסלומון (2026)',
-    reason: 'הורדה גורפת פגעה במיצוב. הלקח: מבצע מתוחם בזמן ל-2 דירות בלבד שמר על ערך שאר הפרויקט (דרך שלישית).',
-    question: 'האם במקום הורדה גורפת ניתן לייצר פיילוט מתוחם כפי שפעל בהצלחה בסלומון?',
-    score: 0.87
-  }
-];
 
 export async function analyzeCapturedDilemma(
   rawText: string,
@@ -101,16 +67,19 @@ export async function analyzeCapturedDilemma(
 הטקסט שנלכד מהמשתמש:
 """${rawText}"""
 
-כללי ברזל לאי-הזיה ולדיוק עובדתי (Strict Grounding & Anti-Hallucination):
-1. היצמד אך ורק למלל שנלכד ולמשמעות הישירה שלו. אל תמציא פרטים חיצוניים, שמות פרויקטים שלא הוזכרו או נושאים עסקיים שלא קשורים (למשל: אם מדובר באוכל/כריך, אל תערב קבלנים, שלד, נדל"ן או מונחים ארגוניים).
+כללי ברזל לאי-הזיה, חילוץ אונטולוגי (OKF) ודיוק עובדתי (Strict Grounding & Anti-Hallucination):
+1. היצמד אך ורק למלל שנלכד ולמשמעות הישירה שלו. אל תמציא פרטים חיצוניים, שמות פרויקטים שלא הוזכרו או נושאים עסקיים שלא קשורים.
 2. 'consideration' (אתה שוקל): ניסוח בגוף שני ("אתה שוקל אם...") המגדיר בדיוק מה עומד על הפרק.
-3. 'centralTension' (מתח מרכזי): מה עומד מול מה ברמת הערכים, הצרכים והמחירים הספציפיים לדילמה זו (למשל סיפוק רעב מיידי ונוחות מול תזונה בריאה).
+3. 'centralTension' (מתח מרכזי): מה עומד מול מה ברמת הערכים, הצרכים והמחירים הספציפיים לדילמה זו.
 4. 'goalsPrices' (מטרות ומחירים): "הבנתי שחשוב לך להשיג ולשמור: ..." הממוקד בדיוק בנושא של המשתמש.
-5. 'facts' (עובדות קשיחות): מה שידוע בוודאות מתוך דברי המשתמש.
-6. 'assumptions' (הנחות ופרשנויות): בין 1 ל-3 הנחות מרכזיות שהמשתמש מניח לגבי העתיד או המצב.
+5. 'facts' (עובדות קשיחות): מה שידוע בוודאות מתוך דברי המשתמש כרשימת עובדות נפרדות (מערך מיתרים).
+6. 'assumptions' (הנחות ופרשנויות): בין 1 ל-3 הנחות מרכזיות שהמשתמש מניח לגבי העתיד או המצב (מערך מיתרים).
 7. 'missingInfo' (פער המידע / ציר ההכרעה): מהו הנתון היחיד או השאלה שבירורה יכריע את הכף.
-8. 'question' (שאלת חידוד והארה): שאלה אחת בלבד, חדה, עמוקה ומאירה, המנוסחת בגוף שני וממוקדת ישירות בדילמה זו (לא גנרית!).
+8. 'question' (שאלת חידוד והארה מרכזית): שאלה אחת בלבד, חדה, עמוקה ומאירה, המנוסחת בגוף שני וממוקדת ב-100% בחומר הגלם של הדילמה שנלכדה כעת (ללא ערבוב עם תקדימי עבר או נושאים חיצוניים)!
 9. 'proposedSteps': מערך של 1 עד 2 צעדים מעשיים וקונקרטיים המתאימים ישירות לדילמה.
+10. 'operatingPrinciples': בין 1 ל-2 עקרונות פעולה או כללי אצבע של שיקול דעת המופעלים בדילמה זו (מערך מיתרים).
+11. 'tradeoffs': ויתורים מודעים בין ערך מוגן (protectedValue - מה שומרים בכל מחיר) לבין ערך מוקרב (sacrificedValue - על מה מוותרים או מסתכנים).
+12. 'boundaryConditions': סייגים ותנאי סף לקיום ההנחות ("ההנחה תקפה רק אם...").
 
 חלץ פלט JSON מדויק בעברית לפי המבנה הבא:
 {
@@ -121,9 +90,12 @@ export async function analyzeCapturedDilemma(
   "facts": ["עובדה קשיחה 1", "עובדה קשיחה 2"],
   "assumptions": ["הנחה 1", "הנחה 2"],
   "missingInfo": "...",
-  "question": "...",
+  "question": "שאלת חידוד חדה הממוקדת ב-100% בחומר הגלם הנוכחי...",
   "proposedSteps": ["צעד 1", "צעד 2"],
-  "proposedCriteria": ["קריטריון מעקב"]
+  "proposedCriteria": ["קריטריון מעקב"],
+  "operatingPrinciples": ["עקרון פעולה..."],
+  "tradeoffs": [{"protectedValue": "ערך מוגן", "sacrificedValue": "ערך מוקרב"}],
+  "boundaryConditions": ["סייג..."]
 }`;
 
     const controller = new AbortController();
@@ -186,7 +158,10 @@ export async function analyzeCapturedDilemma(
           missingInfo: obj.missingInfo || 'הנתון שיאפשר הכרעה מדויקת',
           question: obj.question || 'מהו הגורם האחד שאם יתברר, יכריע את הכף עבורך?',
           proposedSteps: Array.isArray(obj.proposedSteps) && obj.proposedSteps.length > 0 ? obj.proposedSteps : ['בירור ממוקד לפני הכרעה'],
-          proposedCriteria: Array.isArray(obj.proposedCriteria) ? obj.proposedCriteria : ['בדיקת תוצאות ההכרעה']
+          proposedCriteria: Array.isArray(obj.proposedCriteria) ? obj.proposedCriteria : ['בדיקת תוצאות ההכרעה'],
+          operatingPrinciples: Array.isArray(obj.operatingPrinciples) ? obj.operatingPrinciples : [],
+          tradeoffs: Array.isArray(obj.tradeoffs) ? obj.tradeoffs : [],
+          boundaryConditions: Array.isArray(obj.boundaryConditions) ? obj.boundaryConditions : []
         };
       }
     } else {
@@ -202,29 +177,29 @@ export async function analyzeCapturedDilemma(
     throw new Error('מנוע ה-AI לא הפיק ניתוח עבור הדילמה שנלכדה. אנא נסה שוב.');
   }
 
-  // Authentic Tri-Factor Precedent Matching (STRICT: Never force a false fallback!)
-  const lower = rawText.toLowerCase();
-  let matchedPrecedent = null;
-  for (const prec of PRECEDENTS_DATABASE) {
-    const hasMatch = prec.keywords.some(k => lower.includes(k.toLowerCase()));
-    if (hasMatch) {
-      matchedPrecedent = prec;
-      break;
-    }
-  }
+  // Authentic OKF Precedent Matching against User's Historical Decisions Catalog
+  const precedentMatch = findBestOKFPrecedent(
+    rawText,
+    parsed.consideration,
+    {
+      operatingPrinciples: parsed.operatingPrinciples,
+      tradeoffs: parsed.tradeoffs
+    },
+    currentUserId
+  );
 
-  let mockHistorical = undefined;
-  let analogyData = undefined;
+  let mockHistorical: IlluminationQuestion | undefined = undefined;
+  let analogyData: { title: string; reason: string; strength: string; score?: number } | undefined = undefined;
 
-  // ONLY show precedent if there is an actual semantic/keyword match!
-  if (matchedPrecedent) {
+  // ONLY show precedent if there is an authentic semantic/OKF match!
+  if (precedentMatch) {
     mockHistorical = {
       id: `hist-${now}`,
       caseId: `dc-${now}`,
       strategy: 'outcome_contract_anchor',
       origin: 'historical_precedent',
-      questionText: matchedPrecedent.question,
-      triggerReason: 'זוהה תקדים עבר ישיר בנושא דומה',
+      questionText: precedentMatch.suggestedQuestion,
+      triggerReason: precedentMatch.matchReason,
       shouldIntervene: true,
       isSecondary: true,
       canSkip: true,
@@ -234,10 +209,10 @@ export async function analyzeCapturedDilemma(
     };
 
     analogyData = {
-      title: matchedPrecedent.title,
-      reason: matchedPrecedent.reason,
+      title: precedentMatch.matchedPrecedent.title,
+      reason: precedentMatch.matchedPrecedent.lesson || precedentMatch.matchedPrecedent.conclusion || precedentMatch.matchedPrecedent.dilemma,
       strength: 'strong',
-      score: matchedPrecedent.score
+      score: precedentMatch.score
     };
   }
 
