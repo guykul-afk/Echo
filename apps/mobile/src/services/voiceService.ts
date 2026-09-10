@@ -80,7 +80,7 @@ export async function transcribeAudioWithGemini(audioBlob: Blob): Promise<string
 2. אל תוסיף שום הקדמה, הסבר, מרכאות או תוספת שלא נאמרה בהקלטה.
 3. רק אם הקובץ שקט לחלוטין ללא כל דיבור אנושי, החזר: ריק.`;
 
-  const models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+  const models = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
   let lastError: any = null;
 
   for (const model of models) {

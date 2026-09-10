@@ -89,6 +89,9 @@ export async function analyzeCapturedDilemma(
   currentUserId: string = 'Guy_Kuleski'
 ): Promise<AnalysisSessionResult> {
   const apiKey = getActiveGeminiKey();
+  if (!apiKey) {
+    throw new Error('לא נמצא מפתח API פעיל עבור Gemini. אנא בדוק את ההגדרות.');
+  }
   const now = Date.now();
 
   let parsed: EpistemicAnalysisOutput | null = null;
@@ -180,27 +183,17 @@ export async function analyzeCapturedDilemma(
           proposedCriteria: Array.isArray(obj.proposedCriteria) ? obj.proposedCriteria : ['בדיקת תוצאות ההכרעה']
         };
       }
+    } else {
+      const errBody = await response.text().catch(() => '');
+      throw new Error(`שגיאת תקשורת עם מנוע ה-AI (${response.status}): ${errBody.slice(0, 120)}`);
     }
-  } catch (err) {
-    console.warn('[Echo AI Service] Gemini analysis notice:', err);
+  } catch (err: any) {
+    console.error('[Echo AI Service] Gemini analysis error:', err);
+    throw new Error(err?.message || 'שגיאת רשת בעת חיבור למנוע הניתוח של Gemini. אנא בדוק את החיבור לרשת ונסה שנית.');
   }
 
-  // Graceful fallback if offline or model error (NO fake contractor / irrelevant hallucination!)
   if (!parsed) {
-    const firstLine = rawText.split('\n')[0].trim();
-    parsed = {
-      title: firstLine.slice(0, 50) || 'דילמת שיקול דעת',
-      consideration: `אתה שוקל: ${rawText.trim()}`,
-      centralTension: 'בירור סדרי העדיפויות בין האפשרויות השונות שעל הפרק',
-      goalsPrices: 'השגת המענה המיטבי מול האילוצים והמחירים הקיימים',
-      facts: 'הנתונים שהוזנו במעמד הלכידה',
-      assumptions: 'הנחות המוצא שהובילו להתלבטות הנוכחית',
-      assumptionsList: ['הנחת המוצא העומדת בבסיס ההתלבטות'],
-      missingInfo: 'המידע החסר שיאפשר בחירה בטוחה',
-      question: 'אם היית חייב להכריע עכשיו, מה המחיר שפחות תרצה לשלם?',
-      proposedSteps: ['בירור ממוקד לפני הכרעה סופית'],
-      proposedCriteria: ['בחינת התוצאה בפועל']
-    };
+    throw new Error('מנוע ה-AI לא הפיק ניתוח עבור הדילמה שנלכדה. אנא נסה שוב.');
   }
 
   // Authentic Tri-Factor Precedent Matching (STRICT: Never force a false fallback!)

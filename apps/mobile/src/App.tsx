@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { LuxuryTheme } from './theme/colors.js';
 import { QuickCaptureScreen } from './screens/QuickCaptureScreen.js';
-import { DecisionRoomScreen } from './screens/DecisionRoomScreen.js';
+import { DecisionRoomScreen, DecisionSaveData } from './screens/DecisionRoomScreen.js';
 import { OutcomeModal } from './screens/OutcomeModal.js';
 import { DecisionProfileScreen } from './screens/DecisionProfileScreen.js';
 import { DecisionJournalScreen } from './screens/DecisionJournalScreen.js';
 import { TopDrawer } from './components/TopDrawer.js';
 import { checkRedirectAuth } from './services/firebaseAuth.js';
-import { syncUserDecisionsFromCloud } from './services/firestoreSync.js';
+import { syncUserDecisionsFromCloud, saveDecisionToCloud } from './services/firestoreSync.js';
 import { analyzeCapturedDilemma } from './services/aiService.js';
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, QuickLoopStatus, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
 
@@ -32,6 +32,8 @@ export const App: React.FC = () => {
   });
   const [capturesCount, setCapturesCount] = useState<number>(39);
   const [closuresCount, setClosuresCount] = useState<number>(8);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [lastRawCapture, setLastRawCapture] = useState<string>('');
 
   const loadUserMetrics = (user: string) => {
     try {
@@ -86,6 +88,8 @@ export const App: React.FC = () => {
       setIsLoading(false);
       return;
     }
+    setLastRawCapture(rawText);
+    setAnalysisError(null);
     setIsLoading(true);
 
     try {
@@ -101,22 +105,73 @@ export const App: React.FC = () => {
       setRefinedInsight(result.refinedInsight);
 
       setStep('decision_room');
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Capture Analysis Error]:', err);
+      setAnalysisError(err?.message || 'שגיאת תקשורת עם מנוע ה-AI של Gemini. אנא נסה שוב.');
     } finally {
       setIsLoading(false);
     }
   };
 
   // 2. Handle Decision Room Answer / Skip
-  const handleDecisionAnswer = (_answer: string, skip: boolean = false) => {
+  const handleDecisionAnswer = (answer: string, skip: boolean = false) => {
     if (skip) {
       setChosenNextStep(refinedInsight?.chosenStep || 'בירור מוקדם לפני הכרעה');
       setStep('outcome');
+    } else if (answer) {
+      setRefinedInsight(prev => ({
+        before: prev?.before || activeCase?.dimConsideration || activeCase?.title || '',
+        now: answer,
+        chosenStep: answer.slice(0, 80) || prev?.chosenStep || 'בירור מוקדם לפני הכרעה'
+      }));
     }
   };
 
-  // 3. Handle Mirror Live Update
+  // 3. Handle Full Decision Save into Journal (Sealed Record)
+  const handleSaveDecision = (saveData: DecisionSaveData) => {
+    const decisionId = activeCase?.id || `dec-${Date.now()}`;
+    const newDecision = {
+      id: decisionId,
+      title: saveData.consideration.slice(0, 60),
+      family: activeCase?.family || 'general_deliberation',
+      createdAt: activeCase?.createdAt || Date.now(),
+      frozenAt: Date.now(),
+      status: 'נחתם למעקב',
+      sealed: true,
+      dilemma: saveData.consideration,
+      goalsPrices: saveData.goalsPrices,
+      facts: saveData.facts,
+      assumptions: saveData.assumptions,
+      missingInfo: saveData.missingInfo,
+      question: saveData.question,
+      answer: saveData.answer,
+      conclusion: saveData.conclusion,
+      nextStep: saveData.nextStep,
+      followUps: []
+    };
+
+    const storageKey = `echo_decisions_${currentUserId}`;
+    let currentList: any[] = [];
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) currentList = JSON.parse(raw);
+    } catch {}
+
+    const updatedList = [newDecision, ...currentList.filter((d: any) => d.id !== decisionId)];
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(updatedList));
+      if (currentUserId.toLowerCase().includes('guy') || currentUserId.toLowerCase().includes('kuleski')) {
+        localStorage.setItem('echo_decisions_Guy_Kuleski', JSON.stringify(updatedList));
+        localStorage.setItem('echo_decisions_guy_founder', JSON.stringify(updatedList));
+      }
+    } catch {}
+
+    saveDecisionToCloud(newDecision, currentUserId);
+    loadUserMetrics(currentUserId);
+    setStep('journal');
+  };
+
+  // 4. Handle Mirror Live Update
   const handleMirrorUpdate = (updates: FiveHumanDimensions) => {
     if (activeCase) {
       setActiveCase({
@@ -133,7 +188,7 @@ export const App: React.FC = () => {
     }
   };
 
-  // 4. Handle 3-Axis Outcome Submit
+  // 5. Handle 3-Axis Outcome Submit
   const handleOutcomeSubmit = (_outcome: {
     whatHappened: string;
     assumptionClarification: string;
@@ -193,6 +248,32 @@ export const App: React.FC = () => {
 
         {/* Dynamic Screens */}
         <div className="flex-1 overflow-hidden flex flex-col">
+          {analysisError && (
+            <div className="mx-4 mt-3 p-3.5 rounded-2xl border border-rose-500/30 bg-rose-950/40 text-rose-200 text-xs text-right space-y-2 shrink-0 z-30" dir="rtl">
+              <div className="flex justify-between items-center">
+                <span className="font-bold flex items-center gap-1.5 text-rose-300">
+                  <span>⚠️</span>
+                  <span>תקלת תקשורת עם מנוע ה-AI</span>
+                </span>
+                <button 
+                  onClick={() => setAnalysisError(null)} 
+                  className="text-white/60 hover:text-white text-sm px-1 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-[11px] leading-relaxed opacity-90">{analysisError}</p>
+              {lastRawCapture && (
+                <button
+                  onClick={() => handleCaptureSubmit(lastRawCapture)}
+                  className="px-3 py-1.5 rounded-xl border border-rose-400/40 bg-rose-500/20 text-rose-100 text-xs font-semibold cursor-pointer active:scale-95"
+                >
+                  נסה שוב עם אותה הלכידה ↺
+                </button>
+              )}
+            </div>
+          )}
+
           {step === 'capture' && (
             <QuickCaptureScreen
               onCaptureSubmit={handleCaptureSubmit}
@@ -228,6 +309,7 @@ export const App: React.FC = () => {
               initialRefinedInsight={refinedInsight}
               similarCaseAnalogy={similarCaseAnalogy}
               onAnswerSubmit={handleDecisionAnswer}
+              onSaveDecision={handleSaveDecision}
               onMirrorUpdate={handleMirrorUpdate}
             />
           )}
