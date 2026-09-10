@@ -8,6 +8,6 @@ build/
 .DS_Store
 *.log
 .firebase/
-apps/mobile/env-config.js
+**/env-config.js
 DECISION_CYCLES.json
 DECISION_CYCLES.md

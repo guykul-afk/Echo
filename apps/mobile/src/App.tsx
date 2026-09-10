@@ -4,6 +4,7 @@ import { QuickCaptureScreen } from './screens/QuickCaptureScreen.js';
 import { DecisionRoomScreen } from './screens/DecisionRoomScreen.js';
 import { OutcomeModal } from './screens/OutcomeModal.js';
 import { DecisionProfileScreen } from './screens/DecisionProfileScreen.js';
+import { TopDrawer } from './components/TopDrawer.js';
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, QuickLoopStatus, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
 
 type AppStep = 'capture' | 'decision_room' | 'outcome' | 'profile';
@@ -22,7 +23,16 @@ export const App: React.FC = () => {
   const [similarCaseAnalogy, setSimilarCaseAnalogy] = useState<{ title: string; reason: string; strength: string; score?: number } | undefined>(undefined);
   const [refinedInsight, setRefinedInsight] = useState<RefinedInsight | undefined>(undefined);
   const [chosenNextStep, setChosenNextStep] = useState<string>('');
-  const [currentUserId] = useState<string>('guy_founder');
+  const [currentUserId, setCurrentUserId] = useState<string>(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('ECHO_ACTIVE_USER')) || 'guy_founder';
+  });
+
+  const handleSwitchUser = (newUser: string) => {
+    setCurrentUserId(newUser);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ECHO_ACTIVE_USER', newUser);
+    }
+  };
 
   // Precedents database for real-time Tri-Factor matching
   const PRECEDENTS_DATABASE = [
@@ -229,13 +239,19 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 select-none" style={{ backgroundColor: LuxuryTheme.background.base }}>
+    <div className="w-full min-h-screen flex flex-col items-center justify-start sm:justify-center p-0 sm:p-4 select-none" style={{ backgroundColor: LuxuryTheme.background.base }}>
       
-      {/* Mobile Frame Container */}
+      {/* Container: 100% full screen on phones, elegant luxury mockup frame on desktop */}
       <div 
-        className="relative w-full max-w-[410px] h-[860px] max-h-[95vh] rounded-[44px] border-[5px] border-[#1e212b] shadow-[0_25px_80px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col"
+        className="relative w-full min-h-screen sm:min-h-[860px] sm:max-h-[95vh] sm:max-w-[430px] sm:rounded-[44px] sm:border-[5px] sm:border-[#1e212b] sm:shadow-[0_25px_80px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col"
         style={{ backgroundColor: LuxuryTheme.background.base }}
       >
+        {/* Top Collapsible Drawer */}
+        <TopDrawer
+          currentUser={currentUserId}
+          onSwitchUser={handleSwitchUser}
+          onOpenJournal={() => setStep('profile')}
+        />
         
         {/* Navigation bar if not on capture */}
         {step !== 'capture' && (
