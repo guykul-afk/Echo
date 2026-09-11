@@ -136,7 +136,7 @@ export const TopDrawer: React.FC<TopDrawerProps> = ({
               }}
               className="py-1.5 px-3 rounded-xl text-[11px] border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] transition-all font-medium flex items-center justify-center gap-1 cursor-pointer text-[#E6E8EE]"
             >
-              <span>פרופיל כיול</span>
+              <span>פרופיל אישי</span>
               <span style={{ color: LuxuryTheme.accent.gold }}>←</span>
             </button>
           </div>
