@@ -55,7 +55,7 @@ ${fixture.styleInstructions}
 ענה על שאלת ההארה הזו בגוף ראשון (אני) בצורה האותנטית ביותר של אלכס ברגע זה בזמן:
 1. הישאר ב-100% בתוך הדמות והמצב הפסיכולוגי הנוכחי שלה (האם אתה רגוע ואידיאליסט, או הישרדותי ולחוץ?).
 2. תן תשובה אנושית, ישירה ומנומקת לפי מה שמניע אותך כרגע (2 עד 4 משפטים חדים).
-3. אל תשתמש במילות הקדמה ("אני אלכס", "בתור מנכ"ל"), אלא כתוב ישירות את תשובתך למערכת ECHO.
+3. אל תשתמש במילות הקדמה ("אני אלכס", "בתור מנכ"ל"), ואל תכתוב טיוטות, הערות באנגלית, או תגיות כמו Draft/Outline. כתוב ישירות את תשובתך בעברית בלבד למערכת ECHO.
 `;
 
   try {
@@ -66,7 +66,7 @@ ${fixture.styleInstructions}
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.5,
-          maxOutputTokens: 500
+          maxOutputTokens: 1024
         }
       })
     });
@@ -80,6 +80,7 @@ ${fixture.styleInstructions}
     const data = await response.json();
     let answer = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
     answer = answer.replace(/^```(?:text)?\s*/i, '').replace(/\s*```$/, '').trim();
+    answer = answer.replace(/\*?Draft\s*\d*[^:\n]*:?\*?/gi, '').replace(/\*?Mental Outline:?\*?/gi, '').trim();
     if (answer.startsWith('"') && answer.endsWith('"')) {
       answer = answer.slice(1, -1).trim();
     }
@@ -219,11 +220,11 @@ export async function runAlexDriftSimulation() {
 * **טרייד-אוף מרכזי (Deep Trade-off):** 
   - **ערך מוגן (Protected):** \`${deep?.tradeoffs?.[0]?.protectedValue || 'לא הוגדר'}\`
   - **ערך מוקרב (Sacrificed):** \`${deep?.tradeoffs?.[0]?.sacrificedValue || 'לא הוגדר'}\`
-  - **הפיכות הטרייד-אוף:** \`${deep?.tradeoffs?.[0]?.reversibility || 'לא הוגדר'}\`
+  - **הקשר הטרייד-אוף:** \`${deep?.tradeoffs?.[0]?.context || 'ללא הקשר מיוחד'}\`
 * **תנאי גבול (Boundary Conditions):**
   - **טענת יעד:** ${deep?.boundaryConditions?.[0]?.targetAssertion || 'ללא'}
   - **תנאי גבול מסייג (Condition):** \`${deep?.boundaryConditions?.[0]?.condition || 'ללא סייג'}\`
-* **טופולוגיית דילמה ועמדת סיכון:** \`${deep?.dilemmaTopology || 'N/A'}\` | סיכון: \`${deep?.riskPosture || 'N/A'}\`
+* **טופולוגיית דילמה ומניע החלטה:** \`${deep?.dilemmaTopology || 'N/A'}\` | מניע: \`${deep?.decisionDriver || 'N/A'}\`
 
 ### 3. טלמטריית זיכרון ושליפה מקדימה (Qualified Retrieval Telemetry)
 * **מספר תקדימי עבר שנשלפו:** ${retrievedCount}
@@ -287,8 +288,9 @@ ${retrieval?.preambleContext ? `* **הקשר עבר שהוזרק לשאלה (Pre
 
 ### תובנות ארכיטקטוניות מהרצת הסימולציה:
 1. **חילוץ סינכרוני של ממדי עומק:** המערכת הצליחה לחלץ בזמן אמת עקרונות פעולה, טרייד-אופים ותנאי גבול בכל אחד משלושת השלבים ללא כשלים.
-2. **איכות החיבור הדו-סוכני:** סוכן הדמות (Alex) גילם בהצלחה את השינוי במצב הנפשי – מענה עשיר ואידיאליסטי בחודש 1, לעומת מענה קצר, לחוץ והגנתי בחודש 8.
-3. **הצלבת זיכרון ועימות משתמש:** בשלב 3, שירות ה-Retrieval זיהה את ההתנגשות עם החלטות קודמות, והזין שאלת הארה סינתטית שעימתה את אלכס ישירות עם שבירת הגבול המקורית שלו.
+3. **הצלבת זיכרון ועימות משתמש:** ${contradictionCaught 
+  ? 'בשלב 3, שירות ה-Retrieval זיהה את ההתנגשות עם החלטות קודמות, והזין שאלת הארה סינתטית שעימתה את אלכס ישירות עם שבירת הגבול המקורית שלו.' 
+  : 'בשלב 3, שירות ה-Retrieval לא זיהה את ההתנגשות (ציון שליפה מתחת לסף האיכות או היעדר מועמדים מעל הסף).'}
 `;
 
   fs.appendFileSync(REPORT_FILE, summaryMd);

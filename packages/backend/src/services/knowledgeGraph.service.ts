@@ -75,16 +75,6 @@ export class KnowledgeGraphService {
 
   async findContradictingAssertions(userId: string, target: GraphAssertion): Promise<GraphAssertion[]> {
     const active = await this.getActiveAssertionsByUser(userId);
-    const targetText = target.statement.toLowerCase();
-
-    // Key opposites / tension cues in decision contexts
-    const oppositePairs: [RegExp, RegExp][] = [
-      [/יציבות|בטוח|סיכון נמוך|שמירה/, /סיכון|הרפתקה|צמיחה|שינוי|חדש/],
-      [/עצמאות|לבד|סולו/, /שותפות|ביחד|צוות|הסכמה/],
-      [/מהירות|עכשיו|מיידי/, /סבלנות|בדיקה מעמיקה|לחכות|המתנה/],
-      [/פשטות|מינימליסטי/, /עומק|מקיף|מורכב/],
-      [/השקעה|התרחבות/, /צמצום|חיסכון|זהירות/]
-    ];
 
     return active.filter(other => {
       if (other.id === target.id) return false;
@@ -96,19 +86,23 @@ export class KnowledgeGraphService {
         }
       }
 
-      // 2. Polarity clash
+      // 2. Structured polarity clash (e.g. explicitly tagged risk_seeking vs risk_averse)
       if (target.sentimentOrPolarity === 'risk_seeking' && other.sentimentOrPolarity === 'risk_averse') return true;
       if (target.sentimentOrPolarity === 'risk_averse' && other.sentimentOrPolarity === 'risk_seeking') return true;
 
-      // 3. Semantic tension cues
-      const otherText = other.statement.toLowerCase();
-      for (const [cueA, cueB] of oppositePairs) {
-        if (cueA.test(targetText) && cueB.test(otherText)) return true;
-        if (cueB.test(targetText) && cueA.test(otherText)) return true;
-      }
-
+      // Notice: Untargeted regex keyword matching (e.g. matching 'שמירה' against any decision)
+      // was deliberately removed here to eliminate widespread False Positives.
       return false;
     });
+  }
+
+  async invalidateAssertionsByCase(userId: string, caseId: string, reason: string = 'user_mirror_correction'): Promise<void> {
+    const userMap = this.getUserAssertionsMap(userId);
+    for (const assertion of userMap.values()) {
+      if (assertion.caseId === caseId && assertion.sourceType === 'ai_inferred') {
+        assertion.supersededBy = reason;
+      }
+    }
   }
 
   async getEntitiesByUser(userId: string): Promise<KnowledgeEntity[]> {

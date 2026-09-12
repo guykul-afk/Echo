@@ -147,17 +147,14 @@ export class DecisionService {
       };
 
       // Phase 2 (Silence as a decision): Evaluate whether silence is warranted
-      const missingInfoText = this.ensureString(humanDimensions?.missingInfo).trim();
-      const isMissingInfoEmpty = !missingInfoText || 
-        ['אין', 'אין מידע חסר', 'אין פערי מידע', 'הכל ברור', 'לא צוין', '-'].some(c => missingInfoText.includes(c));
-
       const isExplicitSilenceStrategy = cognitiveResult.illuminationQuestion.strategy === 'no_intervention' ||
         cognitiveResult.illuminationQuestion.shouldIntervene === false;
 
       let shouldIntervene = effectiveFriction === 'quick' ? false : !isExplicitSilenceStrategy;
 
-      // Smart silence when unknowns are empty and situation is balanced (סעיף 14)
-      if (shouldIntervene && isMissingInfoEmpty && (cognitiveResult.illuminationQuestion.expectedReflectionValue ?? 0.8) < 0.6) {
+      // Smart silence: when ERV < 0.81 (low expected reflection value), silence is warranted
+      const erv = cognitiveResult.illuminationQuestion.expectedReflectionValue ?? 0.8;
+      if (shouldIntervene && erv < 0.81) {
         shouldIntervene = false;
       }
 
@@ -402,18 +399,22 @@ export class DecisionService {
       }
     }
     if (decisionCase.keyHinge && decisionCase.keyHinge.length >= 8) {
-      const statement = decisionCase.keyHinge.length > 120 ? decisionCase.keyHinge.slice(0, 117) + '...' : decisionCase.keyHinge;
-      await this.knowledgeGraphService.saveAssertion({
-        id: `asrt-${caseId}-hinge`,
-        userId: dto.userId,
-        caseId,
-        statement,
-        category: 'assumption',
-        sourceType: 'ai_inferred',
-        timestamp: now,
-        confidenceLevel: 85,
-        createdAt: now
-      });
+      // Do not save question-form hinges as assumptions (prevents Echo from quoting its own questions as user statements)
+      const isQuestion = decisionCase.keyHinge.includes('?') || decisionCase.keyHinge.startsWith('האם');
+      if (!isQuestion) {
+        const statement = decisionCase.keyHinge.length > 120 ? decisionCase.keyHinge.slice(0, 117) + '...' : decisionCase.keyHinge;
+        await this.knowledgeGraphService.saveAssertion({
+          id: `asrt-${caseId}-hinge`,
+          userId: dto.userId,
+          caseId,
+          statement,
+          category: 'assumption',
+          sourceType: 'ai_inferred',
+          timestamp: now,
+          confidenceLevel: 85,
+          createdAt: now
+        });
+      }
     }
 
     // Horizon 2: Index Deep Decision Mechanisms (Principles, Tradeoffs, Qualified Boundaries, Frameworks)
@@ -552,7 +553,10 @@ export class DecisionService {
     if (updates.reliance) session.decisionCase.dimReliance = updates.reliance;
     if (updates.unknowns) session.decisionCase.dimUnknowns = updates.unknowns;
     if (updates.centralTension) session.decisionCase.centralTension = updates.centralTension;
-    if (updates.keyHinge) session.decisionCase.keyHinge = updates.keyHinge;
+    if (updates.facts || updates.assumptions) {
+      // Invalidate old ai_inferred assertions for this case to prevent rejected/corrected assumptions from lingering in graph
+      await this.knowledgeGraphService.invalidateAssertionsByCase(session.decisionCase.userId, caseId, 'user_mirror_update');
+    }
 
     session.decisionCase.updatedAt = Date.now();
     return session.decisionCase;
@@ -572,6 +576,10 @@ export class DecisionService {
     }
 
     session.decisionCase.mirrorFeedback = feedback;
+    if (feedback === 'inaccurate') {
+      // Invalidate all ai_inferred assertions for this case so user-rejected mirrors are not quoted later
+      await this.knowledgeGraphService.invalidateAssertionsByCase(session.decisionCase.userId, caseId, 'mirror_inaccurate');
+    }
     session.decisionCase.updatedAt = Date.now();
     return session.decisionCase;
   }

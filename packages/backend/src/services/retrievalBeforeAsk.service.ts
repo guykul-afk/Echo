@@ -12,7 +12,9 @@ const HEBREW_STOPWORDS = new Set([
   'את', 'על', 'עם', 'של', 'לא', 'כן', 'זה', 'זו', 'אלה', 'אלו', 'היה', 'היו', 'תהיה', 'יהיה',
   'אני', 'אתה', 'הוא', 'היא', 'אנחנו', 'אתם', 'הם', 'כל', 'רק', 'עוד', 'יותר', 'לפני', 'אחרי',
   'כדי', 'אם', 'כי', 'או', 'גם', 'אבל', 'אך', 'כבר', 'שוב', 'שם', 'פה', 'כאן', 'מאוד', 'מה', 'מי',
-  'לגבי', 'בגלל', 'מתוך', 'אצל', 'כמו', 'בין'
+  'לגבי', 'בגלל', 'מתוך', 'אצל', 'כמו', 'בין', 'האם', 'יש', 'אין', 'כרגע', 'שני', 'נוספים', 'נוספת',
+  'שלך', 'שלי', 'שלו', 'שלה', 'אותו', 'אותה', 'אותם', 'אפשר', 'צריך', 'יכול', 'יכולה', 'כעת', 'טוב',
+  'פחות', 'משהו', 'דבר', 'דברים'
 ]);
 
 function extractConceptPhrases(text: string): string[] {
@@ -29,6 +31,69 @@ function extractConceptPhrases(text: string): string[] {
     }
   }
   return phrases;
+}
+
+function normalizeHebrewWord(word: string): string {
+  let w = word.toLowerCase().trim();
+  // Strip common Hebrew prefixes (ו, ה, ב, ל, מ, ש, כ)
+  if (w.length >= 4 && (w.startsWith('ו') || w.startsWith('ה') || w.startsWith('ב') || w.startsWith('ל') || w.startsWith('מ') || w.startsWith('ש') || w.startsWith('כ'))) {
+    w = w.slice(1);
+  }
+  if (w.length >= 4 && (w.startsWith('ה') || w.startsWith('ב') || w.startsWith('ל') || w.startsWith('מ'))) {
+    w = w.slice(1);
+  }
+  return w;
+}
+
+function extractKeyTokens(text: string): string[] {
+  return text
+    .split(/[\s,.:;״"()!?\-\/|]+/)
+    .map(w => w.trim().toLowerCase())
+    .filter(w => w.length >= 3 && !HEBREW_STOPWORDS.has(w))
+    .map(normalizeHebrewWord)
+    .filter(w => w.length >= 3 && !HEBREW_STOPWORDS.has(w));
+}
+
+function computeConceptOverlap(phraseA: string, phraseB: string): { sharedTokens: string[]; overlapRatio: number } {
+  if (!phraseA || !phraseB) return { sharedTokens: [], overlapRatio: 0 };
+  const lowerA = phraseA.toLowerCase();
+  const lowerB = phraseB.toLowerCase();
+
+  // Direct substring check
+  if (lowerA.includes(lowerB) || lowerB.includes(lowerA)) {
+    return { sharedTokens: [phraseA.trim()], overlapRatio: 1.0 };
+  }
+
+  const tokensA = extractKeyTokens(lowerA);
+  const tokensB = extractKeyTokens(lowerB);
+
+  if (tokensA.length === 0 || tokensB.length === 0) return { sharedTokens: [], overlapRatio: 0 };
+
+  const sharedTokens: string[] = [];
+  for (const tA of tokensA) {
+    for (const tB of tokensB) {
+      const minLen = Math.min(tA.length, tB.length);
+      const prefixMatch = (minLen >= 4 && (tA.startsWith(tB.slice(0, 4)) || tB.startsWith(tA.slice(0, 4))));
+      if (tA === tB || tA.includes(tB) || tB.includes(tA) || prefixMatch) {
+        sharedTokens.push(tA);
+        break;
+      }
+    }
+  }
+
+  const overlapRatio = sharedTokens.length / Math.min(tokensA.length, tokensB.length);
+  return { sharedTokens, overlapRatio };
+}
+
+function parseTradeoffAssertion(statement: string): { protectedValue: string; sacrificedValue: string } | null {
+  const match = statement.match(/שימור:\s*(.*?)\s*\|\s*ויתור:\s*(.*)/i);
+  if (match) {
+    return {
+      protectedValue: match[1].trim(),
+      sacrificedValue: match[2].trim()
+    };
+  }
+  return null;
 }
 
 export class RetrievalBeforeAskService {
@@ -75,29 +140,112 @@ export class RetrievalBeforeAskService {
 
       const stmtClean = assertion.statement.toLowerCase().trim();
 
-      // Deep Mechanism Match: Tradeoffs
+      // Deep Mechanism Match: Tradeoffs & Reversals (Contradictions)
       if (deepMechanisms?.tradeoffs && deepMechanisms.tradeoffs.length > 0) {
-        for (const t of deepMechanisms.tradeoffs) {
-          const prot = (t.protectedValue || '').toLowerCase().trim();
-          const sacr = (t.sacrificedValue || '').toLowerCase().trim();
-          if ((prot && stmtClean.includes(prot)) || (sacr && stmtClean.includes(sacr))) {
-            const tradeScore = (prot && stmtClean.includes(prot) && sacr && stmtClean.includes(sacr)) ? 0.98 : 0.92;
-            if (tradeScore > score) {
-              score = tradeScore;
-              reason = `deep_tradeoff_match(${t.protectedValue}/${t.sacrificedValue})`;
+        if (assertion.category === 'tradeoff') {
+          const oldTradeoff = parseTradeoffAssertion(stmtClean);
+          if (oldTradeoff) {
+            for (const newT of deepMechanisms.tradeoffs) {
+              // 1. REVERSAL CONTRADICTION: What was previously protected is now sacrificed!
+              const revSacrCheck = computeConceptOverlap(newT.sacrificedValue, oldTradeoff.protectedValue);
+              if (revSacrCheck.sharedTokens.length > 0) {
+                const reversalScore = 0.99;
+                if (reversalScore > score) {
+                  score = reversalScore;
+                  reason = `tradeoff_reversal_contradiction(sacrificing_protected:${revSacrCheck.sharedTokens.join(',')})`;
+                }
+              }
+
+              // 2. RECIPROCAL REVERSAL: What was previously sacrificed is now protected!
+              const revProtCheck = computeConceptOverlap(newT.protectedValue, oldTradeoff.sacrificedValue);
+              if (revProtCheck.sharedTokens.length > 0) {
+                const recipScore = 0.96;
+                if (recipScore > score) {
+                  score = recipScore;
+                  reason = `tradeoff_reversal(protecting_sacrificed:${revProtCheck.sharedTokens.join(',')})`;
+                }
+              }
+
+              // 3. CONSISTENT TRADEOFF REINFORCEMENT:
+              const protCheck = computeConceptOverlap(newT.protectedValue, oldTradeoff.protectedValue);
+              const sacrCheck = computeConceptOverlap(newT.sacrificedValue, oldTradeoff.sacrificedValue);
+              if (protCheck.sharedTokens.length > 0 && sacrCheck.sharedTokens.length > 0) {
+                const consScore = 0.98;
+                if (consScore > score) {
+                  score = consScore;
+                  reason = `deep_tradeoff_match(consistent:${protCheck.sharedTokens.join(',')}/${sacrCheck.sharedTokens.join(',')})`;
+                }
+              } else if (protCheck.sharedTokens.length > 0) {
+                const consScore = 0.92;
+                if (consScore > score) {
+                  score = consScore;
+                  reason = `deep_tradeoff_match(shared_protected:${protCheck.sharedTokens.join(',')})`;
+                }
+              } else if (sacrCheck.sharedTokens.length > 0) {
+                const consScore = 0.90;
+                if (consScore > score) {
+                  score = consScore;
+                  reason = `deep_tradeoff_match(shared_sacrificed:${sacrCheck.sharedTokens.join(',')})`;
+                }
+              }
+            }
+          }
+        } else {
+          // General assertion matching against new tradeoffs using concept overlap
+          for (const t of deepMechanisms.tradeoffs) {
+            const protCheck = computeConceptOverlap(t.protectedValue, stmtClean);
+            const sacrCheck = computeConceptOverlap(t.sacrificedValue, stmtClean);
+            if (protCheck.sharedTokens.length > 0 && sacrCheck.sharedTokens.length > 0) {
+              const tradeScore = 0.97;
+              if (tradeScore > score) {
+                score = tradeScore;
+                reason = `deep_tradeoff_match(${protCheck.sharedTokens.join(',')}/${sacrCheck.sharedTokens.join(',')})`;
+              }
+            } else if (protCheck.sharedTokens.length > 0 || sacrCheck.sharedTokens.length > 0) {
+              const matchedTokens = [...protCheck.sharedTokens, ...sacrCheck.sharedTokens];
+              const tradeScore = 0.92;
+              if (tradeScore > score) {
+                score = tradeScore;
+                reason = `deep_tradeoff_match(${matchedTokens.join(',')})`;
+              }
             }
           }
         }
       }
 
-      // Deep Mechanism Match: Operating Principles
-      if (deepMechanisms?.operatingPrinciples && deepMechanisms.operatingPrinciples.length > 0) {
-        for (const p of deepMechanisms.operatingPrinciples) {
-          const pClean = p.toLowerCase().trim();
-          if (pClean.length >= 6 && (stmtClean.includes(pClean) || pClean.includes(stmtClean))) {
-            if (0.95 > score) {
-              score = 0.95;
-              reason = `operating_principle_match`;
+      // Deep Mechanism Match: Operating Principles & Principle Breach
+      if (assertion.category === 'principle') {
+        if (deepMechanisms?.operatingPrinciples && deepMechanisms.operatingPrinciples.length > 0) {
+          for (const p of deepMechanisms.operatingPrinciples) {
+            const overlap = computeConceptOverlap(p, stmtClean);
+            if (overlap.sharedTokens.length > 0) {
+              const pScore = overlap.overlapRatio >= 0.4 ? 0.98 : 0.94;
+              if (pScore > score) {
+                score = pScore;
+                reason = `operating_principle_match(${overlap.sharedTokens.join(',')})`;
+              }
+            }
+          }
+        }
+        // Check if input dilemma concepts overlap directly with operating principle
+        const directPrincipleOverlap = computeConceptOverlap(stmtClean, inputLower);
+        if (directPrincipleOverlap.sharedTokens.length > 0) {
+          const directScore = directPrincipleOverlap.overlapRatio >= 0.25 ? 0.94 : 0.88;
+          if (directScore > score) {
+            score = directScore;
+            reason = `operating_principle_relevance(${directPrincipleOverlap.sharedTokens.join(',')})`;
+          }
+        }
+        // Check if a new decision's sacrificed value violates an existing principle!
+        if (deepMechanisms?.tradeoffs && deepMechanisms.tradeoffs.length > 0) {
+          for (const t of deepMechanisms.tradeoffs) {
+            const breachOverlap = computeConceptOverlap(t.sacrificedValue, stmtClean);
+            if (breachOverlap.sharedTokens.length > 0) {
+              const breachScore = 0.99;
+              if (breachScore > score) {
+                score = breachScore;
+                reason = `principle_breach_contradiction(sacrificing_principle:${breachOverlap.sharedTokens.join(',')})`;
+              }
             }
           }
         }
@@ -139,9 +287,9 @@ export class RetrievalBeforeAskService {
         reason = reason ? `${reason}+concept` : 'concept_phrase_overlap';
       }
 
-      // Substantial domain word overlap (strictly requires >= 4 significant keywords to avoid incidental noise)
-      if (sharedWords.length >= 4) {
-        const overlapScore = Math.min(0.86, 0.70 + (sharedWords.length * 0.04));
+      // Substantial domain word overlap
+      if (sharedWords.length >= 3) {
+        const overlapScore = Math.min(0.88, 0.72 + (sharedWords.length * 0.04));
         if (overlapScore > score) {
           score = overlapScore;
           reason = `thematic_keywords(${sharedWords.slice(0, 5).join(',')})`;
@@ -159,16 +307,19 @@ export class RetrievalBeforeAskService {
         reason += '+qualified_condition';
       }
 
-      // STRICT QUALITY GATE:
+      // QUALITY GATE:
       // Must have an authentic structural anchor:
-      // (1) Entity match, (2) Deep tradeoff/principle match, (3) Concrete bigram concept match,
-      // or (4) Substantial >= 4 keyword overlap with an outcome.
+      // (1) Entity match, (2) Deep tradeoff/principle/reversal match, (3) Concrete concept match,
+      // or (4) Substantial >= 3 keyword overlap.
       const hasAuthenticAnchor = isEntityMatch ||
         reason.includes('deep_tradeoff_match') ||
+        reason.includes('tradeoff_reversal') ||
         reason.includes('operating_principle_match') ||
+        reason.includes('operating_principle_relevance') ||
+        reason.includes('principle_breach') ||
         hasConceptMatch ||
         isFullSubstring ||
-        (sharedWords.length >= 4 && assertion.category === 'outcome');
+        sharedWords.length >= 3;
 
       // Reject anything below 0.85 or lacking an authentic anchor
       if (score >= 0.85 && hasAuthenticAnchor) {
@@ -220,6 +371,10 @@ export class RetrievalBeforeAskService {
     // 4. Contradiction Retrieval
     const contradictions = await this.knowledgeGraphService.findContradictingAssertions(userId, topAssertion);
     const topContradiction = contradictions.length > 0 ? contradictions[0] : undefined;
+    const isContradiction = Boolean(topContradiction) ||
+      topCandidate.reason.includes('contradiction') ||
+      topCandidate.reason.includes('reversal') ||
+      topCandidate.reason.includes('breach');
 
     // 5. Memory Budget (Maximum 1-2 assertions, <= 120 chars each)
     const budgetAssertions = [topAssertion];
@@ -229,23 +384,34 @@ export class RetrievalBeforeAskService {
 
     // Build balanced Memory Preamble
     let memoryPreamble: string | undefined;
-    if (topContradiction) {
-      memoryPreamble = `במקרה קודם ציינת "${topAssertion.statement.slice(0, 55)}", אך בהחלטה אחרת: "${topContradiction.statement.slice(0, 55)}".`;
+    const isUserOrigin = topAssertion.sourceType === 'user_confirmed' || topAssertion.sourceType === 'user_stated';
+    if (topCandidate.reason.includes('tradeoff_reversal') || topCandidate.reason.includes('principle_breach')) {
+      const cleanStmt = topAssertion.statement.replace(/^שימור:\s*/, '').split('|')[0].trim();
+      memoryPreamble = isUserOrigin
+        ? `בעבר הגדרת קו אדום/שימור לגבי: "${cleanStmt.slice(0, 60)}", אך בדילמה הנוכחית מתבצע ויתור עליו.`
+        : `בהחלטה קודמת הוגדר שימור לגבי: "${cleanStmt.slice(0, 60)}", אך בדילמה הנוכחית מתבצע ויתור עליו.`;
+    } else if (topContradiction) {
+      memoryPreamble = isUserOrigin
+        ? `במקרה קודם ציינת "${topAssertion.statement.slice(0, 55)}", אך בהחלטה אחרת: "${topContradiction.statement.slice(0, 55)}".`
+        : `בהקשר קודם עלה: "${topAssertion.statement.slice(0, 55)}", לעומת החלטה אחרת: "${topContradiction.statement.slice(0, 55)}".`;
     } else if (budgetAssertions.length > 0) {
       if (topAssertion.condition) {
         memoryPreamble = `מתקדים עבר: "${topAssertion.statement.slice(0, 60)}" (סייג שהוגדר: "${topAssertion.condition.slice(0, 45)}")`;
       } else {
-        memoryPreamble = `מהקשר קודם: "${topAssertion.statement.slice(0, 70)}"`;
+        memoryPreamble = isUserOrigin
+          ? `במקרה קודם ציינת: "${topAssertion.statement.slice(0, 70)}"`
+          : `מהקשר קודם: "${topAssertion.statement.slice(0, 70)}"`;
       }
     }
 
     // Determine if we should suppress, convert to confirmation, or simply provide memory context
-    if (isFirmlyDocumented || confirmedRecently || askedRecently) {
+    // Never suppress if a genuine contradiction/reversal is detected!
+    if (!isContradiction && (isFirmlyDocumented || confirmedRecently || askedRecently)) {
       // Novelty Gate active: pattern already known, do not badger user with "is this still true?"
       return {
         entities: relevantEntities,
         assertions: budgetAssertions,
-        contradictingAssertions: topContradiction ? [topContradiction] : [],
+        contradictingAssertions: [],
         memoryPreamble,
         hasKnownAnswer: true,
         knownAnswerFact: topAssertion.statement,
@@ -258,8 +424,9 @@ export class RetrievalBeforeAskService {
     }
 
     // Only convert to confirmation in rare, high-confidence, unconfirmed cases (<= 20% target)
-    // and when explicitly looking for previously stated user facts
-    const shouldConfirm = (topAssertion.sourceType === 'user_stated' || topAssertion.category === 'principle' || topAssertion.category === 'decision_mechanism') &&
+    // and when explicitly looking for previously stated user facts (not contradictions)
+    const shouldConfirm = !isContradiction &&
+      (topAssertion.sourceType === 'user_stated' || topAssertion.sourceType === 'user_confirmed' || topAssertion.category === 'principle' || topAssertion.category === 'decision_mechanism') &&
       !topContradiction &&
       (topAssertion.confidenceLevel >= 85) &&
       !topAssertion.lastAskedAt;
@@ -268,7 +435,9 @@ export class RetrievalBeforeAskService {
       await this.knowledgeGraphService.recordAssertionAsked(userId, topAssertion.id);
       const confQuestion = topAssertion.condition
         ? `בעבר פעלת לפי: "${topAssertion.statement}" [סייג: "${topAssertion.condition}"]. האם סייג זה מתקיים גם בדילמה הנוכחית?`
-        : `בעבר ציינת ש"${topAssertion.statement}". האם זה עדיין תקף?`;
+        : (isUserOrigin
+            ? `בעבר ציינת ש"${topAssertion.statement}". האם זה עדיין תקף?`
+            : `בהחלטה קודמת עלתה ההנחה: "${topAssertion.statement}". האם הנחה זו תקפה גם כעת?`);
 
       return {
         entities: relevantEntities,
@@ -289,14 +458,14 @@ export class RetrievalBeforeAskService {
     return {
       entities: relevantEntities,
       assertions: budgetAssertions,
-      contradictingAssertions: topContradiction ? [topContradiction] : [],
+      contradictingAssertions: isContradiction ? [topContradiction || topAssertion] : [],
       memoryPreamble,
       hasKnownAnswer: true,
       knownAnswerFact: topAssertion.statement,
       shouldConvertToConfirmation: false,
       canSuppressIntervention: false,
       retrievalScore: topCandidate.score,
-      retrievalReason: `historical_context(${topCandidate.reason})`,
+      retrievalReason: isContradiction ? `contradiction_detected(${topCandidate.reason})` : `historical_context(${topCandidate.reason})`,
       retrievedCandidatesCount: candidateAssertions.length
     };
   }

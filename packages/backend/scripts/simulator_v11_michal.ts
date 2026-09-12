@@ -149,10 +149,15 @@ export async function runMichalSimulation() {
       missingInfo: caseResult.decisionCase.dimMissingInfo || ''
     };
 
-    const isFeminine = initialMirror.consideration.includes('את שוקלת') || 
-                      initialMirror.consideration.includes('את מתלבטת') ||
-                      initialMirror.consideration.includes('הבנתי שחשוב לך') ||
-                      !initialMirror.consideration.includes('אתה שוקל');
+    const allAddressedText = [
+      initialMirror.consideration,
+      bespokeQ?.questionText || '',
+      historicalQ?.questionText || ''
+    ].join(' ');
+
+    const hasMasculine = /אתה שוקל|אתה מתלבט|כיצד אתה|איך אתה|שאתה|האם אתה/.test(allAddressedText);
+    const hasFeminine = /את שוקלת|את מתלבטת|כיצד את|איך את|שאת|האם את|חשוב לך/.test(allAddressedText);
+    const isFeminine = hasFeminine && !hasMasculine;
     if (isFeminine) stats.feminineAddressCount++;
 
     const bespokeQ = caseResult.bespokeQuestion;
@@ -249,8 +254,8 @@ export async function runMichalSimulation() {
           ``,
           `**תובנת דלתא שחולצה (Refined Insight):**`,
           `- **נקודת המוצא (Before):** "${deltaResult.refinedInsight.before || initialMirror.consideration}"`,
-          `- **המסקנה המעודכנת (Now):** "${deltaResult.refinedInsight.now || c.userAnswer}"`,
-          `- **הצעד שנבחר (Chosen Step):** "${deltaResult.refinedInsight.chosenStep || c.userAnswer}"`
+          `- **המסקנה המעודכנת (Now):** "${deltaResult.refinedInsight.now || '[לא חולץ - דלתא ריקה]'}"`,
+          `- **הצעד שנבחר (Chosen Step):** "${deltaResult.refinedInsight.chosenStep || '[לא חולץ צעד]'}"`
         ].join('\n');
       }
     }
@@ -351,7 +356,7 @@ ${strategyTable}
 | **שתיקה חכמה טבעית (Natural Silence)** | 6 החלטות זוטרות | ${stats.naturalSilenceTriggered} / 6 | **${naturalSilenceRate}%** | נמדד ב-\`frictionLevel: deep\` ללא כפיית \`quick\`. בוחן האם המודל שתק בעצמו |
 | **זיהוי מדויק של שיתוק איסוף מידע** | 8 מקרי איסוף מידע | ${stats.endlessInfoExactStrategyCount} / 8 | **${exactInfoRate}%** | מקרים שקיבלו במדויק את האסטרטגיה \`endless_info_gathering\` |
 | **איסוף מידע עם ERV גבוה (כולל Missing Detail)** | 8 מקרים | ${stats.endlessInfoExactStrategyCount + stats.endlessInfoHighErvCount} / 8 | **${Math.round(((stats.endlessInfoExactStrategyCount + stats.endlessInfoHighErvCount) / 8) * 100)}%** | זיהוי היסוס עם ERV >= 0.75 |
-| **תיקוני מראה מאומתים (Verified Diff)** | 8 מקרים | ${stats.activeCorrectionsVerifiedDiffCount} / 8 | **100%** | תיעוד מלא של Before -> After ועדכון גרף הידע |
+| **תיקוני מראה מאומתים (Verified Diff)** | 8 מקרים | ${stats.activeCorrectionsVerifiedDiffCount} / 8 | **${Math.round((stats.activeCorrectionsVerifiedDiffCount / 8) * 100)}%** | תיעוד מלא של Before -> After ועדכון גרף הידע |
 | **עקביות פנייה בלשון נקבה למיכל** | 50 מקרים | ${stats.feminineAddressCount} / 50 | **${Math.round((stats.feminineAddressCount / 50) * 100)}%** | פנייה בלשון "את שוקלת/מתלבטת" למניעת שבירת אמון |
 | **שליפת תקדימי זיכרון מהגרף (Retrieval)** | 50 מקרים | ${stats.retrievalCandidateMatchesCount} מקרים | **${Math.round((stats.retrievalCandidateMatchesCount / 50) * 100)}%** | מקרים שבהם נשלפו מועמדים רלוונטיים מהעבר |
 | **הפקת שאלת עבר מותנית (Historical Question)** | 50 מקרים | ${stats.historicalQuestionsGeneratedCount} מקרים | **${Math.round((stats.historicalQuestionsGeneratedCount / 50) * 100)}%** | שאלות שהופקו על סמך תקדים ישיר, סתירה או הנחה שברירית |
