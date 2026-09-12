@@ -40,18 +40,23 @@ export class TriFactorRetrievalService {
     // 3. Total Weighted Score
     const totalScore = (0.45 * structuralScore) + (0.35 * contextualScore) + (0.20 * semanticCosineSimilarity);
 
-    // Formulation of human-readable analogy explanation
-    let reason = '';
-    if (structuralScore > 0.8) {
-      reason = 'התאמה מבנית גבוהה: התחייבות משמעותית תחת אי-ודאות עם בדיקה מקדימה אפשרית';
-    } else if (structuralScore > 0.6) {
-      reason = 'אנלוגיה מבנית חלקית: מתח בין צמיחה לשמירה על מיקוד ומשאבים';
-    } else {
-      reason = 'השוואה כללית של קבלת החלטה בתנאי סיכון';
-    }
+    // Formulation of human-readable analogy explanation based on actual properties
+    const commitmentDesc = sourceSignature.commitmentGradient > 0.6 
+      ? 'רמת מחויבות גבוהה וקשה להפיכה' 
+      : sourceSignature.commitmentGradient < 0.4 
+        ? 'רמת מחויבות מודולרית והפיכה' 
+        : 'רמת מחויבות מדורגת';
+
+    const structuralQuality = structuralScore > 0.8 
+      ? 'התאמה מבנית גבוהה בפרופיל ההפיכות ועלות המידע' 
+      : structuralScore > 0.6 
+        ? 'התאמה מבנית חלקית במאפייני המחויבות' 
+        : 'קרבה מבנית בסיסית';
+
+    let reason = `${structuralQuality} (${commitmentDesc})`;
 
     if (sourceEra && targetEra && sourceEra.name !== targetEra.name) {
-      reason += ` (שים לב: מקרה העבר התרחש בתקופת "${targetEra.name}")`;
+      reason += ` | מקרה עבר מתקופת "${targetEra.name}"`;
     }
 
     const strength = totalScore >= 0.82 ? 'strong' : totalScore >= 0.70 ? 'partial' : 'weak';

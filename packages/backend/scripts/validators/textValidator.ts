@@ -96,5 +96,15 @@ export function validateResponseText(
     return { isValid: false, reason: `English phrase run in response detected` };
   }
 
+  // Check for leading debris like )**: or markdown artifacts
+  if (/^[\)\*\:\-\>\s]+/.test(clean)) {
+    return { isValid: false, reason: `Response starts with debris/formatting symbols: "${clean.slice(0, 10)}"` };
+  }
+
+  // Must end with terminal sentence punctuation (prevents token truncation mid-sentence)
+  if (!/[\.\?!״"”']$/.test(clean)) {
+    return { isValid: false, reason: `Response ends without terminal punctuation (truncated): "${clean.slice(-15)}"` };
+  }
+
   return { isValid: true };
 }

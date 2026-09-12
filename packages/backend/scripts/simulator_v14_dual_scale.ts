@@ -481,6 +481,11 @@ export async function runLargeScaleDualSimulation() {
   const yonatanOverconfSign = yonatanFullCalib.overconfidenceBiasIndex >= 0 ? '+' : '';
   const tamarOverconfSign = tamarFullCalib.overconfidenceBiasIndex >= 0 ? '+' : '';
 
+  const contaminationPct = ((crossTenantContaminationCount / 80) * 100).toFixed(1);
+  const isolationSummary = crossTenantContaminationCount === 0
+    ? `**100% בידוד מלא (0% זליגה קוגניטיבית)** (0 חריגות מתוך 80 בדיקות)`
+    : `**זוהו חריגות זליגה: ${contaminationPct}% זליגה** (${crossTenantContaminationCount} חריגות מתוך 80 בדיקות)`;
+
   let reportMd = `# דו"ח סימולציה רחבת היקף V14: אבולוציית קבלת החלטות בשני משתמשי קצה על פני 180 יום
 **תאריך הרצה:** ${new Date().toISOString().split('T')[0]}  
 **היקף הפעילות:** 80 מקרים קוגניטיביים מלאים (40 לכל משתמש), תמלול שמע גולמי (30–60 שניות למקרה), פריסה כרונולוגית על פני חצי שנה מדומה (180 יום).
@@ -493,7 +498,7 @@ export async function runLargeScaleDualSimulation() {
 2. **ד"ר תמר לוין (43) — סמנכ"לית מו"פ בביוטק:** החלה בשיתוק מאיסוף מידע (Analysis Paralysis), פרפקציוניזם ושנאת סיכון קיצונית, ועברה תהליך של קבלת החלטות בתנאי אי-ודאות (Satisficing), תעוזה ניסויית ומנהיגות קלינית.
 
 ### ממצאי ליבה של המערכת:
-* **בידוד רב-דיירי (Multi-Tenancy Isolation):** 100% הפרדה מלאה בין שני המשתמשים. נבדקו כל 80 האינטראקציות, שאלות ההארה, זיכרונות העבר וגרף הידע — **0% זליגה קוגניטיבית** (${crossTenantContaminationCount} חריגות).
+* **בידוד רב-דיירי (Multi-Tenancy Isolation):** נבדקו כל 80 האינטראקציות, שאלות ההארה, זיכרונות העבר וגרף הידע — ${isolationSummary}.
 * **אבולוציית טאב פרופיל קבלת החלטות:** הוכח כי הטאב הקיים אינו "ממוצע שטוח". אצל שני המשתמשים זוהה מהפך שלם בארכיטיפ הראשי, נרשמו שינויים מהותיים בשלבי הזרימה (Flow Steps), והופקה כרטיסיית המסע \`Evolution Journey\` עם זיהוי מדויק של נקודות המפנה.
 * **מנוע הכיול (Calibration Engine):**
   * **יונתן:** מדד ביטחון היתר (Overconfidence Bias Index) ירד מ-\`+${yonatanEarlyCalib.overconfidenceBiasIndex.toFixed(2)}\` (אופטימיות יתר מסוכנת) ל-\`+${yonatanFullCalib.overconfidenceBiasIndex.toFixed(2)}\` (כיול מעולה). ציון ברייר (Brier Score) השתפר מ-\`${yonatanEarlyCalib.brierScore.toFixed(3)}\` ל-\`${yonatanFullCalib.brierScore.toFixed(3)}\`.

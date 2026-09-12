@@ -177,21 +177,33 @@ export class DecisionProfileService {
     const consensusDrop = early.consensusRatio - late.consensusRatio;
     const resultsSpike = late.resultsRatio - early.resultsRatio;
 
-    // Check for transition from consensus/caution to strategic/risk/results
-    if ((riskShift > 0.2 || resultsSpike > 0.2) && (early.consensusRatio > 0.3 || consensusDrop > 0.1)) {
+    // Check for transition from consensus/caution/perfectionism to strategic/risk/results
+    if ((riskShift > 0.15 || resultsSpike > 0.15) && (early.consensusRatio > 0.25 || consensusDrop > 0.1 || early.downsideProtectionCount > early.upsideCaptureCount)) {
       // Find inflection point: first case in lateCases with high risk or results orientation
       const inflectionCase = lateCases.find(c => {
         const text = `${c.title} ${c.dimConsideration}`.toLowerCase();
-        return text.includes('פיטורין') || text.includes('להציל') || text.includes('חיתוך') || text.includes('פיבוט') || text.includes('סיכון');
+        return text.includes('פיטורין') || text.includes('להציל') || text.includes('חיתוך') || text.includes('פיבוט') || text.includes('סיכון') || text.includes('fda') || text.includes('אישור');
       }) || lateCases[0];
 
+      const fromStyle = early.consensusRatio > 0.3
+        ? (isFemale ? 'מנהלת מחפשת-קונצנזוס ושומרת הרמוניה' : 'מנהל מחפש-קונצנזוס ושומר הרמוניה')
+        : (early.riskRatio === 0
+            ? (isFemale ? 'שומרת סף זהירה וחותרת לוודאות' : 'שומר סף זהיר וחותר לוודאות')
+            : (isFemale ? 'מנהלת ממוקדת בדיקות מקדימות' : 'מנהל ממוקד בדיקות מקדימות'));
+
+      const toStyle = resultsSpike > 0.2
+        ? (isFemale ? 'מנהיגה אסטרטגית מונחית-תוצאות' : 'מנהיג אסטרטגי מונחה-תוצאות')
+        : (isFemale ? 'מנהיגה ממוקדת הכרעה ונטילת סיכונים' : 'מנהיג ממוקד הכרעה ונטילת סיכונים');
+
+      const narrative = isFemale
+        ? `ניכר תהליך הבשלה מובהק: בתחילת הדרך החלטותייך התאפיינו בזהירות מוגברת וחתירה לוודאות. עם צבירת האחריות והניסיון, ניכר מעבר להכרעות חדות מבוססות שורה תחתונה, נכונות ליטול סיכונים אסטרטגיים, והובלה נחושה גם בתנאי אי-ודאות.`
+        : `ניכר תהליך הבשלה מובהק: בתחילת הדרך החלטותיך התאפיינו בזהירות מוגברת וחתירה לוודאות. עם צבירת האחריות והניסיון, ניכר מעבר להכרעות חדות מבוססות שורה תחתונה, נכונות ליטול סיכונים אסטרטגיים, והובלה נחושה גם בתנאי אי-ודאות.`;
+
       return {
-        fromStyle: isFemale ? 'מנהלת מחפשת-קונצנזוס ושומרת הרמוניה' : 'מנהל מחפש-קונצנזוס ושומר הרמוניה',
-        toStyle: isFemale ? 'מנהיגה אסטרטגית מונחית-תוצאות ונטילת סיכונים' : 'מנהיג אסטרטגי מונחה-תוצאות ונטילת סיכונים',
-        trajectoryShiftBadge: 'מעבר מובהק: זהירות והרמוניה ← הכרעה אסטרטגית וסיכון',
-        narrative: isFemale
-          ? 'ניכר תהליך הבשלה מובהק: בתחילת הדרך החלטותייך התמקדו בהגנה על שקט תעשייתי, שמירה על קונצנזוס צוותי ושנאת סיכון. עם צבירת האחריות, ניכר מעבר להכרעות חדות מבוססות שורה תחתונה, נכונות לשלם מחירים חברתיים למען הצלחת המערכת, ונכונות גבוהה ליטול סיכונים אסטרטגיים.'
-          : 'ניכר תהליך הבשלה מובהק: בתחילת הדרך החלטותיך התמקדו בהגנה על שקט תעשייתי, שמירה על קונצנזוס צוותי ושנאת סיכון. עם צבירת האחריות, ניכר מעבר להכרעות חדות מבוססות שורה תחתונה, נכונות לשלם מחירים חברתיים למען הצלחת המערכת, ונכונות גבוהה ליטול סיכונים אסטרטגיים.',
+        fromStyle,
+        toStyle,
+        trajectoryShiftBadge: `מעבר מובהק: ${fromStyle} ← ${toStyle}`,
+        narrative,
         inflectionPointCaseTitle: inflectionCase?.title,
         inflectionPointCaseId: inflectionCase?.id
       };
@@ -239,10 +251,10 @@ export class DecisionProfileService {
     let prominentTendency = '';
 
     if (evolution) {
-      mainTitle = isFemale ? 'מנהיגה אסטרטגית מונחית-תוצאות' : 'מנהיג אסטרטגי מונחה-תוצאות';
+      mainTitle = evolution.toStyle;
       mainDesc = isFemale
-        ? 'את פועלת מתוך ראייה מערכתית ארוכת טווח. למדת להעדיף הצלחה אסטרטגית ושורה תחתונה על פני נוחות רגעית או קונצנזוס חברתי. אינך נרתעת מחיכוך או מנטילת סיכונים כשהיעדים מחייבים זאת.'
-        : 'אתה פועל מתוך ראייה מערכתית ארוכת טווח. למדת להעדיף הצלחה אסטרטגית ושורה תחתונה על פני נוחות רגעית או קונצנזוס חברתי. אינך נרתע מחיכוך או מנטילת סיכונים כשהיעדים מחייבים זאת.';
+        ? `את פועלת מתוך ראייה מערכתית ארוכת טווח. למדת להעדיף הצלחה אסטרטגית ושורה תחתונה. התפתחת מ"${evolution.fromStyle}" לעבר סגנון ניהולי נחוש המאפשר הכרעות בתנאי אי-ודאות.`
+        : `אתה פועל מתוך ראייה מערכתית ארוכת טווח. למדת להעדיף הצלחה אסטרטגית ושורה תחתונה. התפתחת מ"${evolution.fromStyle}" לעבר סגנון ניהולי נחוש המאפשר הכרעות בתנאי אי-ודאות.`;
       prominentTendency = isFemale ? 'הכרעה עניינית ונטילת אחריות ארגונית' : 'הכרעה עניינית ונטילת אחריות ארגונית';
     } else if (metrics.consensusRatio > 0.4 || metrics.riskRatio === 0) {
       mainTitle = isFemale ? 'מחפשת קונצנזוס וקרקע בטוחה' : 'מחפש קרקע מוצקה לפני תנועה';

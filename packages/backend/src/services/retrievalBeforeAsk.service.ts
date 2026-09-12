@@ -72,9 +72,11 @@ function computeConceptOverlap(phraseA: string, phraseB: string): { sharedTokens
   const sharedTokens: string[] = [];
   for (const tA of tokensA) {
     for (const tB of tokensB) {
-      const minLen = Math.min(tA.length, tB.length);
-      const prefixMatch = (minLen >= 4 && (tA.startsWith(tB.slice(0, 4)) || tB.startsWith(tA.slice(0, 4))));
-      if (tA === tB || tA.includes(tB) || tB.includes(tA) || prefixMatch) {
+      // Exact match or Hebrew suffix variation (e.g. פיתוח / פיתוחים / פיתוחו)
+      // Disallows false positive matches between distinct roots (e.g. פיתוח vs פיתוי)
+      const isSuffixVariation = (tA.length >= 4 && tB.length >= 4) &&
+        ((tA.startsWith(tB) && tA.length - tB.length <= 3) || (tB.startsWith(tA) && tB.length - tA.length <= 3));
+      if (tA === tB || isSuffixVariation) {
         sharedTokens.push(tA);
         break;
       }
@@ -83,6 +85,14 @@ function computeConceptOverlap(phraseA: string, phraseB: string): { sharedTokens
 
   const overlapRatio = sharedTokens.length / Math.min(tokensA.length, tokensB.length);
   return { sharedTokens, overlapRatio };
+}
+
+function formatStatementQuote(statement: string, maxChars: number = 100): string {
+  const clean = (statement || '').trim();
+  if (clean.length <= maxChars) return clean;
+  const truncated = clean.slice(0, maxChars);
+  const lastSpace = truncated.lastIndexOf(' ');
+  return (lastSpace > 20 ? truncated.slice(0, lastSpace) : truncated) + '...';
 }
 
 function parseTradeoffAssertion(statement: string): { protectedValue: string; sacrificedValue: string } | null {
@@ -287,9 +297,9 @@ export class RetrievalBeforeAskService {
         reason = reason ? `${reason}+concept` : 'concept_phrase_overlap';
       }
 
-      // Substantial domain word overlap
-      if (sharedWords.length >= 3) {
-        const overlapScore = Math.min(0.88, 0.72 + (sharedWords.length * 0.04));
+      // Substantial domain word overlap (requires >= 4 unique non-stopword tokens)
+      if (sharedWords.length >= 4) {
+        const overlapScore = Math.min(0.86, 0.72 + (sharedWords.length * 0.03));
         if (overlapScore > score) {
           score = overlapScore;
           reason = `thematic_keywords(${sharedWords.slice(0, 5).join(',')})`;
@@ -310,7 +320,7 @@ export class RetrievalBeforeAskService {
       // QUALITY GATE:
       // Must have an authentic structural anchor:
       // (1) Entity match, (2) Deep tradeoff/principle/reversal match, (3) Concrete concept match,
-      // or (4) Substantial >= 3 keyword overlap.
+      // or (4) Substantial >= 4 keyword overlap on outcome or principle.
       const hasAuthenticAnchor = isEntityMatch ||
         reason.includes('deep_tradeoff_match') ||
         reason.includes('tradeoff_reversal') ||
@@ -319,7 +329,7 @@ export class RetrievalBeforeAskService {
         reason.includes('principle_breach') ||
         hasConceptMatch ||
         isFullSubstring ||
-        sharedWords.length >= 3;
+        (sharedWords.length >= 4 && (assertion.category === 'outcome' || assertion.category === 'principle'));
 
       // Reject anything below 0.85 or lacking an authentic anchor
       if (score >= 0.85 && hasAuthenticAnchor) {
@@ -388,19 +398,19 @@ export class RetrievalBeforeAskService {
     if (topCandidate.reason.includes('tradeoff_reversal') || topCandidate.reason.includes('principle_breach')) {
       const cleanStmt = topAssertion.statement.replace(/^שימור:\s*/, '').split('|')[0].trim();
       memoryPreamble = isUserOrigin
-        ? `בעבר הגדרת קו אדום/שימור לגבי: "${cleanStmt.slice(0, 60)}", אך בדילמה הנוכחית מתבצע ויתור עליו.`
-        : `בהחלטה קודמת הוגדר שימור לגבי: "${cleanStmt.slice(0, 60)}", אך בדילמה הנוכחית מתבצע ויתור עליו.`;
+        ? `בעבר הגדרת קו אדום/שימור לגבי: "${formatStatementQuote(cleanStmt)}", אך בדילמה הנוכחית מתבצע ויתור עליו.`
+        : `בהחלטה קודמת הוגדר שימור לגבי: "${formatStatementQuote(cleanStmt)}", אך בדילמה הנוכחית מתבצע ויתור עליו.`;
     } else if (topContradiction) {
       memoryPreamble = isUserOrigin
-        ? `במקרה קודם ציינת "${topAssertion.statement.slice(0, 55)}", אך בהחלטה אחרת: "${topContradiction.statement.slice(0, 55)}".`
-        : `בהקשר קודם עלה: "${topAssertion.statement.slice(0, 55)}", לעומת החלטה אחרת: "${topContradiction.statement.slice(0, 55)}".`;
+        ? `במקרה קודם ציינת "${formatStatementQuote(topAssertion.statement)}", אך בהחלטה אחרת: "${formatStatementQuote(topContradiction.statement)}".`
+        : `בהקשר קודם עלה: "${formatStatementQuote(topAssertion.statement)}", לעומת החלטה אחרת: "${formatStatementQuote(topContradiction.statement)}".`;
     } else if (budgetAssertions.length > 0) {
       if (topAssertion.condition) {
-        memoryPreamble = `מתקדים עבר: "${topAssertion.statement.slice(0, 60)}" (סייג שהוגדר: "${topAssertion.condition.slice(0, 45)}")`;
+        memoryPreamble = `מתקדים עבר: "${formatStatementQuote(topAssertion.statement)}" (סייג שהוגדר: "${formatStatementQuote(topAssertion.condition, 60)}")`;
       } else {
         memoryPreamble = isUserOrigin
-          ? `במקרה קודם ציינת: "${topAssertion.statement.slice(0, 70)}"`
-          : `מהקשר קודם: "${topAssertion.statement.slice(0, 70)}"`;
+          ? `במקרה קודם ציינת: "${formatStatementQuote(topAssertion.statement)}"`
+          : `מהקשר קודם: "${formatStatementQuote(topAssertion.statement)}"`;
       }
     }
 

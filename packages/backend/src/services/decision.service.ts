@@ -196,6 +196,13 @@ export class DecisionService {
         const hasRelevantHistoricalPreamble = Boolean(memoryCheck.memoryPreamble && memoryCheck.assertions.length > 0);
 
         if (hasContradiction) {
+          // WIRE CONNECT: Confront user directly in the primary illumination question with the past boundary/principle!
+          if (memoryCheck.memoryPreamble) {
+            bespokeQuestion.questionText = `${memoryCheck.memoryPreamble}\n\n${bespokeQuestion.questionText}`;
+            bespokeQuestion.origin = 'historical_precedent';
+            bespokeQuestion.strategy = 'contradiction_dissonance';
+          }
+
           historicalQuestion = {
             id: `illum-hist-${caseId}`,
             caseId,
@@ -225,6 +232,10 @@ export class DecisionService {
             createdAt: now
           };
         } else if (hasRelevantHistoricalPreamble) {
+          if (memoryCheck.memoryPreamble && !bespokeQuestion.questionText.includes(memoryCheck.memoryPreamble)) {
+            bespokeQuestion.questionText = `${memoryCheck.memoryPreamble}\n\n${bespokeQuestion.questionText}`;
+          }
+
           historicalQuestion = {
             id: `illum-hist-${caseId}`,
             caseId,
@@ -553,6 +564,7 @@ export class DecisionService {
     if (updates.reliance) session.decisionCase.dimReliance = updates.reliance;
     if (updates.unknowns) session.decisionCase.dimUnknowns = updates.unknowns;
     if (updates.centralTension) session.decisionCase.centralTension = updates.centralTension;
+    if (updates.keyHinge) session.decisionCase.keyHinge = updates.keyHinge;
     if (updates.facts || updates.assumptions) {
       // Invalidate old ai_inferred assertions for this case to prevent rejected/corrected assumptions from lingering in graph
       await this.knowledgeGraphService.invalidateAssertionsByCase(session.decisionCase.userId, caseId, 'user_mirror_update');

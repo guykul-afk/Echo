@@ -149,6 +149,10 @@ export async function runMichalSimulation() {
       missingInfo: caseResult.decisionCase.dimMissingInfo || ''
     };
 
+    const bespokeQ = caseResult.bespokeQuestion;
+    const historicalQ = caseResult.historicalQuestion;
+    const retrievalTelem = caseResult.retrievalTelemetry;
+
     const allAddressedText = [
       initialMirror.consideration,
       bespokeQ?.questionText || '',
@@ -159,10 +163,6 @@ export async function runMichalSimulation() {
     const hasFeminine = /את שוקלת|את מתלבטת|כיצד את|איך את|שאת|האם את|חשוב לך/.test(allAddressedText);
     const isFeminine = hasFeminine && !hasMasculine;
     if (isFeminine) stats.feminineAddressCount++;
-
-    const bespokeQ = caseResult.bespokeQuestion;
-    const historicalQ = caseResult.historicalQuestion;
-    const retrievalTelem = caseResult.retrievalTelemetry;
 
     const questionText = caseResult.illuminationQuestion || initialMirror.consideration || '';
     const strategyUsed = bespokeQ?.strategy || 'none';
