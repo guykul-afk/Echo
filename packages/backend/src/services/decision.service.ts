@@ -184,7 +184,7 @@ export class DecisionService {
 
       // Question 2: שאלת עבר מותנית - מופעלת אך ורק אם מזוהה צורך אמיתי (תקדים, סתירה, או הנחה שברירית מהעבר)
       if (shouldIntervene) {
-        const isTrivialCase = isExplicitSilenceStrategy || erv < 0.85;
+        const isTrivialCase = isExplicitSilenceStrategy || erv < 0.40;
         memoryCheck = await this.retrievalBeforeAskService.checkBeforeAsk(
           dto.userId,
           bespokeQuestion.questionText,

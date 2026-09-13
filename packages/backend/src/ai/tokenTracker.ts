@@ -83,6 +83,7 @@ export class TokenTracker {
 
   static formatMarkdownTable(modelName: string = 'gemini-3.6-flash'): string {
     const s = this.getSummary(modelName);
+    const thinkingTokens = s.totalTokens - (s.promptTokens + s.candidatesTokens);
     return `
 ## 5. עלות הרצה בפועל וצריכת משאבים (Token Usage & Financial Cost)
 
@@ -92,7 +93,7 @@ export class TokenTracker {
 | **סך קריאות API שבוצעו** | **${s.totalCalls.toLocaleString()}** | Capture + Illumination + Delta + Milestones + Persona |
 | **טוקנים של קלט (Prompt Tokens)** | **${s.promptTokens.toLocaleString()}** | תעריף: $0.10 ל-1,000,000 טוקנים |
 | **טוקנים של פלט (Completion Tokens)** | **${s.candidatesTokens.toLocaleString()}** | תעריף: $0.40 ל-1,000,000 טוקנים |
-| **סך כל הטוקנים (Total Tokens)** | **${s.totalTokens.toLocaleString()}** | נמדד ישירות מ-\`usageMetadata\` של גוגל |
+${thinkingTokens > 0 ? `| **טוקנים של חשיבה (Thinking/Cached)** | **${thinkingTokens.toLocaleString()}** | טוקנים מוסווים / מטמון שאינם מחויבים בעלות הפלט הרגילה |\n` : ''}| **סך כל הטוקנים (Total Tokens)** | **${s.totalTokens.toLocaleString()}** | נמדד ישירות מ-\`usageMetadata\` של גוגל |
 | **עלות הרצה בדולר ($ USD)** | **$${s.costUSD.toFixed(4)}** | חישוב מדויק לפי מחירון רשמי |
 | **עלות הרצה בשקלים (₪ ILS)** | **₪${s.costILS.toFixed(3)}** | שער המרה משוער 3.65 ש"ח לדולר |
 `;

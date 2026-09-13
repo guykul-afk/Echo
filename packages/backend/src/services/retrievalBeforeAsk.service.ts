@@ -175,7 +175,7 @@ export class RetrievalBeforeAskService {
               // 1. REVERSAL CONTRADICTION: What was previously protected is now sacrificed!
               const revSacrCheck = computeConceptOverlap(newT.sacrificedValue, oldTradeoff.protectedValue);
               if (revSacrCheck.sharedTokens.length >= 2 || (revSacrCheck.sharedTokens.length === 1 && isEntityMatch)) {
-                const reversalScore = 0.95 + (revSacrCheck.overlapRatio * 0.04);
+                const reversalScore = 0.70 + (revSacrCheck.overlapRatio * 0.29);
                 if (reversalScore > score) {
                   score = reversalScore;
                   reason = `tradeoff_reversal_contradiction(sacrificing_protected:${revSacrCheck.sharedTokens.join(',')})`;
@@ -329,10 +329,7 @@ export class RetrievalBeforeAskService {
         reason += '+qualified_condition';
       }
 
-      // QUALITY GATE:
-      // Must have an authentic structural anchor:
-      // (1) Entity match, (2) Deep tradeoff/principle/reversal match, (3) Concrete concept match,
-      // or (4) Substantial >= 4 keyword overlap on outcome or principle.
+      // Evaluate authentic anchor for later
       const hasAuthenticAnchor = isEntityMatch ||
         reason.includes('deep_tradeoff_match') ||
         reason.includes('tradeoff_reversal') ||
@@ -343,13 +340,19 @@ export class RetrievalBeforeAskService {
         isFullSubstring ||
         (sharedWords.length >= 4 && (assertion.category === 'outcome' || assertion.category === 'principle'));
 
-      // Reject anything below 0.85 or lacking an authentic anchor
-      if (score >= 0.85 && hasAuthenticAnchor) {
-        candidateAssertions.push({ assertion, score, reason });
+      if (score > 0) {
+        candidateAssertions.push({ assertion, score, reason, hasAuthenticAnchor } as any);
       }
     }
 
-    if (candidateAssertions.length === 0) {
+    // Top-K = 8
+    candidateAssertions.sort((a, b) => b.score - a.score);
+    const topKCandidates = candidateAssertions.slice(0, 8);
+
+    // Apply Quality Gate
+    const qualifiedCandidates = topKCandidates.filter((c: any) => c.score >= 0.85 && c.hasAuthenticAnchor);
+
+    if (qualifiedCandidates.length === 0) {
       return {
         entities: relevantEntities,
         assertions: [],
@@ -362,18 +365,18 @@ export class RetrievalBeforeAskService {
       };
     }
 
-    // Sort candidates:
+    // Sort qualified candidates:
     // 1. Closed loop outcome assertions receive primary precedence
     // 2. Retrieval Score
     // 3. Confidence level and freshness
-    candidateAssertions.sort((a, b) => {
+    qualifiedCandidates.sort((a, b) => {
       const aIsOutcome = a.assertion.category === 'outcome' ? 1 : 0;
       const bIsOutcome = b.assertion.category === 'outcome' ? 1 : 0;
       if (aIsOutcome !== bIsOutcome) return bIsOutcome - aIsOutcome;
       if (b.score !== a.score) return b.score - a.score;
       return (b.assertion.confidenceLevel || 0) - (a.assertion.confidenceLevel || 0) || b.assertion.timestamp - a.assertion.timestamp;
     });
-    const topCandidate = candidateAssertions[0];
+    const topCandidate = qualifiedCandidates[0];
     const topAssertion = topCandidate.assertion;
 
     // 3. Novelty Gate Evaluation
