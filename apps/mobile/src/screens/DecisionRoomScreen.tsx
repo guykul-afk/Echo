@@ -48,6 +48,7 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
 };
 
 export interface DecisionSaveData {
+  title?: string;
   consideration: string;
   centralTension: string;
   goalsPrices: string;
@@ -371,6 +372,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
 
     if (onSaveDecision) {
       onSaveDecision({
+        title: decisionCase.title,
         consideration,
         centralTension,
         goalsPrices,

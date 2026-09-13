@@ -141,15 +141,18 @@ export const App: React.FC = () => {
   // 3. Handle Full Decision Save into Journal (Sealed Record)
   const handleSaveDecision = (saveData: DecisionSaveData) => {
     const decisionId = activeCase?.id || `dec-${Date.now()}`;
+    const fullTitle = saveData.title || activeCase?.title || saveData.consideration;
     const newDecision = {
       id: decisionId,
-      title: saveData.consideration.slice(0, 60),
+      title: fullTitle,
       family: activeCase?.family || 'general_deliberation',
       createdAt: activeCase?.createdAt || Date.now(),
       frozenAt: Date.now(),
       status: 'נחתם למעקב',
       sealed: true,
       dilemma: saveData.consideration,
+      consideration: saveData.consideration,
+      dimConsideration: saveData.consideration,
       goalsPrices: saveData.goalsPrices,
       facts: saveData.facts,
       assumptions: saveData.assumptions,

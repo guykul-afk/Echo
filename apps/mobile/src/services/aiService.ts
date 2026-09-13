@@ -157,7 +157,7 @@ export async function analyzeCapturedDilemma(
         let factsText = formatToBulletLines(obj.facts);
 
         parsed = {
-          title: obj.title || rawText.slice(0, 50),
+          title: obj.title || rawText.trim(),
           consideration: obj.consideration || `אתה שוקל: ${rawText}`,
           centralTension: obj.centralTension || 'בחינת החלופות והמחירים הנלווים',
           goalsPrices: obj.goalsPrices || 'איזון בין הרצון להשיג את המטרה לבין המחירים הכרוכים בה',

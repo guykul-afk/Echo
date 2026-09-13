@@ -16,6 +16,7 @@ interface StoredDecision {
   title: string;
   frozenAt?: number;
   date?: string;
+  dilemma?: string;
   consideration?: string;
   rawCaptureText?: string;
   rawVerbatim?: string;
@@ -88,6 +89,43 @@ function cleanHtml(str?: string): string {
     .replace(/&gt;/gi, '>')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function getFullDecisionTitle(d: StoredDecision): string {
+  const fullCandidates = [
+    d.dilemma,
+    d.dimConsideration,
+    d.consideration,
+    d.rawCaptureText,
+    d.rawVerbatim
+  ].filter((c): c is string => typeof c === 'string' && c.trim().length > 0);
+
+  const rawTitle = (d.title || '').trim();
+
+  if (rawTitle) {
+    const cleanTit = cleanHtml(rawTitle);
+    // If rawTitle was truncated (e.g. at 60 chars or cut off), look for a longer candidate that extends it
+    const longerMatch = fullCandidates.find(c => {
+      const cleanCand = cleanHtml(c);
+      return (
+        cleanCand.length > cleanTit.length &&
+        (cleanCand.startsWith(cleanTit) ||
+         cleanCand.startsWith(cleanTit.slice(0, 30)) ||
+         (cleanTit.length >= 45 && cleanCand.includes(cleanTit.slice(0, 40))))
+      );
+    });
+
+    if (longerMatch) {
+      return cleanHtml(longerMatch);
+    }
+    return cleanTit;
+  }
+
+  if (fullCandidates.length > 0) {
+    return cleanHtml(fullCandidates[0]);
+  }
+
+  return 'החלטה ללא כותרת';
 }
 
 const SEED_DECISIONS: StoredDecision[] = [
@@ -312,7 +350,15 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
           {decisions.map((d) => {
             const isExpanded = expandedId === d.id;
             const dateStr = d.date || (d.frozenAt ? new Date(d.frozenAt).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: 'numeric' }) : '—');
-            const considerationText = cleanHtml(d.dimConsideration || d.consideration || d.rawVerbatim || d.rawCaptureText || d.goal) || '—';
+            const displayTitle = getFullDecisionTitle(d);
+            const rawConsideration = cleanHtml(d.dimConsideration || d.consideration || d.dilemma || d.rawVerbatim || d.rawCaptureText || d.goal);
+            const showConsiderationSubline = Boolean(
+              rawConsideration &&
+              rawConsideration !== '—' &&
+              rawConsideration !== displayTitle &&
+              !displayTitle.includes(rawConsideration) &&
+              !rawConsideration.includes(displayTitle)
+            );
             const nextStepText = cleanHtml(d.chosenNextStep || d.nextStep || d.insightChosenStep || d.refinedAction || d.actionAnswer || d.userAnswer || d.selectedCriterion) || '—';
             const beforeText = cleanHtml(d.insightBefore || d.assumptions) || '—';
             const nowText = cleanHtml(d.insightNow || d.question || d.keyHinge) || 'בדיקת הנחת הציר';
@@ -354,14 +400,16 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
                 </div>
 
                 {/* Title & Consideration */}
-                <div>
-                  <h3 className="font-editorial text-sm font-bold text-[#E6E8EE]">
-                    {d.title || 'החלטה ללא כותרת'}
+                <div className="space-y-1">
+                  <h3 className="font-editorial text-sm font-bold text-[#E6E8EE] break-words whitespace-normal leading-snug">
+                    {displayTitle}
                   </h3>
-                  <p className="text-[11px] font-light text-[#E6E8EE]/70 mt-1 line-clamp-2">
-                    <span style={{ color: LuxuryTheme.accent.gold }}>אתה שוקל: </span>
-                    {considerationText}
-                  </p>
+                  {showConsiderationSubline && (
+                    <p className="text-[11px] font-light text-[#E6E8EE]/70 mt-1 break-words whitespace-normal">
+                      <span style={{ color: LuxuryTheme.accent.gold }}>אתה שוקל: </span>
+                      {rawConsideration}
+                    </p>
+                  )}
                 </div>
 
                 {/* Next Step / Conclusion Snippet */}
@@ -418,7 +466,7 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
 
                       return (
                         <DecisionFlowPipeline
-                          dilemma={cleanHtml(d.dimConsideration || d.consideration || d.rawVerbatim || d.rawCaptureText || d.title)}
+                          dilemma={cleanHtml(d.dimConsideration || d.consideration || d.dilemma || d.rawVerbatim || d.rawCaptureText || d.title)}
                           goalsPrices={cleanHtml(d.dimGoalsPrices || d.goalsPrices || d.goal || d.centralTension)}
                           facts={cleanHtml(d.dimFacts || d.facts || d.observations)}
                           assumptions={cleanHtml(d.dimAssumptions || d.assumptions || d.dimReliance || d.reliance)}
@@ -502,7 +550,7 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col justify-center items-center p-3">
           <div className="w-full max-w-[420px] max-h-[92vh] overflow-y-auto bg-[#07080B] rounded-3xl border border-[#202330] shadow-2xl p-2 flex flex-col">
             <OutcomeModal
-              caseTitle={activeOutcomeDecision.dimConsideration || activeOutcomeDecision.consideration || activeOutcomeDecision.rawVerbatim || activeOutcomeDecision.title}
+              caseTitle={getFullDecisionTitle(activeOutcomeDecision)}
               nextStepChosen={activeOutcomeDecision.chosenNextStep || activeOutcomeDecision.nextStep || activeOutcomeDecision.insightChosenStep || activeOutcomeDecision.refinedAction}
               onSubmitOutcome={handleOutcomeSubmit}
               onCancel={() => setActiveOutcomeDecision(null)}
