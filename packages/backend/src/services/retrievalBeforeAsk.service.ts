@@ -35,13 +35,11 @@ function extractConceptPhrases(text: string): string[] {
 
 function normalizeHebrewWord(word: string): string {
   let w = word.toLowerCase().trim();
-  // Strip common Hebrew prefixes (ו, ה, ב, ל, מ, ש, כ)
-  if (w.length >= 4 && (w.startsWith('ו') || w.startsWith('ה') || w.startsWith('ב') || w.startsWith('ל') || w.startsWith('מ') || w.startsWith('ש') || w.startsWith('כ'))) {
+  if (w.length >= 5 && (w.startsWith('ו') || w.startsWith('ה') || w.startsWith('ב') || w.startsWith('ל') || w.startsWith('מ') || w.startsWith('ש') || w.startsWith('כ'))) {
     w = w.slice(1);
   }
-  if (w.length >= 4 && (w.startsWith('ה') || w.startsWith('ב') || w.startsWith('ל') || w.startsWith('מ'))) {
-    w = w.slice(1);
-  }
+  const badFragments = ['ירה', 'ירות', 'וצר', 'שקיע'];
+  if (badFragments.includes(w)) return '';
   return w;
 }
 
@@ -122,8 +120,22 @@ export class RetrievalBeforeAskService {
     userId: string,
     draftQuestion: string,
     rawText: string,
-    deepMechanisms?: DeepDecisionMechanisms
+    deepMechanisms?: DeepDecisionMechanisms,
+    isTrivialCase: boolean = false
   ): Promise<RetrievalBeforeAskResult> {
+    if (isTrivialCase) {
+      return {
+        memoryPreamble: undefined,
+        shouldConvertToConfirmation: false,
+        knownAnswerFact: undefined,
+        contradictingAssertions: [],
+        assertions: [],
+        entities: [],
+        hasKnownAnswer: false,
+        canSuppressIntervention: false
+      };
+    }
+
     const activeAssertions = await this.knowledgeGraphService.getActiveAssertionsByUser(userId);
     const entities = await this.knowledgeGraphService.getEntitiesByUser(userId);
     const now = Date.now();
@@ -148,6 +160,10 @@ export class RetrievalBeforeAskService {
       let score = 0;
       let reason = '';
 
+      const isEntityMatch = Boolean(
+        assertion.entityId && relevantEntities.some(e => e.id === assertion.entityId)
+      );
+
       const stmtClean = assertion.statement.toLowerCase().trim();
 
       // Deep Mechanism Match: Tradeoffs & Reversals (Contradictions)
@@ -158,8 +174,8 @@ export class RetrievalBeforeAskService {
             for (const newT of deepMechanisms.tradeoffs) {
               // 1. REVERSAL CONTRADICTION: What was previously protected is now sacrificed!
               const revSacrCheck = computeConceptOverlap(newT.sacrificedValue, oldTradeoff.protectedValue);
-              if (revSacrCheck.sharedTokens.length > 0) {
-                const reversalScore = 0.99;
+              if (revSacrCheck.sharedTokens.length >= 2 || (revSacrCheck.sharedTokens.length === 1 && isEntityMatch)) {
+                const reversalScore = 0.95 + (revSacrCheck.overlapRatio * 0.04);
                 if (reversalScore > score) {
                   score = reversalScore;
                   reason = `tradeoff_reversal_contradiction(sacrificing_protected:${revSacrCheck.sharedTokens.join(',')})`;
@@ -250,8 +266,9 @@ export class RetrievalBeforeAskService {
         if (deepMechanisms?.tradeoffs && deepMechanisms.tradeoffs.length > 0) {
           for (const t of deepMechanisms.tradeoffs) {
             const breachOverlap = computeConceptOverlap(t.sacrificedValue, stmtClean);
-            if (breachOverlap.sharedTokens.length > 0) {
-              const breachScore = 0.99;
+            if (breachOverlap.sharedTokens.length >= 2 || (breachOverlap.sharedTokens.length === 1 && isEntityMatch)) {
+              // Add variance to the score based on ratio instead of hardcoding 0.99 everywhere
+              const breachScore = 0.95 + (breachOverlap.overlapRatio * 0.04);
               if (breachScore > score) {
                 score = breachScore;
                 reason = `principle_breach_contradiction(sacrificing_principle:${breachOverlap.sharedTokens.join(',')})`;
@@ -272,11 +289,6 @@ export class RetrievalBeforeAskService {
           reason = reason ? `${reason}+evidence_match` : 'deep_evidence_match';
         }
       }
-
-      // Lexical & Entity matching (fallback/complementary)
-      const isEntityMatch = Boolean(
-        assertion.entityId && relevantEntities.some(e => e.id === assertion.entityId)
-      );
 
       const conceptPhrases = extractConceptPhrases(assertion.statement);
       const hasConceptMatch = conceptPhrases.some(phrase => inputLower.includes(phrase));

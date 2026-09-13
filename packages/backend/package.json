@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "test": "node dist/tests/run-simulations.js",
-    "test:phase1": "node dist/tests/phase1-memory.test.js"
+    "test:phase1": "node dist/tests/phase1-memory.test.js",
+    "simulate:v16:scale": "npx tsx scripts/simulator_v16_talia_scale.ts"
   },
   "dependencies": {
     "@echo/shared": "^1.0.0",

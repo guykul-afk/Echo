@@ -3,6 +3,7 @@ import { IAiProvider, EpistemicExtractionResult, ExtractedSignatureDTO } from '.
 import { EPISTEMIC_EXTRACTION_SYSTEM_PROMPT } from '../../prompts/epistemic-extraction.prompt.js';
 import { COGNITIVE_ENGINE_PROMPT, CognitiveAnalysisResult } from '../../prompts/cognitive-engine.prompt.js';
 import { DELTA_ENGINE_PROMPT, DeltaAnalysisResult } from '../../prompts/delta-engine.prompt.js';
+import { TokenTracker } from '../tokenTracker.js';
 
 function sanitizeJsonString(jsonStr: string): string {
   const lines = jsonStr.split('\n');
@@ -128,6 +129,7 @@ export class GeminiAiProvider implements IAiProvider {
     }
 
     const data = await response.json();
+    TokenTracker.recordUsage(data.usageMetadata);
     let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
     
     // Unwrap any quotes or markdown
@@ -191,6 +193,7 @@ Extract the epistemic breakdown, decision signature, four human dimensions, and 
     }
 
     const data = await response.json();
+    TokenTracker.recordUsage(data.usageMetadata);
     const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!candidateText) {
       throw new Error('No content returned from Gemini.');
@@ -242,6 +245,7 @@ CRITICAL: DO NOT repeat these angles, tropes (e.g. freemium, binary dichotomy), 
     }
 
     const data = await response.json();
+    TokenTracker.recordUsage(data.usageMetadata);
     const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!candidateText) {
       throw new Error('No content returned from Gemini Cognitive Engine.');
@@ -310,6 +314,7 @@ User's Response:
     }
 
     const data = await response.json();
+    TokenTracker.recordUsage(data.usageMetadata);
     const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!candidateText) {
       throw new Error('No content returned from Gemini Delta Engine.');
@@ -423,6 +428,7 @@ User's Response:
     }
 
     const data = await response.json();
+    TokenTracker.recordUsage(data.usageMetadata);
     return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
   }
 }

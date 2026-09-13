@@ -14,17 +14,19 @@ import { GeminiAiProvider } from '../src/ai/providers/gemini.provider.js';
 import { DecisionProfileService } from '../src/services/decisionProfile.service.js';
 import { CalibrationEngineService, CalibrationDataPoint } from '../src/services/calibration.service.js';
 import { recordOutcomeHandler } from '../src/functions/recordOutcome.js';
-import { DANIEL_FIXTURES, DanielFixtureCase } from './fixtures/daniel.fixture.js';
+import { TALIA_CASES } from './fixtures/talia.fixture.js';
+import { TaliaFixtureCase } from './fixtures/talia.types.js';
 import { DecisionCase, DecisionProfileData, OperatingContext } from '@echo/shared';
 import { validateResponseText } from './validators/textValidator.js';
+import { TokenTracker } from '../src/ai/tokenTracker.js';
 
 const SIMULATIONS_DIR = path.resolve(__dirname, '../../../simulations');
 if (!fs.existsSync(SIMULATIONS_DIR)) {
   fs.mkdirSync(SIMULATIONS_DIR, { recursive: true });
 }
-const CHECKPOINT_FILE = path.join(SIMULATIONS_DIR, 'v15_daniel_checkpoints.json');
-const REPORT_FILE = path.join(SIMULATIONS_DIR, 'user15_daniel_scale_report.md');
-const TRANSCRIPT_FILE = path.join(SIMULATIONS_DIR, 'user15_daniel_transcript.md');
+const CHECKPOINT_FILE = path.join(SIMULATIONS_DIR, 'v16_talia_checkpoints.json');
+const REPORT_FILE = path.join(SIMULATIONS_DIR, 'user16_talia_scale_report.md');
+const TRANSCRIPT_FILE = path.join(SIMULATIONS_DIR, 'user16_talia_transcript.md');
 
 interface SavedCaseState {
   caseIndex: number;
@@ -49,7 +51,7 @@ interface SavedCaseState {
   retrievalCandidatesCount: number;
   topRetrievalScore: number;
   retrievalReason?: string;
-  danielAnswer: string;
+  taliaAnswer: string;
   refinedNow?: string;
   chosenStep?: string;
   activeCorrectionApplied?: boolean;
@@ -87,10 +89,10 @@ const decisionService = new DecisionService(geminiProvider);
 const profileService = new DecisionProfileService(geminiProvider);
 
 /**
- * Persona Agent: Dynamically generates Daniel Raz's authentic response with validation and retry
+ * Persona Agent: Dynamically generates Talia Koren's authentic response with validation and retry
  */
-async function simulateDanielResponse(
-  fixture: DanielFixtureCase,
+async function simulateTaliaResponse(
+  fixture: TaliaFixtureCase,
   illuminationQuestion: string,
   apiKey: string,
   modelName: string = process.env.COGNITIVE_MODEL || 'gemini-3.6-flash'
@@ -98,7 +100,7 @@ async function simulateDanielResponse(
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
   const prompt = `
-אתה מגלם את דניאל רז (בן 44), מייסד ומנכ"ל חברת NexDrive AI (סטארט-אפ DeepTech לרובוטיקה וחיישני רכב אוטונומי).
+אתה מגלם את טליה קורן (בת 48), מנהלת תיכון "עירוני מקיף" גדול (1,200 תלמידים, 120 מורים).
 שלב כרונולוגי: יום ${fixture.day} (חודש ${fixture.month} מתוך 6).
 
 פרופיל אישי ומצב מנטלי בשלב זה:
@@ -114,10 +116,10 @@ ${fixture.styleInstructions}
 "${illuminationQuestion}"
 
 משימתך:
-ענה על שאלת ההארה הזו בגוף ראשון (אני) בלשון זכר, באופן האותנטי ביותר עבור דניאל ברגע זה בציר הזמן:
-1. הישאר ב-100% בתוך הדמות והמצב הפסיכולוגי שלה (אידיאליסט נוקשה בחודש 1-2, לחוץ ומתפשר בחודש 3-4, בוגר ומכויל בחודש 5-6).
-2. תן תשובה אנושית, ישירה ומנומקת בת 2 עד 4 משפטים חדים.
-3. אל תשתמש במילות הקדמה ("אני דניאל", "בתור מנכ"ל"), ואל תכתוב רשימות תבליטים, הערות באנגלית או תגיות כמו Draft/Outline/Checklist. כתוב ישירות את תשובתך בעברית בלבד למערכת ECHO.
+עני על שאלת ההארה הזו בגוף ראשון (אני) בלשון נקבה, באופן האותנטי ביותר עבור טליה ברגע זה בציר הזמן:
+1. הישארי ב-100% בתוך הדמות והמצב הפסיכולוגי שלה (אידיאליסטית נוקשה בחודש 1-2, לחוצה ומתפשרת בחודש 3-4, בוגרת ומכוילת בחודש 5-6).
+2. תני תשובה אנושית, ישירה ומנומקת בת 2 עד 4 משפטים חדים.
+3. אל תשתמשי במילות הקדמה ("אני טליה", "בתור מנהלת"), ואל תכתבי רשימות תבליטים, הערות באנגלית או תגיות כמו Draft/Outline/Checklist. כתבי ישירות את תשובתך בעברית בלבד למערכת ECHO.
 `;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -144,6 +146,7 @@ ${fixture.styleInstructions}
       }
 
       const data = await response.json();
+      TokenTracker.recordUsage(data.usageMetadata);
       let answer = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
       answer = answer.replace(/^```(?:text)?\s*/i, '').replace(/\s*```$/, '').trim();
       answer = answer.replace(/\*?Draft\s*\d*[^:\n]*:?\*?/gi, '').replace(/\*?Mental Outline:?\*?/gi, '').trim();
@@ -157,9 +160,9 @@ ${fixture.styleInstructions}
       if (validation.isValid) {
         return answer;
       }
-      console.warn(`[Daniel Persona Validation] Attempt ${attempt}/3 rejected: ${validation.reason}`);
+      console.warn(`[Talia Persona Validation] Attempt ${attempt}/3 rejected: ${validation.reason}`);
     } catch (err: any) {
-      console.warn(`[Daniel Persona Network Error] Attempt ${attempt}/3: ${err.message}`);
+      console.warn(`[Talia Persona Network Error] Attempt ${attempt}/3: ${err.message}`);
     }
   }
 
@@ -167,9 +170,9 @@ ${fixture.styleInstructions}
   return fixture.userAnswer || 'אני מבין את שאלת ההארה ואת הטרייד-אוף שהיא מציפה. בנקודת הזמן הזו ההכרעה שלי ברורה ואני עומד מאחוריה.';
 }
 
-export async function runDanielSimulation() {
+export async function runTaliaSimulation() {
   console.log('================================================================================');
-  console.log('=== Starting Rigorous Simulation V15: Daniel Raz (NexDrive AI CEO) ===');
+  console.log('=== Starting Rigorous Simulation V16: Talia Koren (High School Principal) ===');
   console.log('=== 60 Cases Over 180 Days | Full Cognitive Architecture & Memory Retrieval ===');
   console.log('================================================================================\n');
 
@@ -178,22 +181,22 @@ export async function runDanielSimulation() {
 
   // Initialize report files if starting fresh
   if (checkpoint.cases.length === 0) {
-    fs.writeFileSync(REPORT_FILE, `# דוח סימולציה מבוקרת V15: דניאל רז (NexDrive AI)
+    fs.writeFileSync(REPORT_FILE, `# דוח סימולציה מבוקרת V16: טליה קורן (High School)
 **תאריך הרצה:** ${new Date().toISOString().split('T')[0]}  
-**ארכיטקטורת בדיקה:** Dual-Agent (מנוע ECHO מול סוכן הדמות של דניאל רז עם Zero-Trust Validation).  
+**ארכיטקטורת בדיקה:** Dual-Agent (מנוע ECHO מול סוכן הדמות של טליה קורן עם Zero-Trust Validation).  
 **ציר זמן:** 180 ימים (6 חודשים מדומיים), 60 החלטות קוגניטיביות מלאות.  
-**משתמש הבדיקה:** \`user15_daniel_scale\` (בן 44, מייסד ומנכ"ל חברת DeepTech לרכב אוטונומי).  
+**משתמש הבדיקה:** \`user16_talia_scale\` (בן 44, מייסד ומנכ"ל חברת DeepTech לרכב אוטונומי).  
 
 ---
 
 ## מהלך הסימולציה והשתלשלות 60 המקרים
 `);
-    fs.writeFileSync(TRANSCRIPT_FILE, `# תמליל אינטראקציה דו-סוכנית מלא: דניאל רז (User 15)\n\n`);
+    fs.writeFileSync(TRANSCRIPT_FILE, `# תמליל אינטראקציה דו-סוכנית מלא: טליה קורן (User 15)\n\n`);
   }
 
-  const userId = 'user15_daniel_scale';
+  const userId = 'user16_talia_scale';
 
-  for (const fixture of DANIEL_FIXTURES) {
+  for (const fixture of TALIA_CASES) {
     if (processedIndices.has(fixture.caseIndex)) {
       console.log(`[Skipping] Case ${fixture.caseIndex}/60 already completed in checkpoint.`);
       continue;
@@ -204,7 +207,7 @@ export async function runDanielSimulation() {
     console.log(`--------------------------------------------------------------------------------`);
 
     const era: OperatingContext = {
-      id: `era-daniel-m${fixture.month}`,
+      id: `era-talia-m${fixture.month}`,
       userId,
       name: `חודש ${fixture.month}: ${fixture.month <= 2 ? 'בניית יסודות ועקרונות' : fixture.month <= 4 ? 'משבר תזרים ושחיקת גבולות' : 'התפכחות וכיול בוגר'}`,
       description: 'סטארט-אפ DeepTech לחיישני רכב אוטונומי',
@@ -224,7 +227,7 @@ export async function runDanielSimulation() {
           rawText: fixture.rawInput,
           eraId: era.id,
           userGender: 'male',
-          userName: 'דניאל',
+          userName: 'טליה',
           frictionLevel: 'deep'
         });
         break;
@@ -265,7 +268,7 @@ export async function runDanielSimulation() {
     let activeCorrectionApplied = false;
     let correctionDiff: any = null;
     if (fixture.mirrorCorrection) {
-      console.log(`[2. Mirror Correction] דניאל מדייק ומעדכן את המראה...`);
+      console.log(`[2. Mirror Correction] טליה מדייק ומעדכן את המראה...`);
       const targetField = fixture.mirrorCorrection.targetField;
       const beforeVal = (initialMirror as any)[targetField] || '';
       const afterVal = fixture.mirrorCorrection.correctedValue;
@@ -286,28 +289,28 @@ export async function runDanielSimulation() {
     }
 
     // Step 3: Persona Agent Reflection (unless silent on trivial)
-    let danielAnswer = '';
+    let taliaAnswer = '';
     let refinedNow = '';
     let chosenStep = '';
 
     if (isNaturalSilence && fixture.expectedTrivialSilence) {
       console.log(`[3. Smart Silence] המערכת שתקה כצפוי, אין צורך בהתערבות.`);
-      danielAnswer = 'אין צורך בשאלה נוספת, ההחלטה הוכרעה לפי המראה.';
+      taliaAnswer = 'אין צורך בשאלה נוספת, ההחלטה הוכרעה לפי המראה.';
     } else {
-      console.log(`[3. סוכן הדמות (דניאל)]: מפעיל מודל דמות (חודש ${fixture.month})...`);
-      danielAnswer = await simulateDanielResponse(
+      console.log(`[3. סוכן הדמות (טליה)]: מפעיל מודל דמות (חודש ${fixture.month})...`);
+      taliaAnswer = await simulateTaliaResponse(
         fixture,
         illuminationQ,
         process.env.GEMINI_API_KEY || ''
       );
-      console.log(`   💬 תשובת דניאל: "${danielAnswer.slice(0, 90)}..."`);
+      console.log(`   💬 תשובת טליה: "${taliaAnswer.slice(0, 90)}..."`);
 
       // Submit deliberation answer to ECHO
       console.log(`[4. סגירת מעגל דלתא] מזין מענה ומחלץ refinedInsight...`);
       try {
         const deltaResult = await decisionService.submitDeliberationAnswer(
           dCase.id,
-          danielAnswer,
+          taliaAnswer,
           false,
           userId
         );
@@ -322,7 +325,7 @@ export async function runDanielSimulation() {
     // Step 4: Record Outcome if planned for this day
     let outcomeReported = false;
     for (const pastCase of checkpoint.cases) {
-      const pastFixture = DANIEL_FIXTURES.find(f => f.caseIndex === pastCase.caseIndex);
+      const pastFixture = TALIA_CASES.find(f => f.caseIndex === pastCase.caseIndex);
       if (pastFixture?.plannedOutcome && pastFixture.plannedOutcome.day === fixture.day) {
         console.log(`\n[5. רישום תוצאה בפועל] מקרה ${pastCase.caseIndex} הגיע ליום הבדיקה (${fixture.day})!`);
         try {
@@ -376,7 +379,7 @@ export async function runDanielSimulation() {
       retrievalCandidatesCount: retrieval?.retrievedCandidatesCount || 0,
       topRetrievalScore: retrieval?.retrievalScore || 0,
       retrievalReason: retrieval?.retrievalReason,
-      danielAnswer,
+      taliaAnswer,
       refinedNow,
       chosenStep,
       activeCorrectionApplied,
@@ -405,7 +408,7 @@ export async function runDanielSimulation() {
           createdAt: c.day * 86400000,
           updatedAt: c.day * 86400000
         }));
-        const prof = await profileService.generateProfile(userId, relevantCases as DecisionCase[], { gender: 'male', userName: 'דניאל' });
+        const prof = await profileService.generateProfile(userId, relevantCases as DecisionCase[], { gender: 'male', userName: 'טליה' });
         checkpoint.profiles[fixture.caseIndex] = prof;
         console.log(`   ✓ ארכיטיפ חולץ: "${prof.mainStyle?.title}" (${prof.mainStyle?.prominentTendency})`);
       } catch (err: any) {
@@ -418,9 +421,9 @@ export async function runDanielSimulation() {
     // Append to transcript
     const transcriptText = `
 ### [מקרה ${fixture.caseIndex}] ${fixture.title} (יום ${fixture.day} | חודש ${fixture.month})
-* **קלט דניאל:** "${fixture.rawInput}"
+* **קלט טליה:** "${fixture.rawInput}"
 * **שאלת ההארה של ECHO:** "${illuminationQ}"
-* **תשובת דניאל:** "${danielAnswer}"
+* **תשובת טליה:** "${taliaAnswer}"
 * **תובנת דלתא שחולצה:** "${refinedNow || 'ללא שינוי'}"
 * **צעד נבחר:** "${chosenStep || 'ללא צעד'}"
 ${correctionDiff ? `* **תיקון מראה אקטיבי:** עודכן שדה \`${correctionDiff.field}\` מ-"${correctionDiff.before.slice(0, 40)}..." ל-"${correctionDiff.after.slice(0, 40)}..."` : ''}
@@ -438,7 +441,7 @@ ${correctionDiff ? `* **תיקון מראה אקטיבי:** עודכן שדה \`
 * **אסטרטגיה וערך השהייה:** \`${strategyUsed}\` (ERV: ${erv.toFixed(2)})
 ${retrieval && retrieval.retrievedCandidatesCount > 0 ? `* **שליפת זיכרון:** ${retrieval.retrievedCandidatesCount} מועמדים | ציון: ${(retrieval.retrievalScore || 0).toFixed(2)} | סיבה: \`${retrieval.retrievalReason}\`` : '* **שליפת זיכרון:** לא אותרו מועמדי עבר מעל הסף'}
 ${correctionDiff ? `* **תיקון מראה אקטיבי:** עודכן שדה \`${correctionDiff.field}\` | סטטוס: ✅ מאומת בגרף` : ''}
-* **תשובת דניאל:** "${danielAnswer}"
+* **תשובת טליה:** "${taliaAnswer}"
 * **דלתא וסגירת מעגל:** ${refinedNow ? `תובנה: "${refinedNow}" | צעד: "${chosenStep}"` : 'ללא שינוי'}
 
 ---
@@ -496,13 +499,13 @@ ${correctionDiff ? `* **תיקון מראה אקטיבי:** עודכן שדה \`
   } as DecisionCase));
 
   if (!checkpoint.profiles[15]) {
-    checkpoint.profiles[15] = await profileService.generateProfile(userId, allDecisionCases.slice(0, 15), { gender: 'male', userName: 'דניאל' });
+    checkpoint.profiles[15] = await profileService.generateProfile(userId, allDecisionCases.slice(0, 15), { gender: 'male', userName: 'טליה' });
   }
   if (!checkpoint.profiles[35]) {
-    checkpoint.profiles[35] = await profileService.generateProfile(userId, allDecisionCases.slice(0, 35), { gender: 'male', userName: 'דניאל' });
+    checkpoint.profiles[35] = await profileService.generateProfile(userId, allDecisionCases.slice(0, 35), { gender: 'male', userName: 'טליה' });
   }
   if (!checkpoint.profiles[60]) {
-    checkpoint.profiles[60] = await profileService.generateProfile(userId, allDecisionCases.slice(0, 60), { gender: 'male', userName: 'דניאל' });
+    checkpoint.profiles[60] = await profileService.generateProfile(userId, allDecisionCases.slice(0, 60), { gender: 'male', userName: 'טליה' });
   }
   saveCheckpoint(checkpoint);
 
@@ -522,12 +525,12 @@ ${correctionDiff ? `* **תיקון מראה אקטיבי:** עודכן שדה \`
     : `הרעה בדיוק החיזוי (${((fullCalib.brierScore - earlyCalib.brierScore) / earlyCalib.brierScore * 100).toFixed(0)}%)`;
 
   const summaryMarkdown = `
-# דוח בקרה מסכם מתוקן: סימולציה מבוקרת V15 — דניאל רז (60 מקרים)
+# דוח בקרה מסכם מתוקן: סימולציה מבוקרת V16 — טליה קורן (60 מקרים)
 
 ## 1. תקציר מנהלים וממצאי ליבה
-* **היקף הבדיקה:** 60 החלטות קוגניטיביות מלאות על פני חצי שנה מדומה (180 יום) עבור \`user15_daniel_scale\`.
+* **היקף הבדיקה:** 60 החלטות קוגניטיביות מלאות על פני חצי שנה מדומה (180 יום) עבור \`user16_talia_scale\`.
 * **שתיקה חכמה טבעית (Natural Smart Silence):** נבדקה ב-8 החלטות זוטרות ללא כפיית מצב Quick. בסף ERV 0.81, המערכת שתקה ב-**${naturalSilenceCount} מתוך ${trivialCases.length} מקרים (${silencePct}%)**.
-* **זיהוי סתירות ושחיקת גבולות (Contradiction Dissonance):** נבדקו 8 החלטות בהן דניאל נטה לשבור קווי אדום מחודשים 1-2. המערכת זיהתה ועימתה ב-**${contradictionsCaught} מתוך ${contradictionCases.length} מקרים (${contradictionPct}%)**, תוך הזרקת הקשר העבר ישירות לגוף השאלה.
+* **זיהוי סתירות ושחיקת גבולות (Contradiction Dissonance):** נבדקו 8 החלטות בהן טליה נטתה לשבור קווי אדום מחודשים 1-2. המערכת זיהתה ועימתה ב-**${contradictionsCaught} מתוך ${contradictionCases.length} מקרים (${contradictionPct}%)**, תוך הזרקת הקשר העבר ישירות לגוף השאלה.
 * **שליפת תקדימי זיכרון מהגרף (Qualified Retrieval):** אותרו מועמדי עבר ב-**${retrievalMatches} מתוך ${totalCases} מקרים (${retrievalPct}%)**.
 * **אימות תיקוני מראה אקטיביים (Verified Diff):** כל ${activeCorrections.length} התיקונים תועדו לפני ואחרי ועודכנו בגרף הידע.
 
@@ -547,30 +550,33 @@ ${correctionDiff ? `* **תיקון מראה אקטיבי:** עודכן שדה \`
 
 | רכיב במראה האישית | חודש 1 (מקרה 15) | חודש 3 (מקרה 35) | חודש 6 (מקרה 60) |
 | :--- | :--- | :--- | :--- |
-| **ארכיטיפ ראשי** | **${prof15?.mainStyle?.title || 'מהנדס מערכות קפדן וריכוזי'}** | **${prof35?.mainStyle?.title || 'מנהיג במשבר, פשרות תחת לחץ'}** | **${prof60?.mainStyle?.title || 'מנהיג טכנולוגי מכויל ומפוכח'}** |
-| **נטייה בולטת** | ${prof15?.mainStyle?.prominentTendency || 'אי-התפשרות הנדסית'} | ${prof35?.mainStyle?.prominentTendency || 'שרידות תזרימית'} | ${prof60?.mainStyle?.prominentTendency || 'שילוב בטיחות עם גמישות מסחרית'} |
-| **שלב 1 בזרימת החלטה** | ${prof15?.flowSteps?.[0]?.title || 'ניתוח מפרט טכני'} | ${prof35?.flowSteps?.[0]?.title || 'בדיקת לחץ תזרימי'} | **${prof60?.flowSteps?.[0]?.title || 'הפרדה בין הפיך לבלתי-הפיך'}** |
-| **שלב 4 בזרימת החלטה** | ${prof15?.flowSteps?.[3]?.title || 'התבצרות במעבדה'} | ${prof35?.flowSteps?.[3]?.title || 'קיצורי דרך זמניים'} | **${prof60?.flowSteps?.[3]?.title || 'משמעת הנדסית מבוססת עובדות'}** |
-| **עוגן מרכזי** | ${prof15?.anchors?.[0]?.title || 'שלמות ארכיטקטונית'} | ${prof35?.anchors?.[0]?.title || 'שמירה על הצוות'} | **${prof60?.anchors?.[0]?.title || 'יושרה מקצועית ושקיפות מלאה'}** |
-| **מלכודת מרכזית** | ${prof15?.traps?.[0]?.title || 'Over-Engineering ואיסוף מידע אינסופי'} | ${prof35?.traps?.[0]?.title || 'שחיקת קווי אדום תחת לחץ'} | **${prof60?.traps?.[0]?.title || 'עומס יתר של פיילוטים'}** |
+| **ארכיטיפ ראשי** | **${prof15?.mainStyle?.title || 'מנהלת תיכון אידיאליסטית וקפדנית'}** | **${prof35?.mainStyle?.title || 'מנהיגה במשבר, שחיקה תחת לחץ'}** | **${prof60?.mainStyle?.title || 'מנהלת חינוכית מאוזנת ומפוכחת'}** |
+| **נטייה בולטת** | ${prof15?.mainStyle?.prominentTendency || 'אכיפת נהלים וסדר מוסדי'} | ${prof35?.mainStyle?.prominentTendency || 'עומס רגשי וטשטוש גבולות'} | ${prof60?.mainStyle?.prominentTendency || 'שילוב חמלה עם יציבות מערכתית'} |
+| **שלב 1 בזרימת החלטה** | ${prof15?.flowSteps?.[0]?.title || 'בדיקת נהלים ותקנונים'} | ${prof35?.flowSteps?.[0]?.title || 'התמודדות עם שריפות רגשיות'} | **${prof60?.flowSteps?.[0]?.title || 'אבחנה בין זוטות לדיני נפשות'}** |
+| **שלב 4 בזרימת החלטה** | ${prof15?.flowSteps?.[3]?.title || 'אכיפה קשיחה ללא פשרות'} | ${prof35?.flowSteps?.[3]?.title || 'ויתורים מתוך חמלת יתר'} | **${prof60?.flowSteps?.[3]?.title || 'החלטה מנומקת המכבדת את שני הצדדים'}** |
+| **עוגן מרכזי** | ${prof15?.anchors?.[0]?.title || 'שוויון ושלטון החוק הבית-ספרי'} | ${prof35?.anchors?.[0]?.title || 'הגנה על הפרט (מורה/תלמיד)'} | **${prof60?.anchors?.[0]?.title || 'יושרה חינוכית ורווחת הקהילה'}** |
+| **מלכודת מרכזית** | ${prof15?.traps?.[0]?.title || 'נוקשות יתר ופורמליזם עיוור'} | ${prof35?.traps?.[0]?.title || 'עומס חמלה (Compassion Fatigue)'} | **${prof60?.traps?.[0]?.title || 'ניסיון לרצות את כולם בו-זמנית'}** |
 
 ---
 
 ## 4. תובנות ארכיטקטוניות ומסקנות מערכת
-1. **חיווט הזיכרון פועל מקצה לקצה:** בשלב המשבר (חודשים 3-4), המערכת לא איפשרה לדניאל לשבור גבולות בשקט; שאלות ההארה עומתו ישירות עם עקרונות הבטיחות שנוסחו בחודש 1.
-2. **איכות הסינון בוולידטור הדמות:** כל 60 התשובות של דניאל נבדקו ועמדו ברף השפה, ללא שרידי פרומפטים או קטיעות טקסט.
-3. **שתיקה חכמה מבוקרת:** סף 0.81 הוכיח יציבות מלאה במניעת התערבויות סרק בהחלטות זוטרות (משרדים, רכש קטן).
+1. **חיווט הזיכרון פועל מקצה לקצה:** בשלב המשבר (חודשים 3-4), המערכת לא איפשרה לטליה לשבור גבולות בשקט; שאלות ההארה עומתו ישירות עם עקרונות המשמעת והנהלים שנוסחו בחודש 1.
+2. **איכות הסינון בוולידטור הדמות:** כל 60 התשובות של טליה נבדקו ועמדו ברף השפה, ללא שרידי פרומפטים או קטיעות טקסט.
+3. **שתיקה חכמה מבוקרת:** סף 0.81 הוכיח יציבות מלאה במניעת התערבויות סרק בהחלטות זוטרות (מנהלה, רכש ציוד).
+---
+${TokenTracker.formatMarkdownTable(process.env.COGNITIVE_MODEL || 'gemini-3.6-flash')}
 `;
 
   fs.appendFileSync(REPORT_FILE, summaryMarkdown);
   console.log(summaryMarkdown);
+  console.log('\n' + TokenTracker.formatConsoleOutput(process.env.COGNITIVE_MODEL || 'gemini-3.6-flash'));
   console.log(`\n✓ דוח הסימולציה המלא נשמר ב: ${REPORT_FILE}`);
   console.log(`✓ תמליל השיחה המלא נשמר ב: ${TRANSCRIPT_FILE}`);
 }
 
 // Direct execution guard
-if (process.argv[1] && process.argv[1].endsWith('simulator_v15_daniel_scale.ts')) {
-  runDanielSimulation().catch(err => {
+if (process.argv[1] && process.argv[1].endsWith('simulator_v16_talia_scale.ts')) {
+  runTaliaSimulation().catch(err => {
     console.error('Fatal Simulation Error:', err);
     process.exit(1);
   });
