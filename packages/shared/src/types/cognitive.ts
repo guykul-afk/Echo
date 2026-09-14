@@ -142,7 +142,12 @@ export interface QualifiedCondition {
   condition: string;
 }
 
+import { LifeDomain } from './domain.js';
+import { AbstractTheme } from './theme.js';
+
 export interface DeepDecisionMechanisms {
+  domain?: LifeDomain;
+  abstractThemes?: AbstractTheme[];
   operatingPrinciples?: string[];
   tradeoffs?: DecisionTradeoff[];
   boundaryConditions?: QualifiedCondition[];

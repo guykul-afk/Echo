@@ -42,7 +42,9 @@ STRICT LINGUISTIC & EPISTEMIC RULES:
 2. Extract the 9 Background Cognitive Dimensions:
    - facts, assumptions, unknowns, affect, riskClass, reversibility, contradictions, locusOfControl, conviction.
 
-3. Extract 8 Analytical Deep Decision Mechanisms (קיטלוג מנגנוני שיקול דעת עמוקים ומסויגים - ללא רגשות):
+3. Extract 8 Analytical Deep Decision Mechanisms & Ontological Anchors (קיטלוג מנגנוני שיקול דעת עמוקים ומסויגים - ללא רגשות):
+   - domain: תחום החיים של ההחלטה (professional | medical | personal | financial | general).
+   - abstractThemes: תמות מופשטות אוניברסליות של הדילמה (רשימה מתוך: dependency_termination | short_term_relief_vs_long_term_viability | resource_allocation_scarcity | irreversible_commitment | ethical_or_cultural_boundary).
    - operatingPrinciples: כללי אצבע ועקרונות פעולה המופעלים בדילמה (למשל: "לא עובדים עם ספקים על ליבת המוצר").
    - tradeoffs: ויתורים מודעים - protectedValue (על מה שומרים בכל מחיר) מול sacrificedValue (מה מוקרב).
    - boundaryConditions: סייגים ותנאי סף להנחות ("ההנחה מתקיימת רק אם / אלא אם...").
@@ -90,6 +92,8 @@ Output strict JSON:
     "conviction": "..."
   },
   "deepMechanisms": {
+    "domain": "professional | medical | personal | financial | general",
+    "abstractThemes": ["dependency_termination | short_term_relief_vs_long_term_viability | resource_allocation_scarcity | irreversible_commitment | ethical_or_cultural_boundary"],
     "operatingPrinciples": ["..."],
     "tradeoffs": [
       {

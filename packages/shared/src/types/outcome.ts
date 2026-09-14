@@ -1,3 +1,5 @@
+import { AbstractTheme } from './theme.js';
+
 export type CriteriaEvaluation =
   | 'succeeded'
   | 'failed'
@@ -31,6 +33,11 @@ export interface Outcome {
   
   // 3. בהתחשב במה שיכולת לדעת אז, מה היית משנה בדרך שבה בחנת את ההחלטה?
   processReflection: string;
+
+  // Causal Triad & Thematic Linking
+  abstractTheme?: AbstractTheme;
+  actionTaken?: string;
+  brokenAssumption?: string;
 
   // 4 כפתורי מענה מהיר (Phase 5 4-Option Fast Status)
   quickStatus?: QuickLoopStatus;

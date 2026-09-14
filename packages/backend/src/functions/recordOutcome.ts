@@ -1,4 +1,4 @@
-import { Outcome, QuickLoopStatus } from '@echo/shared';
+import { Outcome, QuickLoopStatus, AbstractTheme } from '@echo/shared';
 import { CallableContext } from './createDecisionCase.js';
 import { DecisionService } from '../services/decision.service.js';
 import { KnowledgeGraphService } from '../services/knowledgeGraph.service.js';
@@ -10,14 +10,21 @@ export interface RecordOutcomeRequest {
   processReflection?: string;
   quickStatus?: QuickLoopStatus;
 
+  // Causal Triad & Thematic Linking
+  abstractTheme?: AbstractTheme;
+  actionTaken?: string;
+  brokenAssumption?: string;
+
   // Phase 5: Decision Quality vs Outcome Quality
   decisionQualityRating?: 'high_rationality' | 'acceptable_process' | 'rushed_blindspots';
   outcomeQualityRating?: 'favorable' | 'unfavorable' | 'mixed';
   luckAttribution?: 'skill_process' | 'external_luck' | 'bad_luck_good_decision';
 
-  // Backward compatibility
+  // Backward compatibility & Aliases
   actualResultSummary?: string;
+  actualOutcome?: string; // Support simulator alias
   wasCriteriaMet?: boolean;
+  wasSuccessful?: boolean; // Support simulator alias
   unexpectedLearnings?: string;
 }
 
@@ -46,9 +53,16 @@ export async function recordOutcomeHandler(
     throw new Error(`Case ${data.caseId} not found.`);
   }
 
-  const whatHappened = data.whatHappened || data.actualResultSummary || 'עודכנה התקדמות בהבנה';
-  const assumptionClarification = data.assumptionClarification || data.unexpectedLearnings || '';
+  const whatHappened = data.whatHappened || data.actualOutcome || data.actualResultSummary;
+  if (!whatHappened || whatHappened.trim().length === 0) {
+    throw new Error('INVALID_ARGUMENT: whatHappened or actualOutcome is required for recording an outcome.');
+  }
+
+  const isSuccess = data.wasCriteriaMet ?? data.wasSuccessful ?? false;
+  const assumptionClarification = data.assumptionClarification || data.brokenAssumption || data.unexpectedLearnings || '';
   const processReflection = data.processReflection || '';
+  const actionTaken = data.actionTaken || session.decisionCase.title;
+  const abstractTheme = data.abstractTheme || (session.decisionCase.abstractThemes && session.decisionCase.abstractThemes[0]);
 
   const now = Date.now();
   const outcome: Outcome = {
@@ -58,12 +72,15 @@ export async function recordOutcomeHandler(
     whatHappened,
     assumptionClarification,
     processReflection,
+    abstractTheme,
+    actionTaken,
+    brokenAssumption: data.brokenAssumption || assumptionClarification,
     quickStatus: data.quickStatus,
     decisionQualityRating: data.decisionQualityRating || (processReflection ? 'high_rationality' : 'acceptable_process'),
-    outcomeQualityRating: data.outcomeQualityRating || (data.wasCriteriaMet ? 'favorable' : 'mixed'),
+    outcomeQualityRating: data.outcomeQualityRating || (isSuccess ? 'favorable' : 'mixed'),
     luckAttribution: data.luckAttribution || 'skill_process',
     observedFacts: whatHappened,
-    criteriaEvaluation: data.wasCriteriaMet ? 'succeeded' : 'partially_succeeded',
+    criteriaEvaluation: isSuccess ? 'succeeded' : 'partially_succeeded',
     reflectionNotes: assumptionClarification,
     recordedAt: now
   };
@@ -72,17 +89,21 @@ export async function recordOutcomeHandler(
   session.decisionCase.status = 'resolved';
   session.decisionCase.resolvedAt = now;
 
-  // Save lesson / outcome assertion into knowledge graph
+  // Save causal lesson / outcome assertion into knowledge graph
+  const causalStatement = `לקח: פעולת "${actionTaken}" הביאה ל-"${whatHappened.slice(0, 70)}". לקח/הנחה שנשברה: "${assumptionClarification.slice(0, 60)}"`;
+
   await knowledgeGraphService.saveAssertion({
     id: `asrt-outcome-${data.caseId}-${now}`,
     userId,
     caseId: data.caseId,
-    statement: `תוצאה בפועל: "${whatHappened.slice(0, 100)}"`,
+    statement: causalStatement,
     category: 'outcome',
     sourceType: 'user_confirmed',
+    domain: session.decisionCase.domain,
+    abstractThemes: abstractTheme ? [abstractTheme] : session.decisionCase.abstractThemes,
     timestamp: now,
     confidenceLevel: 100,
-    sentimentOrPolarity: data.wasCriteriaMet ? 'pro' : 'con',
+    sentimentOrPolarity: isSuccess ? 'pro' : 'con',
     createdAt: now
   });
 

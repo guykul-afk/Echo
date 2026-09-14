@@ -14,7 +14,11 @@ const HEBREW_STOPWORDS = new Set([
   'כדי', 'אם', 'כי', 'או', 'גם', 'אבל', 'אך', 'כבר', 'שוב', 'שם', 'פה', 'כאן', 'מאוד', 'מה', 'מי',
   'לגבי', 'בגלל', 'מתוך', 'אצל', 'כמו', 'בין', 'האם', 'יש', 'אין', 'כרגע', 'שני', 'נוספים', 'נוספת',
   'שלך', 'שלי', 'שלו', 'שלה', 'אותו', 'אותה', 'אותם', 'אפשר', 'צריך', 'יכול', 'יכולה', 'כעת', 'טוב',
-  'פחות', 'משהו', 'דבר', 'דברים'
+  'פחות', 'משהו', 'דבר', 'דברים',
+  // Operational and generic non-value words (prevent spurious collisions)
+  'אישור', 'אישורי', 'אישורים', 'מיידי', 'מיידית', 'מיידיים', 'תקציב', 'תקציבים', 'דחוף', 'דחופה',
+  'החלטה', 'החלטות', 'לבחור', 'בחירה', 'בדיקה', 'מהר', 'מהיר', 'מהירה', 'רוצה', 'שוקל', 'שוקלת',
+  'עושה', 'עושים', 'שעות', 'ימים', 'שבוע', 'חודש', 'שנה', 'סכום', 'כסף', 'דולר', 'שקל'
 ]);
 
 function extractConceptPhrases(text: string): string[] {
@@ -166,6 +170,40 @@ export class RetrievalBeforeAskService {
 
       const stmtClean = assertion.statement.toLowerCase().trim();
 
+      // Domain & Thematic Analysis (Ontology Layer)
+      const currentDomain = deepMechanisms?.domain;
+      const assertionDomain = assertion.domain;
+      const isCrossDomain = Boolean(
+        currentDomain &&
+        assertionDomain &&
+        currentDomain !== 'general' &&
+        assertionDomain !== 'general' &&
+        currentDomain !== assertionDomain
+      );
+
+      const currentThemes = new Set(deepMechanisms?.abstractThemes || []);
+      const assertionThemes = assertion.abstractThemes || [];
+      const sharedThemes = assertionThemes.filter(t => currentThemes.has(t));
+      const hasSharedAbstractTheme = sharedThemes.length > 0;
+
+      // 1. Inter-Domain Rule: Cross-domain retrieval is strictly thematic
+      if (isCrossDomain) {
+        // Disallow lexical matching across distinct life domains. Only permit thematic outcome or principle cross-pollination.
+        if (hasSharedAbstractTheme && (assertion.category === 'outcome' || assertion.category === 'principle')) {
+          score = 0.96;
+          reason = `cross_domain_thematic_pollination(theme:${sharedThemes.join(',')},from:${assertionDomain}_to:${currentDomain})`;
+          candidateAssertions.push({ assertion, score, reason, hasAuthenticAnchor: true } as any);
+        }
+        // Always skip lexical matching across different domains
+        continue;
+      }
+
+      // Intra-domain outcome thematic match
+      if (hasSharedAbstractTheme && assertion.category === 'outcome') {
+        score = 0.98;
+        reason = `causal_outcome_theme_match(theme:${sharedThemes.join(',')})`;
+      }
+
       // Deep Mechanism Match: Tradeoffs & Reversals (Contradictions)
       if (deepMechanisms?.tradeoffs && deepMechanisms.tradeoffs.length > 0) {
         if (assertion.category === 'tradeoff') {
@@ -229,7 +267,8 @@ export class RetrievalBeforeAskService {
               }
             } else if (protCheck.sharedTokens.length > 0 || sacrCheck.sharedTokens.length > 0) {
               const matchedTokens = [...protCheck.sharedTokens, ...sacrCheck.sharedTokens];
-              const tradeScore = 0.92;
+              // Single token match is limited to 0.65 to prevent false matches from breaching the 0.85 quality gate
+              const tradeScore = matchedTokens.length >= 2 ? 0.92 : 0.65;
               if (tradeScore > score) {
                 score = tradeScore;
                 reason = `deep_tradeoff_match(${matchedTokens.join(',')})`;
@@ -331,6 +370,8 @@ export class RetrievalBeforeAskService {
 
       // Evaluate authentic anchor for later
       const hasAuthenticAnchor = isEntityMatch ||
+        reason.includes('cross_domain_thematic_pollination') ||
+        reason.includes('causal_outcome_theme_match') ||
         reason.includes('deep_tradeoff_match') ||
         reason.includes('tradeoff_reversal') ||
         reason.includes('operating_principle_match') ||
@@ -410,7 +451,10 @@ export class RetrievalBeforeAskService {
     // Build balanced Memory Preamble
     let memoryPreamble: string | undefined;
     const isUserOrigin = topAssertion.sourceType === 'user_confirmed' || topAssertion.sourceType === 'user_stated';
-    if (topCandidate.reason.includes('tradeoff_reversal') || topCandidate.reason.includes('principle_breach')) {
+    if (topCandidate.reason.includes('cross_domain_thematic_pollination') || topCandidate.reason.includes('causal_outcome_theme_match')) {
+      const fromDomainName = topAssertion.domain === 'professional' ? 'העבודה והניהול' : topAssertion.domain === 'medical' ? 'הטיפול והשיקום' : 'הקשר מקביל';
+      memoryPreamble = `מתחום ${fromDomainName} עלה לקח רלוונטי: "${formatStatementQuote(topAssertion.statement)}".`;
+    } else if (topCandidate.reason.includes('tradeoff_reversal') || topCandidate.reason.includes('principle_breach')) {
       const cleanStmt = topAssertion.statement.replace(/^שימור:\s*/, '').split('|')[0].trim();
       memoryPreamble = isUserOrigin
         ? `בעבר הגדרת קו אדום/שימור לגבי: "${formatStatementQuote(cleanStmt)}", אך בדילמה הנוכחית מתבצע ויתור עליו.`

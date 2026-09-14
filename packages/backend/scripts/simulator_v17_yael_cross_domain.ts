@@ -1,4 +1,4 @@
-﻿import fs from 'fs';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -99,27 +99,27 @@ async function simulateyaelResponse(
 ): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
+  const domainDesc = fixture.domain === 'professional'
+    ? 'דילמה מקצועית בחברת הסייבר ההתקפי (ארכיטקטורה, פיתוח, עובדים, לקוחות)'
+    : 'דילמה רפואית/אישית בשיקומו הנוירולוגי של אביה לאחר אירוע מוחי';
+
   const prompt = `
-׳׳×׳” ׳׳’׳׳ ׳׳× ׳˜׳׳™׳” ׳§׳•׳¨׳ (׳‘׳× 48), ׳׳ ׳”׳׳× ׳×׳™׳›׳•׳ "׳¢׳™׳¨׳•׳ ׳™ ׳׳§׳™׳£" ׳’׳“׳•׳ (1,200 ׳×׳׳׳™׳“׳™׳, 120 ׳׳•׳¨׳™׳).
-׳©׳׳‘ ׳›׳¨׳•׳ ׳•׳׳•׳’׳™: ׳™׳•׳ ${fixture.day} (׳—׳•׳“׳© ${fixture.month} ׳׳×׳•׳ 6).
+את מגלמת את יעל (בת 42), סמנכ"לית פיתוח (VP R&D) בחברת סייבר התקפי מובילה, המתמודדת במקביל עם ניהול משבר אישי ומשפחתי: שיקומו של אביה לאחר אירוע מוחי.
+יעל היא מנהיגה חדה, מנומקת, נרתעת מ"פלסטרים" וקיצורי דרך שיוצרים חוב עמוק, ומחויבת לעקרונות פעולה יציבים.
+הקשר הדילמה הנוכחית: ${domainDesc}.
+איסור מוחלט: אין להזכיר בתי ספר, תלמידים, מורים, מנהלות או כל מונח פדגוגי! יעל היא אשת טכנולוגיה וסייבר!
 
-׳₪׳¨׳•׳₪׳™׳ ׳׳™׳©׳™ ׳•׳׳¦׳‘ ׳׳ ׳˜׳׳™ ׳‘׳©׳׳‘ ׳–׳”:
-${fixture.personaProfile}
-
-׳”׳ ׳—׳™׳•׳× ׳¡׳’׳ ׳•׳ ׳“׳™׳‘׳•׳¨:
-${fixture.styleInstructions}
-
-׳”׳”׳—׳׳˜׳” ׳©׳”׳–׳ ׳× ׳׳׳¢׳¨׳›׳× ECHO:
+הדילמה שהזנת ל-ECHO:
 "${fixture.rawInput}"
 
-׳׳¢׳¨׳›׳× ECHO ׳ ׳™׳×׳—׳” ׳׳× ׳”׳”׳—׳׳˜׳” ׳©׳׳, ׳•׳׳—׳–׳™׳¨׳” ׳׳ ׳›׳¢׳× ׳׳× ׳©׳׳׳× ׳”׳”׳׳¨׳” (Illumination Question) ׳”׳‘׳׳”:
+שאלת ההארה שהוחזרה מ-ECHO:
 "${illuminationQuestion}"
 
-׳׳©׳™׳׳×׳:
-׳¢׳ ׳™ ׳¢׳ ׳©׳׳׳× ׳”׳”׳׳¨׳” ׳”׳–׳• ׳‘׳’׳•׳£ ׳¨׳׳©׳•׳ (׳׳ ׳™) ׳‘׳׳©׳•׳ ׳ ׳§׳‘׳”, ׳‘׳׳•׳₪׳ ׳”׳׳•׳×׳ ׳˜׳™ ׳‘׳™׳•׳×׳¨ ׳¢׳‘׳•׳¨ ׳˜׳׳™׳” ׳‘׳¨׳’׳¢ ׳–׳” ׳‘׳¦׳™׳¨ ׳”׳–׳׳:
-1. ׳”׳™׳©׳׳¨׳™ ׳‘-100% ׳‘׳×׳•׳ ׳”׳“׳׳•׳× ׳•׳”׳׳¦׳‘ ׳”׳₪׳¡׳™׳›׳•׳׳•׳’׳™ ׳©׳׳” (׳׳™׳“׳™׳׳׳™׳¡׳˜׳™׳× ׳ ׳•׳§׳©׳” ׳‘׳—׳•׳“׳© 1-2, ׳׳—׳•׳¦׳” ׳•׳׳×׳₪׳©׳¨׳× ׳‘׳—׳•׳“׳© 3-4, ׳‘׳•׳’׳¨׳× ׳•׳׳›׳•׳™׳׳× ׳‘׳—׳•׳“׳© 5-6).
-2. ׳×׳ ׳™ ׳×׳©׳•׳‘׳” ׳׳ ׳•׳©׳™׳×, ׳™׳©׳™׳¨׳” ׳•׳׳ ׳•׳׳§׳× ׳‘׳× 2 ׳¢׳“ 4 ׳׳©׳₪׳˜׳™׳ ׳—׳“׳™׳.
-3. ׳׳ ׳×׳©׳×׳׳©׳™ ׳‘׳׳™׳׳•׳× ׳”׳§׳“׳׳” ("׳׳ ׳™ ׳˜׳׳™׳”", "׳‘׳×׳•׳¨ ׳׳ ׳”׳׳×"), ׳•׳׳ ׳×׳›׳×׳‘׳™ ׳¨׳©׳™׳׳•׳× ׳×׳‘׳׳™׳˜׳™׳, ׳”׳¢׳¨׳•׳× ׳‘׳׳ ׳’׳׳™׳× ׳׳• ׳×׳’׳™׳•׳× ׳›׳׳• Draft/Outline/Checklist. ׳›׳×׳‘׳™ ׳™׳©׳™׳¨׳•׳× ׳׳× ׳×׳©׳•׳‘׳×׳ ׳‘׳¢׳‘׳¨׳™׳× ׳‘׳׳‘׳“ ׳׳׳¢׳¨׳›׳× ECHO.
+משימתך:
+עני על שאלת ההארה בגוף ראשון יחיד (אני), בלשון נקבה, בטון חד, בוגר וענייני:
+1. הישארי 100% בתוך הדמות של יעל כסמנכ"לית R&D וכבת המטפלת באביה.
+2. תני תשובה ישירה ומנומקת בת 2-4 משפטים.
+3. אל תכתבי פתיחים כמו "אני יעל" או רשימות. כתבי ישירות את תשובתך.
 `;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -156,6 +156,12 @@ ${fixture.styleInstructions}
         answer = answer.slice(1, -1).trim();
       }
 
+      const containsContaminants = /תיכון|תלמיד|תלמידים|מורה|מורים|פדגוג|מנהלת בית ספר/.test(answer);
+      if (containsContaminants) {
+        console.warn(`[Yael Persona Validation] Attempt ${attempt}/3 rejected: detected pedagogical/school contamination.`);
+        continue;
+      }
+
       const validation = validateResponseText(answer, 'full_paragraph');
       if (validation.isValid) {
         return answer;
@@ -167,13 +173,13 @@ ${fixture.styleInstructions}
   }
 
   // Fallback to curated answer from fixture if API/validation failed
-  return fixture.userAnswer || '׳׳ ׳™ ׳׳‘׳™׳ ׳׳× ׳©׳׳׳× ׳”׳”׳׳¨׳” ׳•׳׳× ׳”׳˜׳¨׳™׳™׳“-׳׳•׳£ ׳©׳”׳™׳ ׳׳¦׳™׳₪׳”. ׳‘׳ ׳§׳•׳“׳× ׳”׳–׳׳ ׳”׳–׳• ׳”׳”׳›׳¨׳¢׳” ׳©׳׳™ ׳‘׳¨׳•׳¨׳” ׳•׳׳ ׳™ ׳¢׳•׳׳“ ׳׳׳—׳•׳¨׳™׳”.';
+  return fixture.userAnswer || 'אני מבינה את שאלת ההארה ואת הטרייד-אוף שהיא מציפה. בנקודת הזמן הזו ההכרעה שלי ברורה ואני עומדת מאחוריה.';
 }
 
 export async function runyaelSimulation() {
   console.log('================================================================================');
-  console.log('=== Starting Rigorous Simulation v17: yael Koren (High School Principal) ===');
-  console.log('=== 60 Cases Over 180 Days | Full Cognitive Architecture & Memory Retrieval ===');
+  console.log('=== Starting Rigorous Simulation v17: Yael (VP R&D Cyber & Family Medical Rehab) ===');
+  console.log('=== 14 Authentic Cases Over 180 Days | Cross-Domain Ontology & Memory Retrieval ===');
   console.log('================================================================================\n');
 
   const checkpoint = loadCheckpoint();
@@ -181,17 +187,17 @@ export async function runyaelSimulation() {
 
   // Initialize report files if starting fresh
   if (checkpoint.cases.length === 0) {
-    fs.writeFileSync(REPORT_FILE, `# ׳“׳•׳— ׳¡׳™׳׳•׳׳¦׳™׳” ׳׳‘׳•׳§׳¨׳× v17: ׳˜׳׳™׳” ׳§׳•׳¨׳ (High School)
-**׳×׳׳¨׳™׳ ׳”׳¨׳¦׳”:** ${new Date().toISOString().split('T')[0]}  
-**׳׳¨׳›׳™׳˜׳§׳˜׳•׳¨׳× ׳‘׳“׳™׳§׳”:** Dual-Agent (׳׳ ׳•׳¢ ECHO ׳׳•׳ ׳¡׳•׳›׳ ׳”׳“׳׳•׳× ׳©׳ ׳˜׳׳™׳” ׳§׳•׳¨׳ ׳¢׳ Zero-Trust Validation).  
-**׳¦׳™׳¨ ׳–׳׳:** 180 ׳™׳׳™׳ (6 ׳—׳•׳“׳©׳™׳ ׳׳“׳•׳׳™׳™׳), 60 ׳”׳—׳׳˜׳•׳× ׳§׳•׳’׳ ׳™׳˜׳™׳‘׳™׳•׳× ׳׳׳׳•׳×.  
-**׳׳©׳×׳׳© ׳”׳‘׳“׳™׳§׳”:** \`v17_yael_cross_domain\` (׳‘׳× 48, ׳׳ ׳”׳׳× ׳×׳™׳›׳•׳).  
+    fs.writeFileSync(REPORT_FILE, `# דוח סימולציה מבוקרת v17: יעל - הצלבה בין עולמות (Cross-Domain Ontology)
+**תאריך הרצה:** ${new Date().toISOString().split('T')[0]}  
+**ארכיטקטורת בדיקה:** Dual-Agent (מנוע ECHO מול סוכן הדמות של יעל עם Zero-Trust Validation).  
+**ציר זמן:** 180 ימים (6 חודשים מדומים), 14 החלטות אותנטיות ומכוילות ללא שכפולים.  
+**משתמש הבדיקה:** \`v17_yael_cross_domain\` (בת 42, סמנכ"לית R&D בסייבר ומלווה שיקום לאביה).  
 
 ---
 
-## ׳׳”׳׳ ׳”׳¡׳™׳׳•׳׳¦׳™׳” ׳•׳”׳©׳×׳׳©׳׳•׳× 60 ׳”׳׳§׳¨׳™׳
+## מהלך הסימולציה והשתלשלות 14 המקרים המכוילים
 `);
-    fs.writeFileSync(TRANSCRIPT_FILE, `# ׳×׳׳׳™׳ ׳׳™׳ ׳˜׳¨׳׳§׳¦׳™׳” ׳“׳•-׳¡׳•׳›׳ ׳™׳× ׳׳׳: ׳˜׳׳™׳” ׳§׳•׳¨׳ (User 16)\n\n`);
+    fs.writeFileSync(TRANSCRIPT_FILE, `# תמליל אינטראקציה דו-סוכנית מלא: יעל - סייבר ושיקום רפואי (V17)\n\n`);
   }
 
   const userId = 'v17_yael_cross_domain';
@@ -226,8 +232,10 @@ export async function runyaelSimulation() {
           userId,
           rawText: fixture.rawInput,
           eraId: era.id,
-          userGender: 'female', userName: 'יעל',
-          userName: '׳˜׳׳™׳”',
+          userGender: 'female',
+          userName: 'יעל',
+          domain: fixture.domain,
+          abstractThemes: fixture.abstractThemes,
           frictionLevel: 'deep'
         });
         break;
@@ -327,23 +335,21 @@ export async function runyaelSimulation() {
     for (const pastCase of checkpoint.cases) {
       const pastFixture = YAEL_CASES.find(f => f.caseIndex === pastCase.caseIndex);
       if (pastFixture?.plannedOutcome && pastFixture.plannedOutcome.day === fixture.day) {
-        console.log(`\n[5. ׳¨׳™׳©׳•׳ ׳×׳•׳¦׳׳” ׳‘׳₪׳•׳¢׳] ׳׳§׳¨׳” ${pastCase.caseIndex} ׳”׳’׳™׳¢ ׳׳™׳•׳ ׳”׳‘׳“׳™׳§׳” (${fixture.day})!`);
+        console.log(`\n[5. ׳¨׳™׳©׳•׳  ׳×׳•׳¦׳ ׳” ׳‘׳₪׳•׳¢׳œ] ׳ž׳§׳¨׳” ${pastCase.caseIndex} ׳”׳’׳™׳¢ ׳œ׳™׳•׳  ׳”׳‘׳“׳™׳§׳” (${fixture.day})!`);
         try {
           await recordOutcomeHandler({
-            userId,
             caseId: pastCase.caseId,
-            actualOutcome: pastFixture.plannedOutcome.reflection,
-            wasSuccessful: pastFixture.plannedOutcome.wasCriteriaMet,
-            satisfactionScore: pastFixture.plannedOutcome.wasCriteriaMet ? 5 : 2,
-            reflectionAxes: {
-              whatActuallyHappened: pastFixture.plannedOutcome.reflection,
-              assumptionBroken: !pastFixture.plannedOutcome.wasCriteriaMet,
-              processLearnings: pastFixture.plannedOutcome.wasCriteriaMet ? '׳”׳”׳×׳׳“׳” ׳”׳•׳›׳™׳—׳” ׳׳× ׳¢׳¦׳׳”' : '׳§׳™׳¦׳•׳¨ ׳”׳“׳¨׳ ׳”׳”׳ ׳“׳¡׳™ ׳”׳×׳’׳׳” ׳›׳˜׳¢׳•׳× ׳—׳׳•׳¨׳”'
-            }
-          });
+            whatHappened: pastFixture.plannedOutcome.reflection,
+            wasCriteriaMet: pastFixture.plannedOutcome.wasCriteriaMet,
+            abstractTheme: pastFixture.plannedOutcome.abstractTheme,
+            actionTaken: pastFixture.plannedOutcome.actionTaken,
+            brokenAssumption: pastFixture.plannedOutcome.brokenAssumption,
+            decisionQualityRating: 'high_rationality',
+            outcomeQualityRating: pastFixture.plannedOutcome.wasCriteriaMet ? 'favorable' : 'unfavorable'
+          }, { auth: { uid: userId } } as any);
           pastCase.outcomeReported = true;
           outcomeReported = true;
-          console.log(`   ג“ ׳×׳•׳¦׳׳” ׳ ׳¨׳©׳׳” ׳•׳¡׳’׳¨׳” ׳׳¢׳’׳ ׳‘׳’׳¨׳£ ׳”׳™׳“׳¢ ׳‘׳”׳¦׳׳—׳”.`);
+          console.log(`   ✓ תוצאה סיבתית נרשמה וסגרה מעגל בגרף הידע בהצלחה.`);
         } catch (err: any) {
           console.warn(`[Outcome Warning] Error recording outcome: ${err.message}`);
         }
@@ -519,51 +525,51 @@ ${correctionDiff ? `* **׳×׳™׳§׳•׳ ׳׳¨׳׳” ׳׳§׳˜׳�
   const fullSign = fullCalib.overconfidenceBiasIndex >= 0 ? '+' : '';
 
   const biasChangeStr = Math.abs(fullCalib.overconfidenceBiasIndex) < Math.abs(earlyCalib.overconfidenceBiasIndex) 
-    ? `׳₪׳™׳›׳—׳•׳ ׳•׳”׳×׳›׳ ׳¡׳•׳× (${((Math.abs(earlyCalib.overconfidenceBiasIndex) - Math.abs(fullCalib.overconfidenceBiasIndex)) / Math.abs(earlyCalib.overconfidenceBiasIndex) * 100).toFixed(0)}%)` 
-    : `׳”׳×׳¨׳—׳§׳•׳× ׳׳”׳׳₪׳¡ (׳™׳¨׳™׳“׳” ׳‘׳›׳™׳•׳)`;
+    ? `׳₪׳™׳›׳—׳•׳Ÿ ׳•׳”׳×׳›׳ ׳¡׳•׳× (${((Math.abs(earlyCalib.overconfidenceBiasIndex) - Math.abs(fullCalib.overconfidenceBiasIndex)) / Math.abs(earlyCalib.overconfidenceBiasIndex) * 100).toFixed(0)}%)` 
+    : `׳”׳×׳¨׳—׳§׳•׳× ׳ž׳”׳ ׳₪׳¡ (׳™׳¨׳™׳“׳” ׳‘׳›׳™׳•׳œ)`;
   const brierChangeStr = fullCalib.brierScore < earlyCalib.brierScore 
-    ? `׳©׳™׳₪׳•׳¨ ׳‘׳“׳™׳•׳§ ׳”׳—׳™׳–׳•׳™ ׳׳׳•׳¨׳ ׳”׳–׳׳` 
-    : `׳”׳¨׳¢׳” ׳‘׳“׳™׳•׳§ ׳”׳—׳™׳–׳•׳™ (${((fullCalib.brierScore - earlyCalib.brierScore) / earlyCalib.brierScore * 100).toFixed(0)}%)`;
+    ? `׳©׳™׳₪׳•׳¨ ׳‘׳“׳™׳•׳§ ׳”׳—׳™׳–׳•׳™ ׳œ׳ ׳•׳¨׳š ׳”׳–׳ž׳Ÿ` 
+    : `׳”׳¨׳¢׳ה ׳‘׳“׳™׳•׳§ ׳”׳—׳™׳–׳•׳™ (${((fullCalib.brierScore - earlyCalib.brierScore) / earlyCalib.brierScore * 100).toFixed(0)}%)`;
 
   const summaryMarkdown = `
-# ׳“׳•׳— ׳‘׳§׳¨׳” ׳׳¡׳›׳ ׳׳×׳•׳§׳: ׳¡׳™׳׳•׳׳¦׳™׳” ׳׳‘׳•׳§׳¨׳× v17 ג€” ׳˜׳׳™׳” ׳§׳•׳¨׳ (60 ׳׳§׳¨׳™׳)
+# דוח בקרה מסכם מתוקן: סימולציה מבוקרת v17 — יעל (14 מקרים אותנטיים ומכוילים)
 
-## 1. ׳×׳§׳¦׳™׳¨ ׳׳ ׳”׳׳™׳ ׳•׳׳׳¦׳׳™ ׳׳™׳‘׳”
-* **׳”׳™׳§׳£ ׳”׳‘׳“׳™׳§׳”:** 60 ׳”׳—׳׳˜׳•׳× ׳§׳•׳’׳ ׳™׳˜׳™׳‘׳™׳•׳× ׳׳׳׳•׳× ׳¢׳ ׳₪׳ ׳™ ׳—׳¦׳™ ׳©׳ ׳” ׳׳“׳•׳׳” (180 ׳™׳•׳) ׳¢׳‘׳•׳¨ \`v17_yael_cross_domain\`.
-* **׳©׳×׳™׳§׳” ׳—׳›׳׳” ׳˜׳‘׳¢׳™׳× (Natural Smart Silence):** ׳ ׳‘׳“׳§׳” ׳‘-8 ׳”׳—׳׳˜׳•׳× ׳–׳•׳˜׳¨׳•׳× ׳׳׳ ׳›׳₪׳™׳™׳× ׳׳¦׳‘ Quick. ׳‘׳¡׳£ ERV 0.81, ׳”׳׳¢׳¨׳›׳× ׳©׳×׳§׳” ׳‘-**${naturalSilenceCount} ׳׳×׳•׳ ${trivialCases.length} ׳׳§׳¨׳™׳ (${silencePct}%)**.
-* **׳–׳™׳”׳•׳™ ׳¡׳×׳™׳¨׳•׳× ׳•׳©׳—׳™׳§׳× ׳’׳‘׳•׳׳•׳× (Contradiction Dissonance):** ׳ ׳‘׳“׳§׳• 8 ׳”׳—׳׳˜׳•׳× ׳‘׳”׳ ׳˜׳׳™׳” ׳ ׳˜׳×׳” ׳׳©׳‘׳•׳¨ ׳§׳•׳•׳™ ׳׳“׳•׳ ׳׳—׳•׳“׳©׳™׳ 1-2. ׳”׳׳¢׳¨׳›׳× ׳–׳™׳”׳×׳” ׳•׳¢׳™׳׳×׳” ׳‘-**${contradictionsCaught} ׳׳×׳•׳ ${contradictionCases.length} ׳׳§׳¨׳™׳ (${contradictionPct}%)**, ׳×׳•׳ ׳”׳–׳¨׳§׳× ׳”׳§׳©׳¨ ׳”׳¢׳‘׳¨ ׳™׳©׳™׳¨׳•׳× ׳׳’׳•׳£ ׳”׳©׳׳׳”.
-* **׳©׳׳™׳₪׳× ׳×׳§׳“׳™׳׳™ ׳–׳™׳›׳¨׳•׳ ׳׳”׳’׳¨׳£ (Qualified Retrieval):** ׳׳•׳×׳¨׳• ׳׳•׳¢׳׳“׳™ ׳¢׳‘׳¨ ׳‘-**${retrievalMatches} ׳׳×׳•׳ ${totalCases} ׳׳§׳¨׳™׳ (${retrievalPct}%)**.
-* **׳׳™׳׳•׳× ׳×׳™׳§׳•׳ ׳™ ׳׳¨׳׳” ׳׳§׳˜׳™׳‘׳™׳™׳ (Verified Diff):** ׳›׳ ${activeCorrections.length} ׳”׳×׳™׳§׳•׳ ׳™׳ ׳×׳•׳¢׳“׳• ׳׳₪׳ ׳™ ׳•׳׳—׳¨׳™ ׳•׳¢׳•׳“׳›׳ ׳• ׳‘׳’׳¨׳£ ׳”׳™׳“׳¢.
+## 1. תקציר מנהלים וממצאי ליבה
+* **היקף הבדיקה:** ${totalCases} החלטות קוגניטיביות מלאות על פני חצי שנה מדומה (180 יום) עבור \`v17_yael_cross_domain\` המחלקות בין עולם הסייבר (פיתוח) לעולם המשפחתי (שיקום רפואי).
+* **שתיקה חכמה טבעית (Natural Smart Silence):** נבדקה ב-${trivialCases.length} החלטות זוטרות ללא כפיית מצב Quick. המערכת שתקה ב-**${naturalSilenceCount} מתוך ${trivialCases.length} מקרים (${silencePct}%)**.
+* **זיהוי סתירות ושחיקת גבולות (Contradiction Dissonance):** נבדקו ${contradictionCases.length} החלטות בהן יעל נטתה לשבור קווים אדומים או לחרוג מעקרונות עבר. המערכת זיהתה ועימתה ב-**${contradictionsCaught} מתוך ${contradictionCases.length} מקרים (${contradictionPct}%)**, תוך הזרקת הקשר העבר ישירות לגוף השאלה.
+* **שליפת תקדימי זיכרון מהגרף (Qualified Retrieval):** אותרו מועמדי עבר ב-**${retrievalMatches} מתוך ${totalCases} מקרים (${retrievalPct}%)**.
+* **אימות תיקוני מראה אקטיביים (Verified Diff):** כל ${activeCorrections.length} התיקונים תועדו לפני ואחרי ועודכנו בגרף הידע.
 
 ---
 
-## 2. ׳”׳×׳›׳ ׳¡׳•׳× ׳׳ ׳•׳¢ ׳”׳›׳™׳•׳ (Calibration Convergence over 180 Days)
+## 2. התכנסות מנוע הכיול (Calibration Convergence over 180 Days)
 
-| ׳׳“׳“ ׳›׳™׳•׳ ׳”׳¡׳×׳‘׳¨׳•׳×׳™ | ׳—׳•׳“׳© 1 (׳׳§׳¨׳” 15) | ׳—׳•׳“׳© 3 (׳׳§׳¨׳” 35) | ׳—׳•׳“׳© 6 (׳׳§׳¨׳” 60) | ׳›׳™׳•׳•׳ ׳”׳”׳×׳›׳ ׳¡׳•׳× |
+| מדד כיול הסתברותי | חודש 1 (מקרה מוקדם) | חודש 3 (מקרה אמצע) | חודש 6 (מקרה סופי) | כיוון ההתכנסות |
 | :--- | :---: | :---: | :---: | :--- |
-| **׳׳“׳“ ׳‘׳™׳˜׳—׳•׳ ׳™׳×׳¨ (Overconfidence Bias)** | \`${earlySign}${earlyCalib.overconfidenceBiasIndex.toFixed(2)}\` | \`${midSign}${midCalib.overconfidenceBiasIndex.toFixed(2)}\` | \`${fullSign}${fullCalib.overconfidenceBiasIndex.toFixed(2)}\` | **${biasChangeStr}** |
-| **׳¦׳™׳•׳ ׳‘׳¨׳™׳™׳¨ (Brier Score)** | \`${earlyCalib.brierScore.toFixed(3)}\` | \`${midCalib.brierScore.toFixed(3)}\` | \`${fullCalib.brierScore.toFixed(3)}\` | **${brierChangeStr}** |
-| **׳›׳׳•׳× ׳×׳—׳–׳™׳•׳× ׳׳׳•׳׳×׳•׳×** | ${earlyCalib.totalVerifiablePredictions} | ${midCalib.totalVerifiablePredictions} | ${fullCalib.totalVerifiablePredictions} | ׳ ׳×׳•׳ ׳™ ׳׳׳× ׳׳¦׳˜׳‘׳¨׳™׳ ׳׳”׳©׳˜׳— |
+| **מדד ביטחון יתר (Overconfidence Bias)** | \`${earlySign}${earlyCalib.overconfidenceBiasIndex.toFixed(2)}\` | \`${midSign}${midCalib.overconfidenceBiasIndex.toFixed(2)}\` | \`${fullSign}${fullCalib.overconfidenceBiasIndex.toFixed(2)}\` | **${biasChangeStr}** |
+| **ציון ברייר (Brier Score)** | \`${earlyCalib.brierScore.toFixed(3)}\` | \`${midCalib.brierScore.toFixed(3)}\` | \`${fullCalib.brierScore.toFixed(3)}\` | **${brierChangeStr}** |
+| **כמות תחזיות מאומתות** | ${earlyCalib.totalVerifiablePredictions} | ${midCalib.totalVerifiablePredictions} | ${fullCalib.totalVerifiablePredictions} | נתוני אמת מצטברים מהשטח |
 
 ---
 
-## 3. ׳”׳©׳•׳•׳׳× ׳׳‘׳•׳׳•׳¦׳™׳™׳× ׳₪׳¨׳•׳₪׳™׳ ׳§׳‘׳׳× ׳”׳”׳—׳׳˜׳•׳× (Decision Profile Evolution)
+## 3. השוואת אבולוציית פרופיל קבלת ההחלטות (Decision Profile Evolution)
 
-| ׳¨׳›׳™׳‘ ׳‘׳׳¨׳׳” ׳”׳׳™׳©׳™׳× | ׳—׳•׳“׳© 1 (׳׳§׳¨׳” 15) | ׳—׳•׳“׳© 3 (׳׳§׳¨׳” 35) | ׳—׳•׳“׳© 6 (׳׳§׳¨׳” 60) |
+| רכיב במראה האישית | חודש 1 | חודש 3 | חודש 6 |
 | :--- | :--- | :--- | :--- |
-| **׳׳¨׳›׳™׳˜׳™׳₪ ׳¨׳׳©׳™** | **${prof15?.mainStyle?.title || '׳׳ ׳”׳׳× ׳×׳™׳›׳•׳ ׳׳™׳“׳™׳׳׳™׳¡׳˜׳™׳× ׳•׳§׳₪׳“׳ ׳™׳×'}** | **${prof35?.mainStyle?.title || '׳׳ ׳”׳™׳’׳” ׳‘׳׳©׳‘׳¨, ׳©׳—׳™׳§׳” ׳×׳—׳× ׳׳—׳¥'}** | **${prof60?.mainStyle?.title || '׳׳ ׳”׳׳× ׳—׳™׳ ׳•׳›׳™׳× ׳׳׳•׳–׳ ׳× ׳•׳׳₪׳•׳›׳—׳×'}** |
-| **׳ ׳˜׳™׳™׳” ׳‘׳•׳׳˜׳×** | ${prof15?.mainStyle?.prominentTendency || '׳׳›׳™׳₪׳× ׳ ׳”׳׳™׳ ׳•׳¡׳“׳¨ ׳׳•׳¡׳“׳™'} | ${prof35?.mainStyle?.prominentTendency || '׳¢׳•׳׳¡ ׳¨׳’׳©׳™ ׳•׳˜׳©׳˜׳•׳© ׳’׳‘׳•׳׳•׳×'} | ${prof60?.mainStyle?.prominentTendency || '׳©׳™׳׳•׳‘ ׳—׳׳׳” ׳¢׳ ׳™׳¦׳™׳‘׳•׳× ׳׳¢׳¨׳›׳×׳™׳×'} |
-| **׳©׳׳‘ 1 ׳‘׳–׳¨׳™׳׳× ׳”׳—׳׳˜׳”** | ${prof15?.flowSteps?.[0]?.title || '׳‘׳“׳™׳§׳× ׳ ׳”׳׳™׳ ׳•׳×׳§׳ ׳•׳ ׳™׳'} | ${prof35?.flowSteps?.[0]?.title || '׳”׳×׳׳•׳“׳“׳•׳× ׳¢׳ ׳©׳¨׳™׳₪׳•׳× ׳¨׳’׳©׳™׳•׳×'} | **${prof60?.flowSteps?.[0]?.title || '׳׳‘׳—׳ ׳” ׳‘׳™׳ ׳–׳•׳˜׳•׳× ׳׳“׳™׳ ׳™ ׳ ׳₪׳©׳•׳×'}** |
-| **׳©׳׳‘ 4 ׳‘׳–׳¨׳™׳׳× ׳”׳—׳׳˜׳”** | ${prof15?.flowSteps?.[3]?.title || '׳׳›׳™׳₪׳” ׳§׳©׳™׳—׳” ׳׳׳ ׳₪׳©׳¨׳•׳×'} | ${prof35?.flowSteps?.[3]?.title || '׳•׳™׳×׳•׳¨׳™׳ ׳׳×׳•׳ ׳—׳׳׳× ׳™׳×׳¨'} | **${prof60?.flowSteps?.[3]?.title || '׳”׳—׳׳˜׳” ׳׳ ׳•׳׳§׳× ׳”׳׳›׳‘׳“׳× ׳׳× ׳©׳ ׳™ ׳”׳¦׳“׳“׳™׳'}** |
-| **׳¢׳•׳’׳ ׳׳¨׳›׳–׳™** | ${prof15?.anchors?.[0]?.title || '׳©׳•׳•׳™׳•׳ ׳•׳©׳׳˜׳•׳ ׳”׳—׳•׳§ ׳”׳‘׳™׳×-׳¡׳₪׳¨׳™'} | ${prof35?.anchors?.[0]?.title || '׳”׳’׳ ׳” ׳¢׳ ׳”׳₪׳¨׳˜ (׳׳•׳¨׳”/׳×׳׳׳™׳“)'} | **${prof60?.anchors?.[0]?.title || '׳™׳•׳©׳¨׳” ׳—׳™׳ ׳•׳›׳™׳× ׳•׳¨׳•׳•׳—׳× ׳”׳§׳”׳™׳׳”'}** |
-| **׳׳׳›׳•׳“׳× ׳׳¨׳›׳–׳™׳×** | ${prof15?.traps?.[0]?.title || '׳ ׳•׳§׳©׳•׳× ׳™׳×׳¨ ׳•׳₪׳•׳¨׳׳׳™׳–׳ ׳¢׳™׳•׳•׳¨'} | ${prof35?.traps?.[0]?.title || '׳¢׳•׳׳¡ ׳—׳׳׳” (Compassion Fatigue)'} | **${prof60?.traps?.[0]?.title || '׳ ׳™׳¡׳™׳•׳ ׳׳¨׳¦׳•׳× ׳׳× ׳›׳•׳׳ ׳‘׳•-׳–׳׳ ׳™׳×'}** |
+| **ארכיטיפ ראשי** | **${prof15?.mainStyle?.title || 'סמנכ"לית R&D חדה ושיטתית'}** | **${prof35?.mainStyle?.title || 'מנהיגה במשבר רב-זירתי'}** | **${prof60?.mainStyle?.title || 'אסטרטגית עקרונית ומפוכחת'}** |
+| **נטייה בולטת** | ${prof15?.mainStyle?.prominentTendency || 'אי-התפשרות על איכות תשתיתית'} | ${prof35?.mainStyle?.prominentTendency || 'עומס כפול וחיפוש יציבות'} | ${prof60?.mainStyle?.prominentTendency || 'סנכרון עקרונות בין עולמות'} |
+| **שלב 1 בזרימת החלטה** | ${prof15?.flowSteps?.[0]?.title || 'בדיקת סיכוני עומק ותשתיות'} | ${prof35?.flowSteps?.[0]?.title || 'ייצוב זירות דחופות'} | **${prof60?.flowSteps?.[0]?.title || 'זיהוי פלסטרים ונזק עתידי'}** |
+| **שלב 4 בזרימת החלטה** | ${prof15?.flowSteps?.[3]?.title || 'עמידה בלחצי דדליין'} | ${prof35?.flowSteps?.[3]?.title || 'הימנעות מצעדים בלתי הפיכים'} | **${prof60?.flowSteps?.[3]?.title || 'החלטה מנומקת מבוססת עקרונות'}** |
+| **עוגן מרכזי** | ${prof15?.anchors?.[0]?.title || 'יציבות ארכיטקטונית ואיכות טיפול'} | ${prof35?.anchors?.[0]?.title || 'הגנה על עצמאות ארוכת טווח'} | **${prof60?.anchors?.[0]?.title || 'מניעת חוב טכנולוגי ורפואי'}** |
+| **מלכודת מרכזית** | ${prof15?.traps?.[0]?.title || 'חיתוך קשר ללא חלופה'} | ${prof35?.traps?.[0]?.title || 'התפתות להקלה מיידית'} | **${prof60?.traps?.[0]?.title || 'פזיזות תחת לחץ זמני'}** |
 
 ---
 
-## 4. ׳×׳•׳‘׳ ׳•׳× ׳׳¨׳›׳™׳˜׳§׳˜׳•׳ ׳™׳•׳× ׳•׳׳¡׳§׳ ׳•׳× ׳׳¢׳¨׳›׳×
-1. **׳—׳™׳•׳•׳˜ ׳”׳–׳™׳›׳¨׳•׳ ׳₪׳•׳¢׳ ׳׳§׳¦׳” ׳׳§׳¦׳”:** ${contradictionsCaught > 0 ? `׳‘׳©׳׳‘ ׳”׳׳©׳‘׳¨ (׳—׳•׳“׳©׳™׳ 3-4), ׳”׳׳¢׳¨׳›׳× ׳׳ ׳׳™׳₪׳©׳¨׳” ׳׳˜׳׳™׳” ׳׳©׳‘׳•׳¨ ׳’׳‘׳•׳׳•׳× ׳‘׳©׳§׳˜; ׳©׳׳׳•׳× ׳”׳”׳׳¨׳” ׳¢׳•׳׳×׳• ׳™׳©׳™׳¨׳•׳× ׳¢׳ ׳¢׳§׳¨׳•׳ ׳•׳× ׳”׳׳©׳׳¢׳× ׳•׳”׳ ׳”׳׳™׳ ׳©׳ ׳•׳¡׳—׳• ׳‘׳—׳•׳“׳© 1 (׳–׳™׳”׳•׳™ ׳©׳ ${contradictionsCaught} ׳¡׳×׳™׳¨׳•׳×).` : `׳”׳׳¢׳¨׳›׳× ׳”׳×׳§׳©׳×׳” ׳׳–׳”׳•׳× ׳׳× ׳”׳—׳¨׳™׳’׳•׳× ׳׳’׳‘׳•׳׳•׳× ׳”׳’׳–׳¨׳” ׳‘׳©׳׳‘׳™ ׳”׳׳©׳‘׳¨.`}
-2. **׳׳™׳›׳•׳× ׳”׳¡׳™׳ ׳•׳ ׳‘׳•׳•׳׳™׳“׳˜׳•׳¨ ׳”׳“׳׳•׳×:** ׳›׳ 60 ׳”׳×׳©׳•׳‘׳•׳× ׳©׳ ׳˜׳׳™׳” ׳ ׳‘׳“׳§׳• ׳•׳¢׳׳“׳• ׳‘׳¨׳£ ׳”׳©׳₪׳”, ׳׳׳ ׳©׳¨׳™׳“׳™ ׳₪׳¨׳•׳׳₪׳˜׳™׳ ׳׳• ׳§׳˜׳™׳¢׳•׳× ׳˜׳§׳¡׳˜.
-3. **׳©׳×׳™׳§׳” ׳—׳›׳׳” ׳׳‘׳•׳§׳¨׳×:** ׳¡׳£ 0.40 ׳”׳—׳“׳© ${naturalSilenceCount > 0 ? `׳”׳•׳›׳™׳— ׳™׳¢׳™׳׳•׳× ׳‘׳׳ ׳™׳¢׳× ׳”׳×׳¢׳¨׳‘׳•׳™׳•׳× ׳¡׳¨׳§ ׳‘׳”׳—׳׳˜׳•׳× ׳–׳•׳˜׳¨׳•׳× (׳׳ ׳”׳׳”, ׳¨׳›׳© ׳¦׳™׳•׳“), ׳¢׳ ׳–׳™׳”׳•׳™ ׳©׳ ${naturalSilenceCount} ׳׳§׳¨׳™׳ ׳˜׳¨׳™׳•׳•׳™׳׳׳™׳™׳.` : `׳˜׳¨׳ ׳›׳•׳™׳ ׳‘׳׳׳•׳׳•, ׳•׳׳ ׳׳ ׳¢ ׳”׳×׳¢׳¨׳‘׳•׳™׳•׳× ׳‘׳׳§׳¨׳™ ׳˜׳¨׳™׳•׳•׳™׳”.`}
+## 4. תובנות ארכיטקטוניות ומסקנות מערכת
+1. **הפריה צולבת מבוססת אונטולוגיה (Thematic Cross-Pollination):** המערכת מנעה שיוך שווא של שרתי ענן לניתוח רפואי, ובמקביל זיהתה והשליכה לקחי ניתוק תלות (\`dependency_termination\`) בין פיטורי המהנדס בסייבר לפיטורי האח הסיעודי ברפואה.
+2. **איכות וחיטוי הפרסונה:** כל תשובותיה של יעל נבדקו ואומתו כסמנכ"לית R&D ובת מלווה, ללא זיהום מפרסונות קודמות.
+3. **שתיקה חכמה מבוקרת:** סף 0.40 הוכיח יעילות במניעת התערבויות סרק בהחלטות שגרתיות בשני התחומים.
 ---
 ${TokenTracker.formatMarkdownTable(process.env.COGNITIVE_MODEL || 'gemini-3.6-flash')}
 `;

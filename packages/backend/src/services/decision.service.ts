@@ -9,7 +9,9 @@ import {
   FourHumanDimensions,
   RefinedInsight,
   RetrievalBeforeAskResult,
-  DeepDecisionMechanisms
+  DeepDecisionMechanisms,
+  LifeDomain,
+  AbstractTheme
 } from '@echo/shared';
 import { AiProviderFactory } from '../ai/factory.js';
 import { IAiProvider } from '../ai/provider.interface.js';
@@ -27,6 +29,8 @@ export interface CreateCaseDTO {
   frictionLevel?: 'quick' | 'focused' | 'deep';
   userGender?: 'male' | 'female';
   userName?: string;
+  domain?: LifeDomain;
+  abstractThemes?: AbstractTheme[];
 }
 
 export interface CaseSessionState {
@@ -278,6 +282,8 @@ export class DecisionService {
       title: extracted.title,
       status: 'deliberating',
       family: extracted.family,
+      domain: deepMechanisms?.domain || dto.domain || 'general',
+      abstractThemes: deepMechanisms?.abstractThemes || dto.abstractThemes || [],
       contextStakes: extracted.contextStakes,
       contextReversibility: extracted.contextReversibility,
       contextTimePressure: extracted.contextTimePressure,
@@ -407,6 +413,8 @@ export class DecisionService {
           sourceType: 'ai_inferred',
           timestamp: now,
           confidenceLevel: 80,
+          domain: decisionCase.domain,
+          abstractThemes: decisionCase.abstractThemes,
           createdAt: now
         });
       }
@@ -425,6 +433,8 @@ export class DecisionService {
           sourceType: 'ai_inferred',
           timestamp: now,
           confidenceLevel: 85,
+          domain: decisionCase.domain,
+          abstractThemes: decisionCase.abstractThemes,
           createdAt: now
         });
       }
@@ -445,6 +455,8 @@ export class DecisionService {
             sourceType: 'ai_inferred',
             timestamp: now,
             confidenceLevel: 85,
+            domain: decisionCase.domain,
+            abstractThemes: decisionCase.abstractThemes,
             createdAt: now
           });
         }
@@ -465,6 +477,8 @@ export class DecisionService {
             sourceType: 'ai_inferred',
             timestamp: now,
             confidenceLevel: 90,
+            domain: decisionCase.domain,
+            abstractThemes: decisionCase.abstractThemes,
             createdAt: now
           });
         }
@@ -486,6 +500,8 @@ export class DecisionService {
             sourceType: 'ai_inferred',
             timestamp: now,
             confidenceLevel: 85,
+            domain: decisionCase.domain,
+            abstractThemes: decisionCase.abstractThemes,
             createdAt: now
           });
         }

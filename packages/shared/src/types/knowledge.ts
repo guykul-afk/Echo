@@ -1,3 +1,6 @@
+import { LifeDomain } from './domain.js';
+import { AbstractTheme } from './theme.js';
+
 export type ProvenanceSourceType =
   | 'user_stated'
   | 'user_confirmed'
@@ -33,6 +36,8 @@ export interface GraphAssertion {
   lastAskedAt?: number;
   sentimentOrPolarity?: 'risk_seeking' | 'risk_averse' | 'pro' | 'con' | 'neutral';
   condition?: string;
+  domain?: LifeDomain;
+  abstractThemes?: AbstractTheme[];
   semanticEmbedding?: number[];
   createdAt: number;
 }
@@ -44,6 +49,7 @@ export interface KnowledgeEntity {
   userId: string;
   name: string;
   type: EntityType;
+  domain?: LifeDomain;
   relationshipToUser?: string;
   relatedDecisions: string[];
   activeAssertions: string[];

@@ -10,3 +10,5 @@ export * from './types/registry.js';
 export * from './types/calibration.js';
 export * from './types/cognitive.js';
 export * from './types/knowledge.js';
+export * from './types/domain.js';
+export * from './types/theme.js';

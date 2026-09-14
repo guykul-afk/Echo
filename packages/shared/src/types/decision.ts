@@ -1,5 +1,7 @@
 import { Outcome } from './outcome.js';
 import { DeepDecisionMechanisms } from './cognitive.js';
+import { LifeDomain } from './domain.js';
+import { AbstractTheme } from './theme.js';
 
 export type DecisionStatus =
   | 'deliberating'
@@ -57,6 +59,8 @@ export interface DecisionCase {
   title: string;
   status: DecisionStatus;
   family: string; // e.g. hire_or_wait, continue_or_stop, market_entry
+  domain?: LifeDomain;
+  abstractThemes?: AbstractTheme[];
   contextStakes: ContextStakes;
   contextReversibility: ContextReversibility;
   contextTimePressure: ContextTimePressure;
