@@ -13,7 +13,8 @@ interface DecisionProfileScreenProps {
 
 export const DecisionProfileScreen: React.FC<DecisionProfileScreenProps> = ({
   onBack,
-  capturesCount = 44,
+  capturesCount = 0,
+  closuresCount = 0,
   profileData,
 }) => {
   const [expandedDecisionId, setExpandedDecisionId] = useState<string | null>(null);
@@ -23,105 +24,100 @@ export const DecisionProfileScreen: React.FC<DecisionProfileScreenProps> = ({
   };
 
   const displayCount = profileData?.capturesCount ?? capturesCount;
+
+  // Zero-Trust: If user has fewer than 3 decisions and no calculated profile data, show authentic Zero-State
+  if (!profileData && displayCount < 3) {
+    return (
+      <div
+        className="flex-1 w-full max-w-[440px] mx-auto p-4 sm:p-5 overflow-y-auto custom-scroll text-right space-y-6 select-none"
+        dir="rtl"
+        style={{ backgroundColor: LuxuryTheme.background.base, color: LuxuryTheme.text.primary }}
+      >
+        <header className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onBack}
+              className="w-9 h-9 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-[#E6E8EE]/70 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 transition-colors cursor-pointer"
+              title="חזרה"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <div>
+              <span className="text-[11px] font-semibold tracking-widest text-[#D4AF37] uppercase block">
+                מראה אישית
+              </span>
+              <h1 className="text-xl font-editorial font-bold text-[#E6E8EE]">
+                הפרופיל האפיסטמי שלך
+              </h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#D4AF37]/10 border border-[#D4AF37]/25 text-[#D4AF37]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]"></span>
+            <span>{displayCount} החלטות מתועדות</span>
+          </div>
+        </header>
+
+        {/* Authentic Zero-State Card */}
+        <section
+          className="p-6 rounded-2xl border space-y-4 text-center sm:text-right"
+          style={{
+            backgroundColor: LuxuryTheme.background.surface,
+            borderColor: LuxuryTheme.background.border,
+            boxShadow: '0 0 24px -4px rgba(212, 175, 55, 0.08)',
+          }}
+        >
+          <div className="w-12 h-12 mx-auto sm:mx-0 rounded-2xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center text-xl text-[#D4AF37]">
+            ✦
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="text-lg font-editorial font-bold text-[#E6E8EE]">
+              פרופיל אישי בהתהוות
+            </h2>
+            <p className="text-xs text-[#E6E8EE]/70 leading-relaxed font-light">
+              המנוע מנתח את עוגני שיקול הדעת, מנגנוני ההכרעה והמתחים החוזרים שלך לאורך זמן.
+              לאחר רישום החלטות ראשונות וסגירת מעגלי תוצאה (לפחות 3 החלטות), תתגבש כאן תמונת מראה אפיסטמית מלאה ומדויקת ללא נתוני דמה.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-2 text-right">
+            <div className="p-3 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+              <span className="text-[10px] text-[#E6E8EE]/50 block">החלטות שנלכדו</span>
+              <span className="text-base font-bold text-[#E6E8EE]">{displayCount}</span>
+            </div>
+            <div className="p-3 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+              <span className="text-[10px] text-[#E6E8EE]/50 block">מעגלים שנסגרו</span>
+              <span className="text-base font-bold text-[#D4AF37]">{closuresCount}</span>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-white/[0.06]">
+            <button
+              type="button"
+              onClick={onBack}
+              className="w-full py-3 px-4 rounded-xl text-xs font-semibold tracking-wide border border-[#D4AF37]/40 bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 text-[#D4AF37] transition-all cursor-pointer shadow-lg active:scale-[0.98]"
+            >
+              לכד דילמה חדשה ←
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   const mainStyle = profileData?.mainStyle || {
-    title: 'מחפש קרקע מוצקה לפני תנועה',
-    description: 'אתה אדם שמעריך יציבות ושקט נפשי. לפני שאתה יוצא לדרך, חשוב לך להבין בדיוק איפה אתה עומד. אתה מעדיף לוותר על הבטחה לרווח מהיר או הימור מפתה, העיקר לדעת שלא תופתע בהמשך. קשה מאוד לגרור אותך לפעול מתוך לחץ רגעי, ותמיד תעדיף לקחת צעד אחורה ולחשוב עוד רגע לפני שאתה חותך.',
-    prominentTendency: 'לקיחת אחריות אישית מלאה',
-    consistencyMetric: 'עקביות לאורך זמן',
+    title: 'דפוסי שיקול דעת אישיים',
+    description: 'מנוע הניתוח האפיסטמי מגבש את המאפיינים הייחודיים של קבלת ההחלטות שלך.',
+    prominentTendency: 'בחינה שקולה של עובדות והנחות',
+    consistencyMetric: 'עקביות בהתפתחות',
   };
 
   const evolution = profileData?.evolution;
-
-  const flowSteps = (profileData?.flowSteps && profileData.flowSteps.length > 0)
-    ? profileData.flowSteps
-    : [
-        {
-          stepNumber: '01',
-          title: 'צלילה למספרים ולשטח',
-          description: 'אתה לא מסתפק בהשערות או שמועות. ישר בודק עלויות, משווה ספקים, ומוודא שהנתונים מסתדרים במציאות.'
-        },
-        {
-          stepNumber: '02',
-          title: "בדיקת 'מה התרחיש הכי גרוע'",
-          description: 'הדבר הראשון שמעסיק אותך הוא איפה הנפילה עלולה לקרות ואיך מונעים ממנה להשבית את כל הפרויקט.'
-        },
-        {
-          stepNumber: '03',
-          title: 'בחינת המצפן הפנימי',
-          description: 'אתה עוצר לבדוק האם זה יושב טוב עם הערכים שלך — למשל האם אתה גלוי והוגן מול השותפים והבנקים, או האם אתה קשוב למשפחה.'
-        },
-        {
-          stepNumber: '04',
-          title: 'חיתוך שקט והתקדמות',
-          description: 'ברגע שקיבלת את ההחלטה, אתה הולך איתה עד הסוף. כמעט שלא רואים אצלך חרטות או זיגזוגים לאחור.'
-        }
-      ];
-
-  const anchors = (profileData?.anchors && profileData.anchors.length > 0)
-    ? profileData.anchors
-    : [
-        {
-          id: 'dc-1788597346752',
-          title: 'לא קופץ למים בלי לבדוק שיש חלופה',
-          tag: 'זהירות מבורכת',
-          description: 'אתה לא מסתמך על הבטחה של ספק בודד אם יש ספק באמינות שלו, ומעדיף לפצל סיכונים מראש כדי שלא תיתקע באמצע הפרויקט.',
-          caseTitle: 'אספקת בטון לפרויקט קטרוני',
-          caseId: 'dc-1788597346752',
-          authenticDilemmaQuote: 'ההחלטה היא האם לפצל את פרויקט קטרוני בין כמה ספקי בטון שיתנו גיבוי אחד לשני או להישאר עם ספק אחד שהאמינות אספקה שלו בינונית...',
-          systemReflection: 'הגדרת השוואת עלות העיכוב מול מחיר הפיצול, ובכך מנעת השבתה פוטנציאלית של היציקות.'
-        },
-        {
-          id: 'dc-1789034514046',
-          title: 'אומר את האמת על השולחן',
-          tag: 'יושרה פנימית',
-          description: 'גם בשיחות מורכבות מול גורמים שמחזיקים בכוח (כמו בנקאים או שותפים), אתה בוחר שקיפות מלאה על פני הצגת תמונה מייפה. זה יוצר אמון עמוק.',
-          caseTitle: 'שיחה עם בנק הפועלים',
-          caseId: 'dc-1789034514046',
-          authenticDilemmaQuote: 'האם להיות גלוי לחלוטין לגבי מצב החברה, אתגריה והערכת השוק בשיחה הראשונה עם זיו מבנק הפועלים, או להציג תמונה אופטימית וורודה יותר...',
-          systemReflection: 'הכרעת בעד גילוי מלא ואותנטי, מתוך הבנה שאמון מקצועי ארוך טווח גובר על רושם רגעי חולף.'
-        },
-        {
-          id: 'dc-1788601474607',
-          title: 'עוצר לחשוב על טובת הילד, לא על הרצון שלך',
-          tag: 'רגישות הורית',
-          description: 'כשזה מגיע לילדים, אתה יודע לנטרל את השאיפות האישיות והתחרותיות שלך, ולשאול באמת מה בונה אצלם ביטחון ומה נכון להם.',
-          caseTitle: 'עתידו הספורטיבי של איתן',
-          caseId: 'dc-1788601474607',
-          authenticDilemmaQuote: 'הכרעה לגבי עתידו הספורטיבי של איתן: התמדה בנבחרת הטיפוס מול מעבר לשחייה...',
-          systemReflection: "הפרדת בין הצורך שלך לראות 'חוסן והתמדה' לבין הרצון הפנימי של איתן, ובחרת במענה חינוכי שמכבד את אישיותו."
-        }
-      ];
-
-  const traps = (profileData?.traps && profileData.traps.length > 0)
-    ? profileData.traps
-    : [
-        {
-          id: 'dc-1788596360147',
-          title: 'הפיתוי להישאר עם המוכר כדי לחסוך כאב ראש',
-          tag: 'הנחה מוקדמת',
-          description: 'לפעמים הנוחות של לעבוד עם מי שכבר נמצא בשטח גורמת לך להניח שהוא יצליח באותה מידה גם במשימה שונה לחלוטין (כמו להניח שקבלן שלד חזק יבריק גם בעבודות גמר עדינות).',
-          caseTitle: 'קבלן שלד לעבודות הגמרים',
-          caseId: 'dc-1788596360147',
-          authenticAssumptionQuote: 'קבלן המצטיין בעבודות שלד מחזיק במיומנות הנדרשת גם לביצוע עבודות גמר מדויקות, והמשכיות תחסוך חיכוכים...',
-          systemReflection: 'המערכת חידדה עבורך שמיומנות גמרים היא דיסציפלינה נפרדת, ודרשה לבחון תיק עבודות גמר ייעודי.'
-        },
-        {
-          id: 'dc-1788942334803',
-          title: 'תשלום מחיר גבוה מדי על ודאות מהירה',
-          tag: 'פגיעה ברווחיות',
-          description: 'כשחוסר הוודאות מעיק, יש אצלך לפעמים דחף "לקנות שקט" מהר מדי — למשל לחתוך מחירים מוקדם מהדרוש כדי להבטיח תזרים בטוח, עוד לפני שמיצית את בדיקת השוק.',
-          caseTitle: 'הורדת מחירי דירות בקיטרוני',
-          caseId: 'dc-1788942334803',
-          authenticAssumptionQuote: 'האם להוריד את מחירי הדירות בקיטרוני וסלומון ב-100 עד 150 אלף ₪ לדירה ולהתקרב לדו"ח אפס כדי להבטיח תזרים מזומנים...',
-          systemReflection: 'החידוד עזר להבין שוויתור גורף על רווח הוא מחיר גבוה מדי, ושיש לבחון חלופות ממוקדות יותר בזמן ובכמות הדירות.'
-        },
-        {
-          id: 'dc-trap-options',
-          title: 'עצירה באיסוף מידע כשיש יותר מדי אפשרויות',
-          tag: 'בדיקת יתר',
-          description: 'כשיש יותר משתיים-שלוש חלופות סבירות, קצב ההכרעה שלך מאט משמעותית. הרצון למפות כל פינה ולגדר כל תרחיש עלול לעכב את היציאה לביצוע.'
-        }
-      ];
+  const flowSteps = profileData?.flowSteps || [];
+  const anchors = profileData?.anchors || [];
+  const traps = profileData?.traps || [];
 
 
 

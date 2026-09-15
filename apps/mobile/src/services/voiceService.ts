@@ -16,13 +16,9 @@ export function getActiveGeminiKey(): string {
   if (typeof window === 'undefined') return '';
   const envKey = window.ENV_CONFIG?.GEMINI_API_KEY?.trim();
   if (envKey && envKey.length > 10) return envKey;
-  const localKey = localStorage.getItem('GEMINI_API_KEY')?.trim();
+  const localKey = localStorage.getItem('DEV_GEMINI_KEY')?.trim() || localStorage.getItem('GEMINI_API_KEY')?.trim();
   if (localKey && localKey.length > 10) return localKey;
-  try {
-    return atob('QVEuQWI4Uk42SWRoT3YyQmt3d2VPM0hOaW96SGdPRm8yNU9XS2Vlb1JOQjRkQ1pvaEdIeWc=');
-  } catch {
-    return '';
-  }
+  return '';
 }
 
 export function blobToBase64(blob: Blob): Promise<string> {

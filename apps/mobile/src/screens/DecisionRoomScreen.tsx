@@ -318,6 +318,8 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
 
     try {
       const result = await refineAnswerWithGemini({
+        caseId: decisionCase?.id,
+        userId: decisionCase?.userId,
         dilemma: consideration,
         centralTension,
         goalsPrices,
@@ -626,25 +628,32 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
         </div>
       </div>
 
-      {/* ================= SECTION 5: Summary ================= */}
+      {/* ================= SECTION 5: Direction & Next Steps ================= */}
       {isDecisionSummarized && insight && (
         <div className="pt-4 border-t border-white/10 space-y-4">
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-editorial font-bold tracking-widest text-amber-300">סיכום ההחלטה</span>
-              <span className="text-xs px-2.5 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono border border-amber-500/20 font-semibold">
-                מסקנה וצעד מעשי
+              <span className="text-xs font-editorial font-bold tracking-widest" style={{ color: LuxuryTheme.accent.gold }}>זיקוק כיוון הפעולה</span>
+              <span 
+                className="text-xs px-2.5 py-0.5 rounded font-mono border font-semibold"
+                style={{ 
+                  backgroundColor: 'rgba(212, 175, 55, 0.1)', 
+                  color: LuxuryTheme.accent.gold, 
+                  borderColor: 'rgba(212, 175, 55, 0.25)' 
+                }}
+              >
+                מתווה וצעדים לבדיקה
               </span>
             </div>
             <h2 className="font-editorial text-2xl font-bold" style={{ color: LuxuryTheme.text.primary }}>
-              סיכום ההחלטה
+              זיקוק כיוון הפעולה
             </h2>
             <p className="text-sm font-medium opacity-75">
-              המסקנה המזוקקת והצעד המעשי שנקבע:
+              המתווה שגובש והצעדים המעשיים לבדיקה בשטח:
             </p>
           </div>
 
-          {/* CARD 1: INSIGHT SUMMARY (נקודת מוצא מול מסקנה מזוקקת) */}
+          {/* CARD 1: INSIGHT SUMMARY (נקודת מוצא מול מתווה מוביל שגובש) */}
           <div 
             className="p-4 rounded-2xl border space-y-3.5 backdrop-blur-sm" 
             style={{ backgroundColor: 'rgba(212, 175, 55, 0.03)', borderColor: 'rgba(212, 175, 55, 0.25)' }}
@@ -662,10 +671,19 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
             {/* Now */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-xs uppercase font-mono tracking-wider font-bold text-amber-300">המסקנה כעת:</span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono font-bold">מסקנה מזוקקת</span>
+                <span className="text-xs uppercase font-mono tracking-wider font-bold" style={{ color: LuxuryTheme.accent.gold }}>כיוון הפעולה שגובש:</span>
+                <span 
+                  className="text-[10px] px-2 py-0.5 rounded border font-mono font-bold"
+                  style={{ 
+                    backgroundColor: 'rgba(212, 175, 55, 0.1)', 
+                    borderColor: 'rgba(212, 175, 55, 0.3)', 
+                    color: LuxuryTheme.accent.gold 
+                  }}
+                >
+                  מתווה מנחה לבדיקה
+                </span>
               </div>
-              <p className="text-sm font-semibold text-amber-100 leading-relaxed">
+              <p className="text-sm font-semibold leading-relaxed" style={{ color: LuxuryTheme.text.primary }}>
                 {insight.now || 'בירור ממוקד של הנחת הציר'}
               </p>
             </div>
@@ -677,8 +695,15 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
             style={{ backgroundColor: 'rgba(212, 175, 55, 0.03)', borderColor: 'rgba(212, 175, 55, 0.25)' }}
           >
             <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-amber-300 text-sm">הצעדים שנבחרו:</span>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-200">
+              <span className="font-bold text-sm" style={{ color: LuxuryTheme.accent.gold }}>הצעדים שנבחרו לבדיקה:</span>
+              <span 
+                className="text-[10px] font-semibold px-2 py-0.5 rounded border"
+                style={{ 
+                  backgroundColor: 'rgba(212, 175, 55, 0.08)', 
+                  borderColor: 'rgba(212, 175, 55, 0.2)', 
+                  color: LuxuryTheme.accent.gold 
+                }}
+              >
                 ניתן לבחור יותר מפעולה אחת
               </span>
             </div>
@@ -699,13 +724,24 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
                       onClick={() => toggleStepSelection(idx)}
                       className={`w-full p-3 rounded-xl border text-right text-sm leading-relaxed flex items-start gap-3 transition-all cursor-pointer ${
                         isSelected
-                          ? 'border-amber-400 bg-amber-500/20 text-white font-semibold shadow-[0_0_12px_rgba(212,175,55,0.15)]'
+                          ? 'font-semibold shadow-[0_0_12px_rgba(212,175,55,0.2)]'
                           : 'border-white/10 bg-white/[0.02] text-stone-200 hover:bg-white/[0.05]'
                       }`}
+                      style={isSelected ? {
+                        borderColor: LuxuryTheme.accent.gold,
+                        backgroundColor: 'rgba(212, 175, 55, 0.15)',
+                        color: LuxuryTheme.text.primary
+                      } : undefined}
                     >
-                      <span className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold transition-all ${
-                        isSelected ? 'border-amber-400 bg-amber-400 text-black' : 'border-white/30 text-transparent'
-                      }`}>
+                      <span 
+                        className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold transition-all ${
+                          isSelected ? 'text-[#07080B]' : 'border-white/30 text-transparent'
+                        }`}
+                        style={isSelected ? {
+                          borderColor: LuxuryTheme.accent.gold,
+                          backgroundColor: LuxuryTheme.accent.gold
+                        } : undefined}
+                      >
                         ✓
                       </span>
                       <span className="flex-1 font-medium">{stepText}</span>
@@ -717,13 +753,14 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
 
             {/* Custom User Step Input */}
             <div className="pt-3 border-t border-white/5 space-y-1.5">
-              <label className="block text-xs font-semibold text-amber-300/90">או הוסף החלטה / צעד מותאם אישית משלך:</label>
+              <label className="block text-xs font-semibold" style={{ color: LuxuryTheme.accent.gold }}>או הוסף בדיקה / צעד מותאם אישית משלך:</label>
               <input
                 type="text"
                 value={customStepText}
                 onChange={e => setCustomStepText(e.target.value)}
-                placeholder="הקלד כאן החלטה או צעד משלך (אופציונלי)..."
-                className="w-full bg-white/[0.03] border border-amber-500/25 rounded-xl px-3.5 py-2.5 text-sm text-right text-stone-100 placeholder:opacity-50 focus:outline-none focus:border-amber-400 font-medium"
+                placeholder="הקלד כאן בדיקה או צעד משלך (אופציונלי)..."
+                className="w-full bg-white/[0.03] rounded-xl px-3.5 py-2.5 text-sm text-right text-stone-100 placeholder:opacity-50 focus:outline-none font-medium border transition-colors"
+                style={{ borderColor: 'rgba(212, 175, 55, 0.3)' }}
               />
             </div>
           </div>

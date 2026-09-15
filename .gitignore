@@ -11,3 +11,8 @@ build/
 **/env-config.js
 DECISION_CYCLES.json
 DECISION_CYCLES.md
+doc_*.json
+latest_*.json
+server_latest_*.json
+last_decision_dump.json
+*.tsbuildinfo

@@ -19,6 +19,13 @@ export const LuxuryTheme = {
     tertiary: 'rgba(230, 232, 238, 0.45)',
     inverse: '#07080B'
   },
+  // Alias for semantic foreground compatibility
+  foreground: {
+    primary: '#E6E8EE',
+    secondary: 'rgba(230, 232, 238, 0.70)',
+    tertiary: 'rgba(230, 232, 238, 0.45)',
+    inverse: '#07080B'
+  },
   // Color 3: Accent & Living Dynamic Fill
   accent: {
     gold: '#D4AF37',

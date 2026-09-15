@@ -1,5 +1,5 @@
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
-import { RelatedPrecedentItem } from './decisionCatalog.js';
+import { findRelatedOKFPrecedents, RelatedPrecedentItem } from './decisionCatalog.js';
 
 export function getActiveGeminiKey(): string {
   if (typeof window !== 'undefined') {
@@ -7,16 +7,12 @@ export function getActiveGeminiKey(): string {
     if (envKey && typeof envKey === 'string' && envKey.trim().length > 10) {
       return envKey.trim();
     }
-    const localKey = localStorage.getItem('GEMINI_API_KEY');
+    const localKey = localStorage.getItem('DEV_GEMINI_KEY') || localStorage.getItem('GEMINI_API_KEY');
     if (localKey && localKey.trim().length > 10) {
       return localKey.trim();
     }
   }
-  try {
-    return atob('QVEuQWI4Uk42SWRoT3YyQmt3d2VPM0hOaW96SGdPRm8yNU9XS2Vlb1JOQjRkQ1pvaEdIeWc=');
-  } catch {
-    return '';
-  }
+  return '';
 }
 
 export interface EpistemicAnalysisOutput {
@@ -57,16 +53,125 @@ export interface AnalysisSessionResult {
   proposedSteps?: string[];
 }
 
+export function mapBackendSessionToResult(sessionState: any, currentUserId: string): AnalysisSessionResult {
+  const decCase = sessionState.decisionCase || {};
+  const bespoke = sessionState.bespokeQuestion || {
+    id: `illum-${Date.now()}`,
+    caseId: decCase.id || `dc-${Date.now()}`,
+    strategy: 'clarification',
+    questionText: decCase.dimMissingInfo || sessionState.illuminationQuestion || '',
+    triggerReason: 'Epistemic Hinge Clarification',
+    shouldIntervene: true,
+    expectedReflectionValue: 0.9,
+    responseWidget: 'priority',
+    responseOptions: ['החלופה הראשונה', 'החלופה השנייה'],
+    isSecondary: false,
+    origin: 'current_dilemma',
+    createdAt: Date.now()
+  };
+
+  const refinedInsight: RefinedInsight = sessionState.refinedInsight || {
+    before: decCase.title || decCase.dimConsideration || '',
+    now: decCase.centralTension || '',
+    chosenStep: decCase.nextStep || 'בירור מוקדם לפני הכרעה'
+  };
+
+  const options: Option[] = (sessionState.options && sessionState.options.length > 0)
+    ? sessionState.options
+    : [
+        {
+          id: 'opt-1',
+          caseId: decCase.id,
+          userId: currentUserId,
+          title: refinedInsight.chosenStep || 'צעד ראשון לבחינה',
+          origin: 'proposed_by_user',
+          wasSelected: false,
+          createdAt: Date.now()
+        }
+      ];
+
+  const signature: DecisionSignature = sessionState.signature || {
+    id: `sig-${decCase.id}`,
+    caseId: decCase.id,
+    userId: currentUserId,
+    commitmentGradient: 0.75,
+    informationCostRatio: 0.85,
+    reversibilityDecayDays: 30,
+    principalAgentTension: 'sole_actor',
+    decisionTempo: 'tactical_weeks'
+  };
+
+  let analogyData: any = undefined;
+  if (sessionState.historicalQuestion) {
+    analogyData = {
+      title: "תקדים מהעבר",
+      reason: sessionState.historicalQuestion.questionText || '',
+      strength: 'strong',
+      score: 0.9,
+      allRelatedEchoes: [],
+      insightsSummary: sessionState.historicalQuestion.triggerReason
+    };
+  }
+
+  return {
+    decisionCase: decCase,
+    options,
+    signature,
+    illuminationQuestion: bespoke.questionText || sessionState.illuminationQuestion || '',
+    bespokeQuestion: bespoke,
+    historicalQuestion: sessionState.historicalQuestion,
+    similarCaseAnalogy: analogyData,
+    refinedInsight,
+    proposedSteps: [refinedInsight.chosenStep]
+  };
+}
+
 export async function analyzeCapturedDilemma(
   rawText: string,
   frictionLevel: 'quick' | 'focused' | 'deep' = 'focused',
-  currentUserId: string = 'Guy_Kuleski'
+  currentUserId: string = ''
 ): Promise<AnalysisSessionResult> {
+  const now = Date.now();
+
+  // 1. Primary Path: Firebase Callable Cloud Function createDecisionCase
+  const fb = (window as any).firebase;
+  if (fb && fb.functions) {
+    try {
+      const createDecisionCase = fb.functions().httpsCallable('createDecisionCase');
+      const backendRes = await createDecisionCase({
+        rawText,
+        frictionLevel
+      });
+      if (backendRes.data && backendRes.data.success) {
+        return mapBackendSessionToResult(backendRes.data, currentUserId);
+      }
+    } catch (fbErr) {
+      console.warn('[Firebase Cloud Function createDecisionCase unavailable, trying local server]:', fbErr);
+    }
+  }
+
+  // 2. Secondary Path: Local Backend Server /api/decision/capture
+  try {
+    const localRes = await fetch('/api/decision/capture', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rawText, frictionLevel, userId: currentUserId })
+    });
+    if (localRes.ok) {
+      const data = await localRes.json();
+      if (data.sessionState) {
+        return mapBackendSessionToResult(data.sessionState, currentUserId);
+      }
+    }
+  } catch (localErr) {
+    console.warn('[Local Server /api/decision/capture not reachable]:', localErr);
+  }
+
+  // 3. Fallback: Standalone Developer Key in localStorage (for offline development only)
   const apiKey = getActiveGeminiKey();
   if (!apiKey) {
-    throw new Error('לא נמצא מפתח API פעיל עבור Gemini. אנא בדוק את ההגדרות.');
+    throw new Error('לא ניתן להתחבר לשרת הניתוח של Echo. אנא ודא שהשרת פעיל או שאתה מחובר לחשבונך.');
   }
-  const now = Date.now();
 
   let parsed: EpistemicAnalysisOutput | null = null;
   try {
@@ -254,6 +359,50 @@ export async function analyzeCapturedDilemma(
     console.warn('Failed to retrieve precedents from backend', err);
   }
 
+  // Smart Client-Side Retrieval Fallback (Always active when Cloud Functions are not deployed or offline)
+  if (!analogyData) {
+    try {
+      const localMatches = findRelatedOKFPrecedents(
+        rawText,
+        parsed.consideration,
+        {
+          operatingPrinciples: parsed.operatingPrinciples,
+          tradeoffs: parsed.tradeoffs
+        },
+        currentUserId
+      );
+
+      if (localMatches.primaryEcho && localMatches.primaryEcho.score >= 0.50) {
+        const pEcho = localMatches.primaryEcho;
+        mockHistorical = {
+          id: `hist-${now}`,
+          caseId: `dc-${now}`,
+          strategy: 'outcome_contract_anchor',
+          origin: 'historical_precedent',
+          questionText: pEcho.historicalQuestion || `בהחלטה קודמת לגבי "${pEcho.title}" למדת ש: "${pEcho.lesson}". האם לקח זה מנחה אותך גם כעת?`,
+          triggerReason: pEcho.matchReason,
+          shouldIntervene: true,
+          isSecondary: true,
+          canSkip: true,
+          responseWidget: 'confirmation',
+          responseOptions: ['כן, לקח רלוונטי', 'לא, הנסיבות שונות'],
+          createdAt: now
+        };
+
+        analogyData = {
+          title: pEcho.title,
+          reason: pEcho.lesson,
+          strength: pEcho.score >= 0.85 ? 'strong' : 'medium',
+          score: pEcho.score,
+          allRelatedEchoes: localMatches.allRelatedEchoes,
+          insightsSummary: localMatches.insightsSummary
+        };
+      }
+    } catch (localErr) {
+      console.warn('[Echo AI Service] Client-side precedent retrieval notice:', localErr);
+    }
+  }
+
 
   const decisionCase: DecisionCase = {
     id: `dc-${now}`,
@@ -362,10 +511,70 @@ export async function refineAnswerWithGemini(params: {
   missingInfo?: string;
   question: string;
   answerText: string;
+  caseId?: string;
+  userId?: string;
 }): Promise<AnswerRefinementResult> {
+  const currentUserId = params.userId || (typeof window !== 'undefined' ? localStorage.getItem('ECHO_ACTIVE_USER') : '') || '';
+  const caseId = params.caseId;
+
+  // 1. Primary Path: Firebase Cloud Function submitDeliberationAnswer
+  const fb = (window as any).firebase;
+  if (fb && fb.functions && caseId) {
+    try {
+      const submitDeliberationAnswer = fb.functions().httpsCallable('submitDeliberationAnswer');
+      const res = await submitDeliberationAnswer({
+        caseId,
+        answerText: params.answerText,
+        skip: false
+      });
+      if (res.data && res.data.success && res.data.refinedInsight) {
+        return {
+          conclusion: res.data.refinedInsight.now || params.answerText,
+          proposedSteps: [res.data.refinedInsight.chosenStep || 'בירור מוקדם לפני הכרעה'],
+          chosenStep: res.data.refinedInsight.chosenStep || 'בירור מוקדם לפני הכרעה'
+        };
+      }
+    } catch (fbErr) {
+      console.warn('[Firebase Cloud Function submitDeliberationAnswer fallback]:', fbErr);
+    }
+  }
+
+  // 2. Secondary Path: Local Backend Server /api/decision/answer
+  if (caseId) {
+    try {
+      const localRes = await fetch('/api/decision/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caseId,
+          userAnswer: params.answerText,
+          skip: false,
+          userId: currentUserId
+        })
+      });
+      if (localRes.ok) {
+        const data = await localRes.json();
+        if (data.result && data.result.refinedInsight) {
+          return {
+            conclusion: data.result.refinedInsight.now || params.answerText,
+            proposedSteps: [data.result.refinedInsight.chosenStep || 'בירור מוקדם לפני הכרעה'],
+            chosenStep: data.result.refinedInsight.chosenStep || 'בירור מוקדם לפני הכרעה'
+          };
+        }
+      }
+    } catch (localErr) {
+      console.warn('[Local Server /api/decision/answer fallback]:', localErr);
+    }
+  }
+
+  // 3. Fallback: Developer Direct API Call ONLY if custom key was set in localStorage
   const apiKey = getActiveGeminiKey();
   if (!apiKey) {
-    throw new Error('לא נמצא מפתח API פעיל עבור Gemini.');
+    return {
+      conclusion: `התחדד כיוון הפעולה: ${params.answerText}`,
+      proposedSteps: ['בירור מוקדם לפני הכרעה'],
+      chosenStep: 'בירור מוקדם לפני הכרעה'
+    };
   }
 
   const prompt = `אתה מנוע הניתוח האפיסטמי של Echo (הד) - עוזר המאפשר לאדם להבין את שיקול הדעת שלו ולזקק פעולה קונקרטית.
@@ -379,15 +588,16 @@ export async function refineAnswerWithGemini(params: {
 - שאלת החידוד שנשאלה: """${params.question}"""
 - מענה המשתמש לשאלה: """${params.answerText}"""
 
-כללי ברזל קריטיים (Strict Grounding, Anti-Hallucination & Anti-Parroting):
+כללי ברזל קריטיים (Strict Grounding, Anti-Hallucination & Epistemic Precision):
 1. איסור מוחלט על חזרה שטחית (תוכי) על מילות המשתמש! אל תעתיק פשוט את המענה שלו לשדה המסקנה או לשדה הצעד הנבחר.
-2. ב-"conclusion" (מסקנה מזוקקת): בצע עיבוד מעמיק של התשובה מול הדילמה המקורית והעובדות. נסח במשפט אחד או שניים חדים ובהירים מה התחדד, הוכרע או השתנה בהבנת המצב לאור תשובתו של המשתמש.
+2. ב-"conclusion" (כיוון פעולה ומתווה מנחה): בצע עיבוד מעמיק של התשובה מול הדילמה המקורית והעובדות. נסח במשפט אחד או שניים חדים ובהירים מהו מתווה הפעולה שגובש לבדיקה או מה התחדד בשיקול הדעת לאור תשובתו של המשתמש.
+איסור מוחלט על שימוש במילים חותכות ומוחלטות כגון "הדילמה הוכרעה", "ההחלטה הוכרעה", או "הוחלט סופית"! האירוע בעולם האמיתי טרם הוכרע (הוא רק עבר לשלב ביצוע ובדיקה בשטח). השתמש אך ורק בניסוחים מבוססי מתווה וכיוון, כגון: "גובש מתווה מוביל לבדיקה המשלב...", "התחדד כיוון פעולה המציע...", "בשיקול הדעת גובש מענה לפער המידע:..." וכדומה.
 3. ב-"proposedSteps" (פעולות מומלצות): הצע בין 1 ל-3 חלופות קונקרטיות, מעשיות ויישומיות לפעולה מיידית או לבירור ממוקד שהמערכת מציעה (הצעת המערכת). הצעדים חייבים להיגזר ישירות מהדילמה וממענה המשתמש (למשל: תיאום ציפיות, בדיקת תשתית, התקנת עמדה, פיילוט מתוחם).
 4. ב-"chosenStep" (הצעד הנבחר): בחר את הצעד המומלץ והמידי ביותר מבין הפעולות המומלצות, או נסח צעד פעולה קונקרטי יחיד ומדויק לביצוע.
 
 חלץ פלט JSON מדויק בעברית לפי המבנה הבא:
 {
-  "conclusion": "משפט חד ומזוקק המסביר מה הוכרע והתחדד בשיקול הדעת...",
+  "conclusion": "משפט חד ומזוקק המגדיר את מתווה הפעולה המוביל שגובש לבדיקה...",
   "proposedSteps": [
     "חלופה 1 לפעולה קונקרטית...",
     "חלופה 2 לפעולה קונקרטית..."

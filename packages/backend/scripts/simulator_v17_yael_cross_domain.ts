@@ -60,6 +60,8 @@ interface SavedCaseState {
     before: string;
     after: string;
   };
+  domain?: string;
+  abstractThemes?: string[];
   outcomeReported?: boolean;
 }
 
@@ -391,6 +393,8 @@ export async function runyaelSimulation() {
       chosenStep,
       activeCorrectionApplied,
       correctionDiff,
+      domain: dCase.domain,
+      abstractThemes: dCase.abstractThemes,
       outcomeReported: false
     };
 

@@ -32,10 +32,10 @@ export function decodeDoc(doc: any): any {
 
 export async function syncUserDecisionsFromCloud(targetUsername: string): Promise<any[]> {
   const isFounder = (
-    targetUsername.toLowerCase().includes('kuleski') || 
-    targetUsername.toLowerCase().includes('guy') || 
     targetUsername === 'Guy_Kuleski' || 
-    targetUsername === 'guy_founder'
+    targetUsername === 'guy_founder' ||
+    targetUsername === 'guy_kuleski' ||
+    targetUsername.toLowerCase() === 'guykul'
   );
 
   const usersToQuery = isFounder 
@@ -157,6 +157,28 @@ export async function syncUserDecisionsFromCloud(targetUsername: string): Promis
     if (raw) localDecisions = JSON.parse(raw);
   } catch {}
 
+  if (isFounder) {
+    const candidateKeys = [
+      storageKey,
+      'echo_decisions_Guy_Kuleski',
+      'echo_decisions_guy_kuleski',
+      'echo_decisions_guy_founder',
+      'echo_decisions_guykul',
+      'echo_decisions_GUYKUL'
+    ];
+    for (const k of candidateKeys) {
+      try {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > localDecisions.length) {
+            localDecisions = parsed;
+          }
+        }
+      } catch {}
+    }
+  }
+
   const mergedMap = new Map<string, any>();
   localDecisions.forEach((d: any) => { if (d && d.id) mergedMap.set(d.id, d); });
   cloudDecisionsMap.forEach((d, id) => {
@@ -168,50 +190,78 @@ export async function syncUserDecisionsFromCloud(targetUsername: string): Promis
 
   const mergedList = Array.from(mergedMap.values()).sort((a, b) => (b.frozenAt || 0) - (a.frozenAt || 0));
 
-  // Save merged list across aliases so user immediately sees all 39+ decisions
-  try {
-    localStorage.setItem(storageKey, JSON.stringify(mergedList));
-    if (isFounder) {
-      localStorage.setItem('echo_decisions_Guy_Kuleski', JSON.stringify(mergedList));
-      localStorage.setItem('echo_decisions_guy_kuleski', JSON.stringify(mergedList));
-      localStorage.setItem('echo_decisions_guy_founder', JSON.stringify(mergedList));
-    }
-  } catch {}
+  // Save merged list across aliases so user immediately sees all decisions
+  if (mergedList.length > 0 || localDecisions.length === 0) {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(mergedList));
+      if (isFounder) {
+        localStorage.setItem('echo_decisions_Guy_Kuleski', JSON.stringify(mergedList));
+        localStorage.setItem('echo_decisions_guy_kuleski', JSON.stringify(mergedList));
+        localStorage.setItem('echo_decisions_guy_founder', JSON.stringify(mergedList));
+      }
+    } catch {}
+  }
 
-  return mergedList;
+  // Push local-only decisions to cloud so cloud is immediately synchronized!
+  const unsyncedLocals = localDecisions.filter((local: any) => local && local.id && !cloudDecisionsMap.has(local.id));
+  let pushedCount = 0;
+  const pushErrors: string[] = [];
+
+  if (unsyncedLocals.length > 0) {
+    console.log(`[ECHO Sync]: Pushing ${unsyncedLocals.length} local-only decisions to cloud...`);
+    for (const d of unsyncedLocals) {
+      try {
+        const ok = await saveDecisionToCloud(d, targetUsername);
+        if (ok) pushedCount++;
+        else pushErrors.push(`שגיאה בשמירת ${d.id}`);
+      } catch (err: any) {
+        pushErrors.push(`${d.id}: ${err?.message || err}`);
+      }
+    }
+  }
+
+  // Return full sync report (backward compatible array with extra properties)
+  const result: any = mergedList;
+  result.list = mergedList;
+  result.pushedCount = pushedCount;
+  result.pushErrors = pushErrors;
+  return result;
 }
 
 export async function saveDecisionToCloud(decision: any, targetUsername: string): Promise<boolean> {
   if (!decision || !decision.id) return false;
   const isFounder = (
-    targetUsername.toLowerCase().includes('kuleski') || 
-    targetUsername.toLowerCase().includes('guy') || 
     targetUsername === 'Guy_Kuleski' || 
-    targetUsername === 'guy_founder'
+    targetUsername === 'guy_founder' ||
+    targetUsername === 'guy_kuleski' ||
+    targetUsername.toLowerCase() === 'guykul'
   );
 
-  const payload = {
+  // Clean payload of any undefined properties to prevent Firestore SDK exceptions
+  const cleanPayload = JSON.parse(JSON.stringify({
     ...decision,
     userId: targetUsername,
     lastSyncedAt: Date.now()
-  };
+  }));
 
   const fb = initFirebase();
   if (fb && fb.firestore) {
-    try {
-      const db = fb.firestore();
-      await db.collection('users').doc(targetUsername).collection('decisions').doc(decision.id).set(payload, { merge: true });
-      if (isFounder) {
-        try {
-          await db.collection('decisions').doc(decision.id).set(payload, { merge: true });
-          await db.collection('users').doc('Guy_Kuleski').collection('decisions').doc(decision.id).set(payload, { merge: true });
-          await db.collection('users').doc('guy_founder').collection('decisions').doc(decision.id).set(payload, { merge: true });
-        } catch {}
+    const db = fb.firestore();
+    await db.collection('users').doc(targetUsername).collection('decisions').doc(decision.id).set(cleanPayload, { merge: true });
+    if (isFounder) {
+      const founderTargets = ['Guy_Kuleski', 'guy_kuleski', 'guy_founder'];
+      for (const target of founderTargets) {
+        if (target !== targetUsername) {
+          try {
+            await db.collection('users').doc(target).collection('decisions').doc(decision.id).set(cleanPayload, { merge: true });
+          } catch {}
+        }
       }
-      return true;
-    } catch (e) {
-      console.warn('Firestore SDK save notice:', e);
+      try {
+        await db.collection('decisions').doc(decision.id).set(cleanPayload, { merge: true });
+      } catch {}
     }
+    return true;
   }
   return false;
 }

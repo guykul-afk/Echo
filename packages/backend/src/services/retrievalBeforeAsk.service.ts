@@ -18,7 +18,8 @@ const HEBREW_STOPWORDS = new Set([
   // Operational and generic non-value words (prevent spurious collisions)
   'אישור', 'אישורי', 'אישורים', 'מיידי', 'מיידית', 'מיידיים', 'תקציב', 'תקציבים', 'דחוף', 'דחופה',
   'החלטה', 'החלטות', 'לבחור', 'בחירה', 'בדיקה', 'מהר', 'מהיר', 'מהירה', 'רוצה', 'שוקל', 'שוקלת',
-  'עושה', 'עושים', 'שעות', 'ימים', 'שבוע', 'חודש', 'שנה', 'סכום', 'כסף', 'דולר', 'שקל'
+  'עושה', 'עושים', 'שעות', 'ימים', 'שבוע', 'חודש', 'שנה', 'סכום', 'כסף', 'דולר', 'שקל',
+  'צוות', 'צוותים', 'איכות', 'משאבים', 'משאב'
 ]);
 
 function extractConceptPhrases(text: string): string[] {
@@ -146,10 +147,15 @@ export class RetrievalBeforeAskService {
 
     const inputLower = (rawText + ' ' + draftQuestion).toLowerCase();
 
-    // 1. Strict Entity Matching
-    const relevantEntities: KnowledgeEntity[] = entities.filter(e =>
-      e.name && e.name.trim().length >= 2 && inputLower.includes(e.name.toLowerCase().trim())
-    );
+    // 1. Smart Entity Matching (Allow partial inclusion)
+    const relevantEntities: KnowledgeEntity[] = entities.filter(e => {
+      if (!e.name || e.name.trim().length < 2) return false;
+      const entityLower = e.name.toLowerCase().trim();
+      if (inputLower.includes(entityLower)) return true;
+      
+      const overlap = computeConceptOverlap(entityLower, inputLower);
+      return overlap.sharedTokens.length > 0 && overlap.overlapRatio >= 0.5;
+    });
 
     // 2. Filter candidate assertions by Deep Mechanisms, Entity, Concept Phrase, or Thematic Overlap
     const candidateAssertions: { assertion: GraphAssertion; score: number; reason: string }[] = [];
@@ -176,8 +182,6 @@ export class RetrievalBeforeAskService {
       const isCrossDomain = Boolean(
         currentDomain &&
         assertionDomain &&
-        currentDomain !== 'general' &&
-        assertionDomain !== 'general' &&
         currentDomain !== assertionDomain
       );
 
@@ -190,7 +194,8 @@ export class RetrievalBeforeAskService {
       if (isCrossDomain) {
         // Disallow lexical matching across distinct life domains. Only permit thematic outcome or principle cross-pollination.
         if (hasSharedAbstractTheme && (assertion.category === 'outcome' || assertion.category === 'principle')) {
-          score = 0.96;
+          const scoreBase = assertion.category === 'outcome' ? 0.94 : 0.92;
+          score = Math.min(scoreBase + (sharedThemes.length * 0.02), 0.99);
           reason = `cross_domain_thematic_pollination(theme:${sharedThemes.join(',')},from:${assertionDomain}_to:${currentDomain})`;
           candidateAssertions.push({ assertion, score, reason, hasAuthenticAnchor: true } as any);
         }
@@ -200,7 +205,7 @@ export class RetrievalBeforeAskService {
 
       // Intra-domain outcome thematic match
       if (hasSharedAbstractTheme && assertion.category === 'outcome') {
-        score = 0.98;
+        score = Math.min(0.92 + (sharedThemes.length * 0.03), 0.99);
         reason = `causal_outcome_theme_match(theme:${sharedThemes.join(',')})`;
       }
 
@@ -333,11 +338,8 @@ export class RetrievalBeforeAskService {
       const hasConceptMatch = conceptPhrases.some(phrase => inputLower.includes(phrase));
       const isFullSubstring = stmtClean.length >= 8 && inputLower.includes(stmtClean);
 
-      const stmtWords = stmtClean
-        .split(/[\s,.:;״"()!?\-\/]+/)
-        .map(w => w.trim())
-        .filter(w => w.length >= 3 && !HEBREW_STOPWORDS.has(w));
-      const sharedWords = stmtWords.filter(w => inputWords.has(w));
+      const assertionOverlap = computeConceptOverlap(stmtClean, inputLower);
+      const sharedWords = assertionOverlap.sharedTokens;
 
       if (isEntityMatch) {
         score = Math.max(score, 0.92);
@@ -452,7 +454,14 @@ export class RetrievalBeforeAskService {
     let memoryPreamble: string | undefined;
     const isUserOrigin = topAssertion.sourceType === 'user_confirmed' || topAssertion.sourceType === 'user_stated';
     if (topCandidate.reason.includes('cross_domain_thematic_pollination') || topCandidate.reason.includes('causal_outcome_theme_match')) {
-      const fromDomainName = topAssertion.domain === 'professional' ? 'העבודה והניהול' : topAssertion.domain === 'medical' ? 'הטיפול והשיקום' : 'הקשר מקביל';
+      const domainNames: Record<string, string> = {
+        'professional': 'העבודה והניהול',
+        'medical': 'הטיפול והשיקום',
+        'personal': 'החיים האישיים',
+        'financial': 'ההתנהלות הפיננסית',
+        'general': 'הקשר מקביל'
+      };
+      const fromDomainName = domainNames[topAssertion.domain || 'general'] || 'הקשר מקביל';
       memoryPreamble = `מתחום ${fromDomainName} עלה לקח רלוונטי: "${formatStatementQuote(topAssertion.statement)}".`;
     } else if (topCandidate.reason.includes('tradeoff_reversal') || topCandidate.reason.includes('principle_breach')) {
       const cleanStmt = topAssertion.statement.replace(/^שימור:\s*/, '').split('|')[0].trim();
@@ -495,6 +504,8 @@ export class RetrievalBeforeAskService {
     // Only convert to confirmation in rare, high-confidence, unconfirmed cases (<= 20% target)
     // and when explicitly looking for previously stated user facts (not contradictions)
     const shouldConfirm = !isContradiction &&
+      !topCandidate.reason.includes('cross_domain_thematic_pollination') &&
+      !topCandidate.reason.includes('causal_outcome_theme_match') &&
       (topAssertion.sourceType === 'user_stated' || topAssertion.sourceType === 'user_confirmed' || topAssertion.category === 'principle' || topAssertion.category === 'decision_mechanism') &&
       !topContradiction &&
       (topAssertion.confidenceLevel >= 85) &&

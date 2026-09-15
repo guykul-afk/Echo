@@ -28,19 +28,19 @@ service cloud.firestore {
     // User-scoped decisions, sessions, and multi-tenancy (Strict Isolation)
     match /users/{userId} {
       allow read, write: if isOwner(userId);
-
-      match /{allSubcollections=**} {
-        allow read, write: if isOwner(userId);
-      }
     }
 
-    // Decisions collection: restricted to founder or decision owner
+    match /users/{userId}/{document=**} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Decisions collection: accessible strictly for verified founder operations
     match /decisions/{decisionId} {
       allow read, write: if isFounder();
     }
 
     // Canonical Decision Cases, contracts, statements
-    // All authenticated users can read historical precedents, only founder can write
+    // Strictly authenticated users can read historical precedents, only verified founder can write
     match /decision_cases/{caseId} {
       allow read: if isAuthenticated();
       allow write: if isFounder();

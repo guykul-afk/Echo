@@ -177,8 +177,14 @@ const server = http.createServer(async (req, res) => {
         const provider = apiKey ? new GeminiAiProvider(apiKey, 'gemini-3.6-flash') : new MockAiProvider();
         const decisionService = new DecisionService(provider);
 
+        if (!payload.userId) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'UNAUTHENTICATED: User must be authenticated to capture a decision.' }));
+          return;
+        }
+
         const sessionState = await decisionService.createCase({
-          userId: payload.userId || 'guy_founder',
+          userId: payload.userId,
           rawText: payload.rawText || '',
           frictionLevel: payload.frictionLevel
         });
@@ -200,6 +206,12 @@ const server = http.createServer(async (req, res) => {
     req.on('end', async () => {
       try {
         const payload = JSON.parse(body);
+        if (!payload.userId) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'UNAUTHENTICATED: User must be authenticated to submit deliberation answer.' }));
+          return;
+        }
+
         const { DecisionService, GeminiAiProvider, MockAiProvider } = await import('../../packages/backend/dist/index.js');
         const apiKey = payload.apiKey || req.headers['x-gemini-api-key'] || process.env.GEMINI_API_KEY;
         const provider = apiKey ? new GeminiAiProvider(apiKey, 'gemini-3.6-flash') : new MockAiProvider();
@@ -208,7 +220,8 @@ const server = http.createServer(async (req, res) => {
         const result = await decisionService.submitDeliberationAnswer(
           payload.caseId,
           payload.userAnswer || '',
-          Boolean(payload.skip)
+          Boolean(payload.skip),
+          payload.userId
         );
 
         res.writeHead(200, { 'Content-Type': 'application/json' });

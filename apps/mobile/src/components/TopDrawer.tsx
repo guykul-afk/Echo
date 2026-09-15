@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LuxuryTheme } from '../theme/colors.js';
 import { UserAuthModal } from './UserAuthModal.js';
+import { getUserFriendlyName } from '../services/firebaseAuth.js';
 
 interface TopDrawerProps {
   currentUser: string;
@@ -84,17 +85,21 @@ export const TopDrawer: React.FC<TopDrawerProps> = ({
               <span
                 onClick={handlePromptUser}
                 className="text-xs font-semibold tracking-wider cursor-pointer hover:opacity-80 transition-opacity"
-                style={{ color: LuxuryTheme.accent.gold }}
-                title="לחץ לשינוי שם או החלפת משתמש"
+                style={{ color: currentUser === 'guest' ? '#A8A29E' : LuxuryTheme.accent.gold }}
+                title="לחץ להתחברות או החלפת חשבון"
               >
-                @{currentUser}
+                {currentUser === 'guest' ? '👤 @אורח' : `@${getUserFriendlyName(currentUser)}`}
               </span>
               <button
                 type="button"
                 onClick={handlePromptUser}
-                className="px-2 py-0.5 rounded-full text-[10px] border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] transition-all font-light cursor-pointer text-[#E6E8EE]"
+                className={`px-2.5 py-0.5 rounded-full text-[10px] border transition-all font-medium cursor-pointer ${
+                  currentUser === 'guest'
+                    ? 'border-amber-400/50 bg-amber-400/15 text-amber-200 hover:bg-amber-400/25'
+                    : 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-[#E6E8EE]'
+                }`}
               >
-                שנה שם / החלף
+                {currentUser === 'guest' ? 'התחבר עם Google' : 'חשבון'}
               </button>
               <button
                 type="button"
@@ -107,10 +112,10 @@ export const TopDrawer: React.FC<TopDrawerProps> = ({
             </div>
             <span
               className="text-[10px] font-light opacity-70 shrink-0 text-[#E6E8EE] flex items-center gap-1"
-              title="Firebase Cloud Firestore"
+              title={currentUser === 'guest' ? 'מצב אורח (הנתונים נשמרים במכשיר זה)' : 'Firebase Cloud Firestore מסונכרן'}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
-              ענן מחובר
+              <span className={`w-1.5 h-1.5 rounded-full inline-block ${currentUser === 'guest' ? 'bg-stone-500' : 'bg-emerald-400 animate-pulse'}`}></span>
+              {currentUser === 'guest' ? 'מקומי' : 'ענן מחובר'}
             </span>
           </div>
 

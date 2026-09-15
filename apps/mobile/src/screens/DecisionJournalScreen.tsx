@@ -196,17 +196,33 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
   const [decisions, setDecisions] = useState<StoredDecision[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [syncedSuccess, setSyncedSuccess] = useState<boolean>(false);
   const [activeOutcomeDecision, setActiveOutcomeDecision] = useState<StoredDecision | null>(null);
 
-  const fetchAndSync = async (showLoading = true) => {
+  const fetchAndSync = async (showLoading = true, isManual = false) => {
     if (showLoading) setIsSyncing(true);
     try {
-      const list = await syncUserDecisionsFromCloud(currentUserId);
+      const res: any = await syncUserDecisionsFromCloud(currentUserId);
+      const list = Array.isArray(res) ? res : res?.list;
       if (list && list.length > 0) {
         setDecisions(list);
+        setSyncedSuccess(true);
+        setTimeout(() => setSyncedSuccess(false), 3500);
       }
-    } catch (err) {
+      if (isManual) {
+        if (res?.pushErrors && res.pushErrors.length > 0) {
+          alert('שגיאות בסנכרון חלק מההחלטות לענן:\n' + res.pushErrors.join('\n'));
+        } else if (res?.pushedCount > 0) {
+          alert(`סונכרנו בהצלחה ${res.pushedCount} החלטות חדשות לענן!`);
+        } else {
+          alert(`כל ההחלטות מסונכרנות ומעודכנות (${list?.length || 0} החלטות).`);
+        }
+      }
+    } catch (err: any) {
       console.warn('Sync notice:', err);
+      if (isManual) {
+        alert('שגיאת תקשורת בסנכרון: ' + (err?.message || err));
+      }
     } finally {
       setIsSyncing(false);
     }
@@ -249,10 +265,10 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
       const key = `echo_decisions_${currentUserId}`;
       localStorage.setItem(key, JSON.stringify(updatedDecisions));
       const isFounder = (
-        currentUserId.toLowerCase().includes('guy') ||
-        currentUserId.toLowerCase().includes('kuleski') ||
         currentUserId === 'Guy_Kuleski' ||
-        currentUserId === 'guy_founder'
+        currentUserId === 'guy_founder' ||
+        currentUserId === 'guy_kuleski' ||
+        currentUserId.toLowerCase() === 'guykul'
       );
       if (isFounder) {
         localStorage.setItem('echo_decisions_Guy_Kuleski', JSON.stringify(updatedDecisions));
@@ -277,8 +293,13 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
   useEffect(() => {
     try {
       const key = `echo_decisions_${currentUserId}`;
-      let saved = localStorage.getItem(key);
-      if (!saved && (currentUserId.toLowerCase().includes('guy') || currentUserId.toLowerCase().includes('kuleski'))) {
+      const isFounder = (
+        currentUserId === 'Guy_Kuleski' ||
+        currentUserId === 'guy_founder' ||
+        currentUserId === 'guy_kuleski' ||
+        currentUserId.toLowerCase() === 'guykul'
+      );
+      if (!saved && isFounder) {
         saved = localStorage.getItem('echo_decisions_Guy_Kuleski') || localStorage.getItem('echo_decisions_guy_founder');
       }
       if (saved) {
@@ -291,7 +312,7 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
       console.warn('Could not load user decisions from localStorage', e);
     }
 
-    fetchAndSync(decisions.length === 0);
+    fetchAndSync(true, false);
   }, [currentUserId]);
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
@@ -324,23 +345,43 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
           </h2>
           <div className="flex items-center justify-center gap-1.5 text-[10px] opacity-70">
             <span>{decisions.length} החלטות מתועדות</span>
-            {isSyncing && <span className="text-amber-400 animate-pulse">(מסנכרן...)</span>}
+            {isSyncing && <span className="animate-pulse" style={{ color: LuxuryTheme.accent.gold }}>(מסנכרן לענן...)</span>}
+            {!isSyncing && syncedSuccess && <span style={{ color: LuxuryTheme.accent.gold }}>(מסונכרן לענן ✓)</span>}
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => fetchAndSync(true)}
-          disabled={isSyncing}
-          className="text-[10px] px-2.5 py-1 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] transition-all cursor-pointer text-amber-200"
-          title="סנכרן החלטות מענן Firestore"
-        >
-          {isSyncing ? '...' : 'סנכרן 🔄'}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              window.location.href = window.location.origin + '?v=' + Date.now();
+            }}
+            className="text-[10px] px-2 py-1 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] transition-all cursor-pointer opacity-70 hover:opacity-100"
+            style={{ color: LuxuryTheme.text.secondary }}
+            title="רענן אפליקציה וטען גרסה עדכנית (ניקוי מטמון)"
+          >
+            רענן ↻
+          </button>
+          <button
+            type="button"
+            onClick={() => fetchAndSync(true, true)}
+            disabled={isSyncing}
+            className="text-[10px] px-2.5 py-1 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] transition-all cursor-pointer font-medium"
+            style={{ color: LuxuryTheme.accent.gold }}
+            title="סנכרן החלטות מענן Firestore"
+          >
+            {isSyncing ? '...' : 'סנכרן 🔄'}
+          </button>
+        </div>
       </div>
 
       {/* Decisions List */}
-      {decisions.length === 0 ? (
+      {isSyncing && decisions.length === 0 ? (
+        <div className="my-auto py-12 text-center rounded-2xl border bg-white/[0.02] space-y-3" style={{ borderColor: LuxuryTheme.background.border }}>
+          <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin mx-auto" style={{ borderColor: `${LuxuryTheme.accent.gold} transparent transparent transparent` }} />
+          <p className="text-xs font-light" style={{ color: LuxuryTheme.accent.gold }}>טוען ומסנכרן החלטות מענן...</p>
+        </div>
+      ) : decisions.length === 0 ? (
         <div className="my-auto py-12 text-center rounded-2xl border bg-white/[0.02]" style={{ borderColor: LuxuryTheme.background.border }}>
           <p className="text-xs opacity-70">אין עדיין החלטות שמורות ביומן.</p>
           <p className="text-[10px] opacity-40 mt-1">הקלט או הקלד דילמה במסך הראשי כדי להתחיל.</p>
@@ -369,7 +410,7 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
               <div
                 key={d.id}
                 onClick={() => setExpandedId(isExpanded ? null : d.id)}
-                className="p-4 rounded-2xl border bg-white/[0.03] transition-all cursor-pointer hover:border-amber-400/40 shadow-lg space-y-3"
+                className="p-4 rounded-2xl border bg-white/[0.03] transition-all cursor-pointer hover:border-[#D4AF37]/40 shadow-lg space-y-3"
                 style={{ borderColor: LuxuryTheme.background.border }}
               >
                 {/* Card Header: Date, Status, Delete */}
@@ -388,11 +429,25 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
 
                   <div className="flex items-center gap-1.5">
                     {isSealed ? (
-                      <span className="px-2 py-0.5 rounded-full text-[9px] border text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+                      <span 
+                        className="px-2 py-0.5 rounded-full text-[9px] border font-medium"
+                        style={{ 
+                          color: LuxuryTheme.accent.gold, 
+                          borderColor: 'rgba(212, 175, 55, 0.3)', 
+                          backgroundColor: 'rgba(212, 175, 55, 0.08)' 
+                        }}
+                      >
                         {hasFollowUps ? 'ביררתי (הושלם)' : 'נחתם למעקב'}
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[9px] border text-amber-300 border-amber-500/30 bg-amber-500/10">
+                      <span 
+                        className="px-2 py-0.5 rounded-full text-[9px] border font-medium"
+                        style={{ 
+                          color: LuxuryTheme.accent.gold, 
+                          borderColor: 'rgba(212, 175, 55, 0.3)', 
+                          backgroundColor: 'rgba(212, 175, 55, 0.08)' 
+                        }}
+                      >
                         {d.status || 'בבירור'}
                       </span>
                     )}
@@ -412,20 +467,26 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
                   )}
                 </div>
 
-                {/* Next Step / Conclusion Snippet */}
-                <div className="p-2.5 rounded-xl bg-amber-400/[0.04] border border-amber-400/20 text-xs text-[#E6E8EE] space-y-1">
+                {/* Next Step / Direction Snippet */}
+                <div 
+                  className="p-2.5 rounded-xl border text-xs text-[#E6E8EE] space-y-1"
+                  style={{ 
+                    backgroundColor: 'rgba(212, 175, 55, 0.03)', 
+                    borderColor: 'rgba(212, 175, 55, 0.2)' 
+                  }}
+                >
                   {beforeText !== '—' && (
                     <div className="text-[10px] opacity-70">
                       <span>קודם: </span>
                       <span>{beforeText}</span>
                     </div>
                   )}
-                  <div className="text-[11px] text-emerald-300 font-medium pt-0.5">
-                    <span>המסקנה: </span>
-                    <span>{nowText}</span>
+                  <div className="text-[11px] font-medium pt-0.5" style={{ color: LuxuryTheme.accent.gold }}>
+                    <span>כיוון הפעולה: </span>
+                    <span style={{ color: LuxuryTheme.text.primary }}>{nowText}</span>
                   </div>
                   {nextStepText !== '—' && (
-                    <div className="text-[10px] text-amber-200/90 pt-0.5">
+                    <div className="text-[10px] opacity-80 pt-0.5">
                       <span>הצעד שנבחר: </span>
                       <span>{nextStepText}</span>
                     </div>

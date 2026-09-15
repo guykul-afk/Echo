@@ -6,7 +6,8 @@ import { OutcomeModal } from './screens/OutcomeModal.js';
 import { DecisionProfileScreen } from './screens/DecisionProfileScreen.js';
 import { DecisionJournalScreen } from './screens/DecisionJournalScreen.js';
 import { TopDrawer } from './components/TopDrawer.js';
-import { checkRedirectAuth } from './services/firebaseAuth.js';
+import { UserAuthModal } from './components/UserAuthModal.js';
+import { checkRedirectAuth, subscribeToAuthState } from './services/firebaseAuth.js';
 import { syncUserDecisionsFromCloud, saveDecisionToCloud } from './services/firestoreSync.js';
 import { analyzeCapturedDilemma } from './services/aiService.js';
 import { DecisionCase, Option, DecisionSignature, RefinedInsight, QuickLoopStatus, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
@@ -34,20 +35,32 @@ export const App: React.FC = () => {
   } | undefined>(undefined);
   const [refinedInsight, setRefinedInsight] = useState<RefinedInsight | undefined>(undefined);
   const [chosenNextStep, setChosenNextStep] = useState<string>('');
-  const [currentUserId, setCurrentUserId] = useState<string>(() => {
-    return (typeof window !== 'undefined' && localStorage.getItem('ECHO_ACTIVE_USER')) || 'Guy_Kuleski';
+  const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('ECHO_ACTIVE_USER') : null;
+    return (saved && saved !== 'guest') ? saved : null;
   });
-  const [capturesCount, setCapturesCount] = useState<number>(39);
-  const [closuresCount, setClosuresCount] = useState<number>(8);
+  const [capturesCount, setCapturesCount] = useState<number>(0);
+  const [closuresCount, setClosuresCount] = useState<number>(0);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [lastRawCapture, setLastRawCapture] = useState<string>('');
   const [proposedSteps, setProposedSteps] = useState<string[]>([]);
 
-  const loadUserMetrics = (user: string) => {
+  const loadUserMetrics = (user: string | null) => {
+    if (!user) {
+      setCapturesCount(0);
+      setClosuresCount(0);
+      return;
+    }
     try {
       const key = `echo_decisions_${user}`;
       let raw = localStorage.getItem(key);
-      if (!raw && (user.toLowerCase().includes('guy') || user.toLowerCase().includes('kuleski'))) {
+      const isFounder = (
+        user === 'Guy_Kuleski' || 
+        user === 'guy_founder' || 
+        user === 'guy_kuleski' || 
+        user.toLowerCase() === 'guykul'
+      );
+      if (!raw && isFounder) {
         raw = localStorage.getItem('echo_decisions_Guy_Kuleski') || localStorage.getItem('echo_decisions_guy_founder');
       }
       if (raw) {
@@ -55,8 +68,11 @@ export const App: React.FC = () => {
         if (Array.isArray(parsed)) {
           setCapturesCount(parsed.length);
           const closed = parsed.filter((d: any) => d.sealed || (d.followUps && d.followUps.length > 0)).length;
-          if (closed > 0) setClosuresCount(closed);
+          setClosuresCount(closed);
         }
+      } else {
+        setCapturesCount(0);
+        setClosuresCount(0);
       }
     } catch {}
 
@@ -64,16 +80,35 @@ export const App: React.FC = () => {
       if (Array.isArray(list) && list.length > 0) {
         setCapturesCount(list.length);
         const closed = list.filter((d: any) => d.sealed || (d.followUps && d.followUps.length > 0)).length;
-        if (closed > 0) setClosuresCount(closed);
+        setClosuresCount(closed);
       }
     });
   };
 
   const handleSwitchUser = (newUser: string) => {
+    if (!newUser || newUser === 'guest') {
+      setCurrentUserId(null);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('ECHO_ACTIVE_USER');
+      }
+      setActiveCase(null);
+      setOptions([]);
+      setSignature(null);
+      setRefinedInsight(undefined);
+      setChosenNextStep('');
+      setCapturesCount(0);
+      setClosuresCount(0);
+      return;
+    }
     setCurrentUserId(newUser);
     if (typeof window !== 'undefined') {
       localStorage.setItem('ECHO_ACTIVE_USER', newUser);
     }
+    setActiveCase(null);
+    setOptions([]);
+    setSignature(null);
+    setRefinedInsight(undefined);
+    setChosenNextStep('');
     loadUserMetrics(newUser);
   };
 
@@ -81,17 +116,31 @@ export const App: React.FC = () => {
     loadUserMetrics(currentUserId);
   }, [currentUserId]);
 
-  // Check if user just redirected back from Google Social Auth
+  // Check if user just redirected back from Google Social Auth or is already authenticated
   useEffect(() => {
     checkRedirectAuth().then((authenticatedUser) => {
       if (authenticatedUser) {
         handleSwitchUser(authenticatedUser);
       }
     });
+
+    const unsubscribe = subscribeToAuthState((authenticatedUser) => {
+      if (authenticatedUser) {
+        handleSwitchUser(authenticatedUser);
+      }
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   // 1. Handle Quick Capture with Real-Time Gemini Epistemic Analysis
   const handleCaptureSubmit = async (rawText: string, frictionLevel: 'quick' | 'focused' | 'deep' = 'focused') => {
+    if (!currentUserId) {
+      setAnalysisError('יש להתחבר לחשבונך כדי ללכוד ולנתח דילמות.');
+      setIsLoading(false);
+      return;
+    }
     if (!rawText || !rawText.trim()) {
       setIsLoading(false);
       return;
@@ -192,10 +241,13 @@ export const App: React.FC = () => {
       if (currentUserId.toLowerCase().includes('guy') || currentUserId.toLowerCase().includes('kuleski')) {
         localStorage.setItem('echo_decisions_Guy_Kuleski', JSON.stringify(updatedList));
         localStorage.setItem('echo_decisions_guy_founder', JSON.stringify(updatedList));
+        localStorage.setItem('echo_decisions_guy_kuleski', JSON.stringify(updatedList));
       }
     } catch {}
 
-    saveDecisionToCloud(newDecision, currentUserId);
+    saveDecisionToCloud(newDecision, currentUserId).then(() => {
+      syncUserDecisionsFromCloud(currentUserId).catch(() => {});
+    });
     loadUserMetrics(currentUserId);
     setStep('journal');
   };
@@ -313,7 +365,7 @@ export const App: React.FC = () => {
           {step === 'journal' && (
             <DecisionJournalScreen
               onBack={() => setStep('capture')}
-              currentUserId={currentUserId}
+              currentUserId={currentUserId || ''}
               onDecisionUpdated={() => loadUserMetrics(currentUserId)}
             />
           )}
@@ -321,7 +373,7 @@ export const App: React.FC = () => {
           {step === 'profile' && (
             <DecisionProfileScreen
               onBack={() => setStep('capture')}
-              currentUserId={currentUserId}
+              currentUserId={currentUserId || ''}
               capturesCount={capturesCount}
               closuresCount={closuresCount}
             />
@@ -353,6 +405,16 @@ export const App: React.FC = () => {
             />
           )}
         </div>
+
+        {/* Blocking User Authentication Modal when unauthenticated */}
+        {!currentUserId && (
+          <UserAuthModal
+            isOpen={true}
+            canClose={false}
+            currentUser={null}
+            onSelectUser={handleSwitchUser}
+          />
+        )}
 
       </div>
     </div>
