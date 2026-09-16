@@ -36,7 +36,11 @@ export const HEBREW_STOPWORDS = new Set([
   'פרויקט', 'אפשרות', 'בנושא', 'טובה', 'פחות', 'מול', 'היום', 'כרגע', 'איך', 'כיצד', 'דרך', 'נושא',
   'שלה', 'שלו', 'שלי', 'שלנו', 'שלהם', 'אותו', 'אותה', 'אותי', 'אותנו', 'אותם', 'אחת', 'אחד', 'שני', 'שניה',
   'אישור', 'אישורי', 'אישורים', 'מיידי', 'מיידית', 'מיידיים', 'תקציב', 'תקציבים', 'דחוף', 'דחופה',
-  'עושה', 'עושים', 'שעות', 'ימים', 'שבוע', 'חודש', 'שנה', 'סכום', 'כסף', 'דולר', 'שקל', 'צוות', 'צוותים', 'איכות'
+  'עושה', 'עושים', 'שעות', 'ימים', 'שבוע', 'חודש', 'שנה', 'סכום', 'כסף', 'דולר', 'שקל', 'צוות', 'צוותים', 'איכות',
+  'חדש', 'חדשה', 'חדשים', 'גדול', 'גדולה', 'גדולים', 'קטן', 'קטנה', 'קטנים', 'ישן', 'ישנה', 'ישנים',
+  'טוב', 'טובים', 'רע', 'רעה', 'רעים', 'הרבה', 'קצת', 'מעט', 'מאד',
+  'עבר', 'עתיד', 'הווה', 'קודם', 'הבא', 'הקודם', 'הבאה', 'נוסף', 'נוספת', 'נוספים',
+  'דבר', 'דברים', 'משהו', 'מישהו', 'אף', 'שום', 'אין', 'יש', 'אחר', 'אחרת', 'אחרים'
 ]);
 
 function normalizeHebrewWord(word: string): string {
@@ -105,7 +109,8 @@ export function getAllUserDecisions(userId: string = ''): CatalogPrecedent[] {
       userId === 'Guy_Kuleski' ||
       userId === 'guy_founder' ||
       userId === 'guy_kuleski' ||
-      (userId && userId.toLowerCase() === 'guykul')
+      userId === 'guy kuleski' ||
+      (userId && (userId.toLowerCase().includes('kuleski') || userId.toLowerCase().includes('guykul')))
     );
     if (isFounder) {
       keysToCheck.push('echo_decisions_Guy_Kuleski', 'echo_decisions_guy_kuleski', 'echo_decisions_guy_founder');

@@ -97,8 +97,10 @@ function categorizeDecision(d) {
 }
 
 async function fetchAllDecisionsFromFirestore(targetUser = 'guy_founder') {
-  const usersToFetch = (targetUser === 'guy_founder' || targetUser === 'Guy_Kuleski' || targetUser === 'guy_kuleski')
-    ? ['Guy_Kuleski', 'guy_kuleski', 'guy_founder']
+  const normUser = (targetUser || '').toLowerCase().trim();
+  const isFounder = normUser.includes('kuleski') || normUser.includes('guy');
+  const usersToFetch = isFounder
+    ? ['Guy_Kuleski', 'guy_kuleski', 'guy kuleski', 'guy_founder', 'guykul']
     : [targetUser];
 
   const allDocsMap = new Map();
@@ -337,7 +339,16 @@ function generateMarkdown(decisions, lastUpdatedIso) {
 
 async function syncDecisionCycles() {
   console.log('[ECHO Sync]: מוריד את כל החלטות המשתמש מ-Firebase Firestore...');
-  const decisions = await fetchAllDecisionsFromFirestore();
+  let decisions = await fetchAllDecisionsFromFirestore();
+  if (decisions.length === 0 && fs.existsSync(JSON_OUTPUT_PATH)) {
+    try {
+      const existing = JSON.parse(fs.readFileSync(JSON_OUTPUT_PATH, 'utf8'));
+      if (existing && Array.isArray(existing.decisions) && existing.decisions.length > 0) {
+        console.log(`[ECHO Sync]: Cloud returned 0 (auth needed). Preserving ${existing.decisions.length} existing local decisions.`);
+        decisions = existing.decisions;
+      }
+    } catch {}
+  }
   console.log(`[ECHO Sync]: נמצאו ${decisions.length} החלטות עבור משתמש.`);
 
   const nowIso = new Date().toISOString();

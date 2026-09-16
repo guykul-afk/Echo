@@ -1,5 +1,6 @@
 // Firestore Cloud Synchronization Service for Echo Mobile
 import { firebaseConfig, initFirebase } from './firebaseAuth.js';
+import { DecisionProfileData } from '@echo/shared';
 
 export function decodeFirestoreValue(val: any): any {
   if (!val) return null;
@@ -341,4 +342,75 @@ export async function saveDecisionToCloud(decision: any, targetUsername: string)
     return savedAny;
   }
   return false;
+}
+
+export async function fetchUserProfileFromBackend(targetUsername: string): Promise<DecisionProfileData | null> {
+  if (!targetUsername || targetUsername === 'guest') return null;
+
+  const normTarget = (targetUsername || '').trim();
+  const isFounder = (
+    normTarget === 'Guy_Kuleski' || 
+    normTarget === 'guy_founder' || 
+    normTarget === 'guy_kuleski' || 
+    normTarget === 'guy kuleski' || 
+    normTarget.toLowerCase() === 'guykul' ||
+    normTarget.toLowerCase() === 'guy kuleski' ||
+    normTarget.toLowerCase() === 'guy_kuleski'
+  );
+  const canonicalId = isFounder ? 'Guy_Kuleski' : normTarget;
+
+  // 1. Check local storage cache first for instant zero-latency presentation
+  try {
+    const cached = localStorage.getItem(`echo_profile_${canonicalId}`) || localStorage.getItem(`echo_profile_${normTarget}`);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed && parsed.mainStyle && parsed.flowSteps && parsed.flowSteps.length > 0) {
+        // Trigger background fresh fetch if needed
+        fetchProfileFromEndpoints(canonicalId, normTarget).catch(() => {});
+        return parsed;
+      }
+    }
+  } catch {}
+
+  return await fetchProfileFromEndpoints(canonicalId, normTarget);
+}
+
+async function fetchProfileFromEndpoints(canonicalId: string, normTarget: string): Promise<DecisionProfileData | null> {
+  // Tier 1: Try backend server API endpoint (/api/user-profile)
+  try {
+    const res = await fetch(`/api/user-profile?userId=${encodeURIComponent(canonicalId)}`);
+    if (res.ok) {
+      const profile = await res.json();
+      if (profile && profile.mainStyle) {
+        cacheProfileLocally(canonicalId, normTarget, profile);
+        return profile;
+      }
+    }
+  } catch (err) {
+    console.warn('[Backend Profile fetch notice]:', err);
+  }
+
+  // Tier 2: Static fallback (/USER_PROFILES.json)
+  try {
+    const res = await fetch('/USER_PROFILES.json');
+    if (res.ok) {
+      const allProfiles = await res.json();
+      const profile = allProfiles[canonicalId] || allProfiles[normTarget];
+      if (profile && profile.mainStyle) {
+        cacheProfileLocally(canonicalId, normTarget, profile);
+        return profile;
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
+function cacheProfileLocally(canonicalId: string, normTarget: string, profile: DecisionProfileData) {
+  try {
+    localStorage.setItem(`echo_profile_${canonicalId}`, JSON.stringify(profile));
+    if (normTarget !== canonicalId) {
+      localStorage.setItem(`echo_profile_${normTarget}`, JSON.stringify(profile));
+    }
+  } catch {}
 }

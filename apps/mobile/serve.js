@@ -15,13 +15,104 @@ const { syncDecisionCycles, fetchAllDecisionsFromFirestore, generateMarkdown } =
 const ROOT_DIR = path.resolve(__dirname, '../..');
 const MD_OUTPUT_PATH = path.join(ROOT_DIR, 'DECISION_CYCLES.md');
 const JSON_OUTPUT_PATH = path.join(ROOT_DIR, 'DECISION_CYCLES.json');
+const USER_PROFILES_PATH = path.join(ROOT_DIR, 'USER_PROFILES.json');
+
+const { DecisionProfileService } = require('../../packages/backend/dist/services/decisionProfile.service.js');
+const decisionProfileService = new DecisionProfileService();
 
 // Local cached decisions to allow instant updates without waiting for full cloud roundtrip
 let localDecisionsCache = [];
+const userProfilesCache = new Map();
+
+// Initialize profiles from disk if available
+try {
+  if (fs.existsSync(USER_PROFILES_PATH)) {
+    const rawProfiles = JSON.parse(fs.readFileSync(USER_PROFILES_PATH, 'utf8'));
+    for (const [uid, p] of Object.entries(rawProfiles)) {
+      userProfilesCache.set(uid, p);
+    }
+  }
+} catch (e) {
+  console.warn('[ECHO Server]: Could not load USER_PROFILES.json:', e.message);
+}
+
+function saveAllUserProfiles() {
+  try {
+    const obj = {};
+    for (const [uid, p] of userProfilesCache.entries()) {
+      obj[uid] = p;
+    }
+    fs.writeFileSync(USER_PROFILES_PATH, JSON.stringify(obj, null, 2), 'utf8');
+  } catch (e) {
+    console.error('[ECHO Server]: Error saving USER_PROFILES.json:', e.message);
+  }
+}
+
+function normalizeUserId(userId) {
+  const norm = (userId || '').trim();
+  if (!norm || norm === 'guest') return 'guest';
+  if (
+    norm === 'Guy_Kuleski' || 
+    norm === 'guy_kuleski' || 
+    norm === 'guy kuleski' || 
+    norm === 'guy_founder' ||
+    norm.toLowerCase().includes('kuleski') || 
+    norm.toLowerCase().includes('guykul')
+  ) {
+    return 'Guy_Kuleski';
+  }
+  return norm;
+}
+
+async function getOrGenerateUserProfile(userId, forceRefresh = false) {
+  const canonicalId = normalizeUserId(userId);
+  if (!forceRefresh && userProfilesCache.has(canonicalId)) {
+    return userProfilesCache.get(canonicalId);
+  }
+
+  // Ensure decisions are loaded
+  if (localDecisionsCache.length === 0 && fs.existsSync(JSON_OUTPUT_PATH)) {
+    try {
+      const existing = JSON.parse(fs.readFileSync(JSON_OUTPUT_PATH, 'utf8'));
+      if (existing && Array.isArray(existing.decisions) && existing.decisions.length > 0) {
+        localDecisionsCache = existing.decisions;
+      }
+    } catch {}
+  }
+
+  // Filter decisions for user (for founder, include all founder decisions or all local decisions)
+  let userDecisions = localDecisionsCache;
+  if (canonicalId !== 'Guy_Kuleski') {
+    userDecisions = localDecisionsCache.filter(d => d.userId === canonicalId);
+  }
+
+  const isFounder = canonicalId === 'Guy_Kuleski';
+  const profile = await decisionProfileService.generateProfile(canonicalId, userDecisions, {
+    userName: isFounder ? 'Guy Kuleski' : canonicalId,
+    gender: 'male'
+  });
+
+  userProfilesCache.set(canonicalId, profile);
+  saveAllUserProfiles();
+  console.log(`[ECHO Server]: Epistemic Profile generated and saved for user "${canonicalId}" (${userDecisions.length} decisions).`);
+  return profile;
+}
 
 async function refreshCacheFromFirestore() {
   try {
-    localDecisionsCache = await fetchAllDecisionsFromFirestore();
+    const fetched = await fetchAllDecisionsFromFirestore();
+    if (fetched && fetched.length > 0) {
+      localDecisionsCache = fetched;
+    } else if (localDecisionsCache.length === 0 && fs.existsSync(JSON_OUTPUT_PATH)) {
+      try {
+        const existing = JSON.parse(fs.readFileSync(JSON_OUTPUT_PATH, 'utf8'));
+        if (existing && Array.isArray(existing.decisions) && existing.decisions.length > 0) {
+          console.log(`[ECHO Server]: Firestore returned 0 docs. Preserving ${existing.decisions.length} local decisions.`);
+          localDecisionsCache = existing.decisions;
+        }
+      } catch {}
+    }
+
     const nowIso = new Date().toISOString();
     const md = generateMarkdown(localDecisionsCache, nowIso);
     fs.writeFileSync(MD_OUTPUT_PATH, md, 'utf8');
@@ -34,6 +125,10 @@ async function refreshCacheFromFirestore() {
       decisions: localDecisionsCache
     }, null, 2), 'utf8');
     console.log(`[ECHO Server]: DECISION_CYCLES.md updated (${localDecisionsCache.length} decisions)`);
+    
+    // Automatically recalculate and persist Guy Kuleski's profile on server
+    await getOrGenerateUserProfile('Guy_Kuleski', true);
+    
     checkDueDecisionsAndAlert();
   } catch (err) {
     console.error('[ECHO Server]: Cloud sync error:', err.message);
@@ -59,7 +154,7 @@ function checkDueDecisionsAndAlert() {
   }
 }
 
-function updateLocalFileWithDecision(decision) {
+async function updateLocalFileWithDecision(decision) {
   if (!decision || !decision.id) return;
   const idx = localDecisionsCache.findIndex(d => d.id === decision.id);
   if (idx >= 0) {
@@ -83,6 +178,9 @@ function updateLocalFileWithDecision(decision) {
     decisions: localDecisionsCache
   }, null, 2), 'utf8');
   console.log(`[ECHO Server]: Instantly updated DECISION_CYCLES.md for decision ${decision.id} ("${decision.title || ''}")`);
+
+  // Recalculate and update profile on server
+  await getOrGenerateUserProfile(decision.userId || 'Guy_Kuleski', true).catch(() => {});
 }
 
 const server = http.createServer(async (req, res) => {
@@ -259,6 +357,47 @@ const server = http.createServer(async (req, res) => {
     );
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ count: due.length, decisions: due }));
+    return;
+  }
+
+  // API 4: Get User Epistemic Profile (Backend-calculated and persisted)
+  if (url.pathname === '/api/user-profile' && req.method === 'GET') {
+    const reqUserId = url.searchParams.get('userId') || 'Guy_Kuleski';
+    try {
+      const profile = await getOrGenerateUserProfile(reqUserId);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(profile));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
+  // API 5: Force Refresh User Epistemic Profile
+  if (url.pathname === '/api/user-profile/refresh' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', async () => {
+      try {
+        const payload = JSON.parse(body || '{}');
+        const reqUserId = payload.userId || 'Guy_Kuleski';
+        const profile = await getOrGenerateUserProfile(reqUserId, true);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(profile));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // Handle /DECISION_CYCLES.json static route cleanly
+  if (url.pathname === '/DECISION_CYCLES.json') {
+    const p = fs.existsSync(JSON_OUTPUT_PATH) ? JSON_OUTPUT_PATH : path.join(__dirname, 'public/DECISION_CYCLES.json');
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    fs.createReadStream(p).pipe(res);
     return;
   }
 

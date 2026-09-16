@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LuxuryTheme } from '../theme/colors.js';
 import { DecisionProfileData } from '@echo/shared';
+import { fetchUserProfileFromBackend } from '../services/firestoreSync.js';
 
 interface DecisionProfileScreenProps {
   onBack: () => void;
@@ -15,18 +16,88 @@ export const DecisionProfileScreen: React.FC<DecisionProfileScreenProps> = ({
   onBack,
   capturesCount = 0,
   closuresCount = 0,
+  currentUserId,
   profileData,
 }) => {
   const [expandedDecisionId, setExpandedDecisionId] = useState<string | null>(null);
+  const [resolvedProfile, setResolvedProfile] = useState<DecisionProfileData | undefined>(profileData);
+  const [isLoading, setIsLoading] = useState<boolean>(!profileData && Boolean(currentUserId));
+
+  useEffect(() => {
+    if (profileData) {
+      setResolvedProfile(profileData);
+      setIsLoading(false);
+      return;
+    }
+    if (currentUserId) {
+      setIsLoading(true);
+      fetchUserProfileFromBackend(currentUserId)
+        .then(p => {
+          if (p) setResolvedProfile(p);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, [profileData, currentUserId]);
 
   const toggleDecision = (id: string) => {
     setExpandedDecisionId(prev => (prev === id ? null : id));
   };
 
-  const displayCount = profileData?.capturesCount ?? capturesCount;
+  const activeProfile = resolvedProfile || profileData;
+  const displayCount = activeProfile?.capturesCount ?? capturesCount;
+
+  // Loading state with Design System compliance
+  if (isLoading && !activeProfile) {
+    return (
+      <div
+        className="flex-1 w-full max-w-[440px] mx-auto p-4 sm:p-5 overflow-y-auto custom-scroll text-right space-y-6 select-none"
+        dir="rtl"
+        style={{ backgroundColor: LuxuryTheme.background.base, color: LuxuryTheme.text.primary }}
+      >
+        <header className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onBack}
+              className="w-9 h-9 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-[#E6E8EE]/70"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <div>
+              <span className="text-[11px] font-semibold tracking-widest text-[#D4AF37] uppercase block">
+                מראה אישית
+              </span>
+              <h1 className="text-xl font-editorial font-bold text-[#E6E8EE]">
+                הפרופיל האפיסטמי שלך
+              </h1>
+            </div>
+          </div>
+        </header>
+
+        <section
+          className="p-6 rounded-2xl border space-y-4 animate-pulse"
+          style={{
+            backgroundColor: LuxuryTheme.background.surface,
+            borderColor: 'rgba(212, 175, 55, 0.25)',
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-[#D4AF37] animate-ping" />
+            <span className="text-xs font-semibold text-[#D4AF37]">טוען פרופיל אפיסטמי מהשרת...</span>
+          </div>
+          <div className="h-6 w-2/3 bg-white/[0.05] rounded-lg" />
+          <div className="h-16 w-full bg-white/[0.03] rounded-xl" />
+        </section>
+      </div>
+    );
+  }
 
   // Zero-Trust: If user has fewer than 3 decisions and no calculated profile data, show authentic Zero-State
-  if (!profileData && displayCount < 3) {
+  if (!activeProfile && displayCount < 3) {
     return (
       <div
         className="flex-1 w-full max-w-[440px] mx-auto p-4 sm:p-5 overflow-y-auto custom-scroll text-right space-y-6 select-none"
@@ -107,17 +178,17 @@ export const DecisionProfileScreen: React.FC<DecisionProfileScreenProps> = ({
     );
   }
 
-  const mainStyle = profileData?.mainStyle || {
+  const mainStyle = activeProfile?.mainStyle || {
     title: 'דפוסי שיקול דעת אישיים',
     description: 'מנוע הניתוח האפיסטמי מגבש את המאפיינים הייחודיים של קבלת ההחלטות שלך.',
     prominentTendency: 'בחינה שקולה של עובדות והנחות',
     consistencyMetric: 'עקביות בהתפתחות',
   };
 
-  const evolution = profileData?.evolution;
-  const flowSteps = profileData?.flowSteps || [];
-  const anchors = profileData?.anchors || [];
-  const traps = profileData?.traps || [];
+  const evolution = activeProfile?.evolution;
+  const flowSteps = activeProfile?.flowSteps || [];
+  const anchors = activeProfile?.anchors || [];
+  const traps = activeProfile?.traps || [];
 
 
 

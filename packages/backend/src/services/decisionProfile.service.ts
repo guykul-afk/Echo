@@ -43,7 +43,11 @@ export class DecisionProfileService {
     options: ProfileGenerationOptions = {}
   ): Promise<DecisionProfileData> {
     const isFemale = options.gender === 'female' || userId.toLowerCase().includes('maya') || userId.toLowerCase().includes('מיכל');
-    const sortedCases = [...decisions].sort((a, b) => (a.frozenAt || 0) - (b.frozenAt || 0));
+    const validCases = decisions.filter(c => 
+      c && c.id && c.title && c.title !== 'test' && 
+      ((c as any).consideration || c.dimConsideration || (c as any).dilemma || (c as any).rawCaptureText || (c as any).rawVerbatim)
+    );
+    const sortedCases = (validCases.length > 0 ? validCases : decisions).sort((a, b) => (a.frozenAt || a.createdAt || 0) - (b.frozenAt || b.createdAt || 0));
     const totalCount = sortedCases.length;
 
     // If 0 decisions, return base emerging state
@@ -320,8 +324,8 @@ export class DecisionProfileService {
     // Anchors from actual cases
     const anchors: DecisionProfileAnchor[] = cases.slice(-3).map((c, idx) => {
       const anyC = c as any;
-      const rawText = c.rawCaptureText || anyC.rawVerbatim || '';
-      const goalText = c.dimGoalsPrices || anyC.goal || anyC.dimGoal || 'השגת יעדים';
+      const rawText = (c.rawCaptureText || anyC.rawVerbatim || anyC.consideration || anyC.dimConsideration || anyC.dilemma || c.title || '').replace(/<[^>]*>/g, '').trim();
+      const goalText = (c.dimGoalsPrices || anyC.goalsPrices || anyC.goal || anyC.dimGoal || 'השגת יעדים ברורים').replace(/<[^>]*>/g, '').trim();
       return {
         id: `anchor-${c.id || idx}`,
         title: c.title || 'הכרעה עניינית בשטח',
@@ -331,16 +335,19 @@ export class DecisionProfileService {
           : `הפגנת נחישות לחדד את המטרה (${goalText}) מבלי להתפזר על שיקולי סרק.`,
         caseTitle: c.title || 'מקרה מתועד',
         caseId: c.id,
-        authenticDilemmaQuote: rawText.slice(0, 120),
-        systemReflection: c.dimConsideration?.slice(0, 120)
+        authenticDilemmaQuote: rawText.slice(0, 140),
+        systemReflection: (c.dimConsideration || anyC.conclusion || anyC.insightsSummary || '')?.replace(/<[^>]*>/g, '').trim().slice(0, 140)
       };
     });
 
     // Traps from actual cases
     const traps: DecisionProfileTrap[] = cases.slice(0, 2).map((c, idx) => {
       const anyC = c as any;
-      const rawText = c.rawCaptureText || anyC.rawVerbatim || '';
-      const firstAssumption = Array.isArray(c.dimAssumptions) ? c.dimAssumptions[0] : (c.dimAssumptions || rawText.slice(0, 100));
+      const rawText = (c.rawCaptureText || anyC.rawVerbatim || anyC.consideration || anyC.dimConsideration || anyC.dilemma || '').replace(/<[^>]*>/g, '').trim();
+      const rawAssumption = Array.isArray(c.dimAssumptions) ? c.dimAssumptions[0] : (c.dimAssumptions || anyC.assumptions || rawText.slice(0, 100));
+      const firstAssumption = typeof rawAssumption === 'string' 
+        ? rawAssumption.replace(/<[^>]*>/g, '').replace(/^[•\s-]+/, '').trim() 
+        : String(rawAssumption || '');
       return {
         id: `trap-${c.id || idx}`,
         title: idx === 0 ? 'הפיתוי לרצות את כולם' : 'תשלום מחיר על דחיית עימות',
@@ -350,8 +357,8 @@ export class DecisionProfileService {
           : 'נטייה להשהות פעולה חדה בתקווה שפתרון ביניים ישמור על שביעות רצון של כלל הצדדים.',
         caseTitle: c.title || 'מקרה מוקדם',
         caseId: c.id,
-        authenticAssumptionQuote: firstAssumption,
-        systemReflection: 'המערכת חידדה שפשרה מוקדמת גובה מחיר מצטבר גבוה יותר בטווח הארוך.'
+        authenticAssumptionQuote: firstAssumption.slice(0, 140),
+        systemReflection: (anyC.conclusion || anyC.dimMissingInfo || 'המערכת חידדה שפשרה מוקדמת גובה מחיר מצטבר גבוה יותר בטווח הארוך.')?.replace(/<[^>]*>/g, '').trim().slice(0, 140)
       };
     });
 

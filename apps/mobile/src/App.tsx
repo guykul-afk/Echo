@@ -8,9 +8,9 @@ import { DecisionJournalScreen } from './screens/DecisionJournalScreen.js';
 import { TopDrawer } from './components/TopDrawer.js';
 import { UserAuthModal } from './components/UserAuthModal.js';
 import { checkRedirectAuth, subscribeToAuthState } from './services/firebaseAuth.js';
-import { syncUserDecisionsFromCloud, saveDecisionToCloud } from './services/firestoreSync.js';
+import { syncUserDecisionsFromCloud, saveDecisionToCloud, fetchUserProfileFromBackend } from './services/firestoreSync.js';
 import { analyzeCapturedDilemma } from './services/aiService.js';
-import { DecisionCase, Option, DecisionSignature, RefinedInsight, QuickLoopStatus, FiveHumanDimensions, IlluminationQuestion } from '@echo/shared';
+import { DecisionCase, Option, DecisionSignature, RefinedInsight, QuickLoopStatus, FiveHumanDimensions, IlluminationQuestion, DecisionProfileData } from '@echo/shared';
 
 type AppStep = 'capture' | 'decision_room' | 'outcome' | 'profile' | 'journal';
 
@@ -41,6 +41,7 @@ export const App: React.FC = () => {
   });
   const [capturesCount, setCapturesCount] = useState<number>(0);
   const [closuresCount, setClosuresCount] = useState<number>(0);
+  const [profileData, setProfileData] = useState<DecisionProfileData | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [lastRawCapture, setLastRawCapture] = useState<string>('');
   const [proposedSteps, setProposedSteps] = useState<string[]>([]);
@@ -49,6 +50,7 @@ export const App: React.FC = () => {
     if (!user) {
       setCapturesCount(0);
       setClosuresCount(0);
+      setProfileData(null);
       return;
     }
     try {
@@ -90,6 +92,13 @@ export const App: React.FC = () => {
         setClosuresCount(closed);
       }
     });
+
+    // Load server-calculated and persisted Epistemic Profile
+    fetchUserProfileFromBackend(user).then((prof) => {
+      if (prof) {
+        setProfileData(prof);
+      }
+    });
   };
 
   const handleSwitchUser = (newUser: string) => {
@@ -105,6 +114,7 @@ export const App: React.FC = () => {
       setChosenNextStep('');
       setCapturesCount(0);
       setClosuresCount(0);
+      setProfileData(null);
       return;
     }
     setCurrentUserId(newUser);
@@ -384,6 +394,7 @@ export const App: React.FC = () => {
               currentUserId={currentUserId || ''}
               capturesCount={capturesCount}
               closuresCount={closuresCount}
+              profileData={profileData || undefined}
             />
           )}
 
