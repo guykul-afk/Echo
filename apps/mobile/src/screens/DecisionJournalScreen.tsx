@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LuxuryTheme } from '../theme/colors.js';
 import { syncUserDecisionsFromCloud, saveDecisionToCloud } from '../services/firestoreSync.js';
+import { subscribeToAuthState } from '../services/firebaseAuth.js';
 import { DecisionFlowPipeline } from '../graphics/DecisionFlowPipeline.js';
 import { OutcomeModal } from './OutcomeModal.js';
 import { QuickLoopStatus } from '@echo/shared';
@@ -293,6 +294,7 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
   useEffect(() => {
     try {
       const key = `echo_decisions_${currentUserId}`;
+      let saved = localStorage.getItem(key);
       const isFounder = (
         currentUserId === 'Guy_Kuleski' ||
         currentUserId === 'guy_founder' ||
@@ -313,6 +315,17 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
     }
 
     fetchAndSync(true, false);
+
+    // Re-sync when auth state resolves to authenticated user
+    const unsubscribe = subscribeToAuthState((authUserId) => {
+      if (authUserId) {
+        fetchAndSync(false, false);
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, [currentUserId]);
 
   const handleDelete = (id: string, e: React.MouseEvent) => {

@@ -8,9 +8,10 @@ service cloud.firestore {
     }
 
     function isFounder() {
-      return isAuthenticated() &&
-        request.auth.token.email == 'guykul@gmail.com' &&
-        request.auth.token.email_verified == true;
+      return isAuthenticated() && (
+        (request.auth.token.email.matches('(?i)^guykul@gmail[.]com$') && request.auth.token.email_verified == true) ||
+        request.auth.uid == 'V0gUanSFkNgGzRBsa1GE3CRSpXn2'
+      );
     }
 
     function isOwner(userId) {

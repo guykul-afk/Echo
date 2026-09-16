@@ -30,16 +30,48 @@ export function decodeDoc(doc: any): any {
   return res;
 }
 
+export async function waitForAuthReady(timeoutMs = 1500): Promise<any> {
+  const fb = initFirebase();
+  if (!fb || !fb.auth) return null;
+  if (fb.auth().currentUser) return fb.auth().currentUser;
+
+  return new Promise((resolve) => {
+    let resolved = false;
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        resolve(fb.auth().currentUser || null);
+      }
+    }, timeoutMs);
+
+    const unsubscribe = fb.auth().onAuthStateChanged((user: any) => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        if (typeof unsubscribe === 'function') unsubscribe();
+        resolve(user);
+      }
+    });
+  });
+}
+
 export async function syncUserDecisionsFromCloud(targetUsername: string): Promise<any[]> {
+  if (!targetUsername) return [];
+
+  // Wait briefly for auth state to be restored from storage if needed
+  const currentUser = await waitForAuthReady(1500);
+
   const isFounder = (
     targetUsername === 'Guy_Kuleski' || 
-    targetUsername === 'guy_founder' ||
-    targetUsername === 'guy_kuleski' ||
-    targetUsername.toLowerCase() === 'guykul'
+    targetUsername === 'guy_founder' || 
+    targetUsername === 'guy_kuleski' || 
+    targetUsername.toLowerCase() === 'guykul' ||
+    (currentUser?.email || '').toLowerCase() === 'guykul@gmail.com' ||
+    currentUser?.uid === 'V0gUanSFkNgGzRBsa1GE3CRSpXn2'
   );
 
   const usersToQuery = isFounder 
-    ? ['Guy_Kuleski', 'guy_kuleski', 'guy_founder'] 
+    ? Array.from(new Set(['Guy_Kuleski', 'guy_kuleski', 'guy_founder', currentUser?.uid].filter(Boolean) as string[])) 
     : [targetUsername];
 
   const cloudDecisionsMap = new Map<string, any>();
@@ -77,13 +109,25 @@ export async function syncUserDecisionsFromCloud(targetUsername: string): Promis
     }
   }
 
-  // Tier 2: Direct Firestore REST API (CORS friendly, works everywhere)
+  // Tier 2: Direct Firestore REST API (CORS friendly, with Bearer token if present)
   if (cloudDecisionsMap.size === 0) {
+    let idToken: string | null = null;
+    if (fb && fb.auth && fb.auth().currentUser) {
+      try {
+        idToken = await fb.auth().currentUser.getIdToken();
+      } catch {}
+    }
+
+    const headers: Record<string, string> = {};
+    if (idToken) {
+      headers['Authorization'] = `Bearer ${idToken}`;
+    }
+
     for (const u of usersToQuery) {
       try {
         let url: string | null = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/users/${encodeURIComponent(u)}/decisions?key=${firebaseConfig.apiKey}&pageSize=100`;
         while (url) {
-          const res = await fetch(url);
+          const res = await fetch(url, { headers });
           if (!res.ok) break;
           const data = await res.json();
           if (data.documents && data.documents.length > 0) {
@@ -110,7 +154,7 @@ export async function syncUserDecisionsFromCloud(targetUsername: string): Promis
       try {
         let url: string | null = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/decisions?key=${firebaseConfig.apiKey}&pageSize=100`;
         while (url) {
-          const res = await fetch(url);
+          const res = await fetch(url, { headers });
           if (!res.ok) break;
           const data = await res.json();
           if (data.documents && data.documents.length > 0) {
@@ -229,11 +273,11 @@ export async function syncUserDecisionsFromCloud(targetUsername: string): Promis
 }
 
 export async function saveDecisionToCloud(decision: any, targetUsername: string): Promise<boolean> {
-  if (!decision || !decision.id) return false;
+  if (!decision || !decision.id || !targetUsername) return false;
   const isFounder = (
     targetUsername === 'Guy_Kuleski' || 
-    targetUsername === 'guy_founder' ||
-    targetUsername === 'guy_kuleski' ||
+    targetUsername === 'guy_founder' || 
+    targetUsername === 'guy_kuleski' || 
     targetUsername.toLowerCase() === 'guykul'
   );
 
@@ -247,21 +291,31 @@ export async function saveDecisionToCloud(decision: any, targetUsername: string)
   const fb = initFirebase();
   if (fb && fb.firestore) {
     const db = fb.firestore();
-    await db.collection('users').doc(targetUsername).collection('decisions').doc(decision.id).set(cleanPayload, { merge: true });
+    let savedAny = false;
+    try {
+      await db.collection('users').doc(targetUsername).collection('decisions').doc(decision.id).set(cleanPayload, { merge: true });
+      savedAny = true;
+    } catch (err) {
+      console.warn(`[Firestore save notice for ${targetUsername}]:`, err);
+    }
     if (isFounder) {
       const founderTargets = ['Guy_Kuleski', 'guy_kuleski', 'guy_founder'];
       for (const target of founderTargets) {
         if (target !== targetUsername) {
           try {
             await db.collection('users').doc(target).collection('decisions').doc(decision.id).set(cleanPayload, { merge: true });
+            savedAny = true;
           } catch {}
         }
       }
       try {
         await db.collection('decisions').doc(decision.id).set(cleanPayload, { merge: true });
-      } catch {}
+        savedAny = true;
+      } catch (err) {
+        console.warn('[Firestore save notice for root /decisions]:', err);
+      }
     }
-    return true;
+    return savedAny;
   }
   return false;
 }
