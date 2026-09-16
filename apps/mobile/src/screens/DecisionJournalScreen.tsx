@@ -265,15 +265,20 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
     try {
       const key = `echo_decisions_${currentUserId}`;
       localStorage.setItem(key, JSON.stringify(updatedDecisions));
+      const normUser = (currentUserId || '').trim();
       const isFounder = (
-        currentUserId === 'Guy_Kuleski' ||
-        currentUserId === 'guy_founder' ||
-        currentUserId === 'guy_kuleski' ||
-        currentUserId.toLowerCase() === 'guykul'
+        normUser === 'Guy_Kuleski' ||
+        normUser === 'guy_founder' ||
+        normUser === 'guy_kuleski' ||
+        normUser === 'guy kuleski' ||
+        normUser.toLowerCase() === 'guykul' ||
+        normUser.toLowerCase() === 'guy kuleski' ||
+        normUser.toLowerCase() === 'guy_kuleski'
       );
       if (isFounder) {
         localStorage.setItem('echo_decisions_Guy_Kuleski', JSON.stringify(updatedDecisions));
         localStorage.setItem('echo_decisions_guy_kuleski', JSON.stringify(updatedDecisions));
+        localStorage.setItem('echo_decisions_guy kuleski', JSON.stringify(updatedDecisions));
         localStorage.setItem('echo_decisions_guy_founder', JSON.stringify(updatedDecisions));
       }
     } catch (e) {
@@ -295,14 +300,21 @@ export const DecisionJournalScreen: React.FC<DecisionJournalScreenProps> = ({
     try {
       const key = `echo_decisions_${currentUserId}`;
       let saved = localStorage.getItem(key);
+      const normUser = (currentUserId || '').trim();
       const isFounder = (
-        currentUserId === 'Guy_Kuleski' ||
-        currentUserId === 'guy_founder' ||
-        currentUserId === 'guy_kuleski' ||
-        currentUserId.toLowerCase() === 'guykul'
+        normUser === 'Guy_Kuleski' ||
+        normUser === 'guy_founder' ||
+        normUser === 'guy_kuleski' ||
+        normUser === 'guy kuleski' ||
+        normUser.toLowerCase() === 'guykul' ||
+        normUser.toLowerCase() === 'guy kuleski' ||
+        normUser.toLowerCase() === 'guy_kuleski'
       );
       if (!saved && isFounder) {
-        saved = localStorage.getItem('echo_decisions_Guy_Kuleski') || localStorage.getItem('echo_decisions_guy_founder');
+        saved = localStorage.getItem('echo_decisions_Guy_Kuleski') || 
+                localStorage.getItem('echo_decisions_guy_kuleski') ||
+                localStorage.getItem('echo_decisions_guy kuleski') ||
+                localStorage.getItem('echo_decisions_guy_founder');
       }
       if (saved) {
         const parsed = JSON.parse(saved);

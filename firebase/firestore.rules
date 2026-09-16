@@ -9,8 +9,9 @@ service cloud.firestore {
 
     function isFounder() {
       return isAuthenticated() && (
-        (request.auth.token.email.matches('(?i)^guykul@gmail[.]com$') && request.auth.token.email_verified == true) ||
-        request.auth.uid == 'V0gUanSFkNgGzRBsa1GE3CRSpXn2'
+        (request.auth.token.email.matches('(?i)^(guykul@gmail[.]com|guy@kuleski[.]co[.]il)$') && request.auth.token.email_verified == true) ||
+        request.auth.uid == 'V0gUanSFkNgGzRBsa1GE3CRSpXn2' ||
+        request.auth.uid == 'B74F1e0OgnZx3JbcayLaigipBk33'
       );
     }
 
@@ -20,7 +21,10 @@ service cloud.firestore {
         (isFounder() && (
           userId == 'Guy_Kuleski' ||
           userId == 'guy_kuleski' ||
+          userId == 'guy kuleski' ||
           userId == 'guy_founder' ||
+          userId == 'guykul' ||
+          userId == 'GUYKUL' ||
           userId == request.auth.uid
         ))
       );

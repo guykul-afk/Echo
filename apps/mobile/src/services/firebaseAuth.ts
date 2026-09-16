@@ -32,7 +32,7 @@ export function initFirebase() {
 
 export function normalizeUsername(user: any): string | null {
   if (!user) return null;
-  const email = (user.email || '').toLowerCase();
+  const email = (user.email || '').toLowerCase().trim();
 
   // Save friendly display name isolated per UID
   if (typeof window !== 'undefined' && user) {
@@ -42,10 +42,15 @@ export function normalizeUsername(user: any): string | null {
     }
   }
 
-  // Preserve legacy founder identity ONLY for exact verified founder email
-  if (email === 'guykul@gmail.com') {
+  // Preserve legacy founder identity for verified founder accounts (Google Workspace & Gmail)
+  const isFounderEmail = email === 'guykul@gmail.com' || email === 'guy@kuleski.co.il';
+  const isFounderUid = user.uid === 'V0gUanSFkNgGzRBsa1GE3CRSpXn2' || user.uid === 'B74F1e0OgnZx3JbcayLaigipBk33';
+  if (isFounderEmail || isFounderUid) {
     if (typeof window !== 'undefined') {
       localStorage.setItem('echo_display_name_Guy_Kuleski', 'Guy_Kuleski (מייסד)');
+      if (user.uid) {
+        localStorage.setItem(`echo_display_name_${user.uid}`, 'Guy_Kuleski (מייסד)');
+      }
     }
     return 'Guy_Kuleski';
   }
@@ -60,7 +65,16 @@ export function normalizeUsername(user: any): string | null {
 
 export function getUserFriendlyName(userId: string | null): string {
   if (!userId) return 'לא מחובר';
-  if (userId === 'Guy_Kuleski') return 'Guy_Kuleski (מייסד)';
+  if (
+    userId === 'Guy_Kuleski' || 
+    userId === 'guy_kuleski' || 
+    userId === 'guy kuleski' || 
+    userId === 'guy_founder' ||
+    userId === 'V0gUanSFkNgGzRBsa1GE3CRSpXn2' ||
+    userId === 'B74F1e0OgnZx3JbcayLaigipBk33'
+  ) {
+    return 'Guy_Kuleski (מייסד)';
+  }
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem(`echo_display_name_${userId}`);
     if (saved) return saved;

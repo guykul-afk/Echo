@@ -61,17 +61,34 @@ export async function syncUserDecisionsFromCloud(targetUsername: string): Promis
   // Wait briefly for auth state to be restored from storage if needed
   const currentUser = await waitForAuthReady(1500);
 
+  const normTarget = (targetUsername || '').trim();
+  const email = (currentUser?.email || '').toLowerCase().trim();
+  const uid = currentUser?.uid || '';
+
   const isFounder = (
-    targetUsername === 'Guy_Kuleski' || 
-    targetUsername === 'guy_founder' || 
-    targetUsername === 'guy_kuleski' || 
-    targetUsername.toLowerCase() === 'guykul' ||
-    (currentUser?.email || '').toLowerCase() === 'guykul@gmail.com' ||
-    currentUser?.uid === 'V0gUanSFkNgGzRBsa1GE3CRSpXn2'
+    normTarget === 'Guy_Kuleski' || 
+    normTarget === 'guy_founder' || 
+    normTarget === 'guy_kuleski' || 
+    normTarget === 'guy kuleski' || 
+    normTarget.toLowerCase() === 'guykul' ||
+    normTarget.toLowerCase() === 'guy kuleski' ||
+    normTarget.toLowerCase() === 'guy_kuleski' ||
+    email === 'guykul@gmail.com' ||
+    email === 'guy@kuleski.co.il' ||
+    uid === 'V0gUanSFkNgGzRBsa1GE3CRSpXn2' ||
+    uid === 'B74F1e0OgnZx3JbcayLaigipBk33'
   );
 
   const usersToQuery = isFounder 
-    ? Array.from(new Set(['Guy_Kuleski', 'guy_kuleski', 'guy_founder', currentUser?.uid].filter(Boolean) as string[])) 
+    ? Array.from(new Set([
+        'Guy_Kuleski',
+        'guy_kuleski',
+        'guy kuleski',
+        'guy_founder',
+        'guykul',
+        'GUYKUL',
+        currentUser?.uid
+      ].filter(Boolean) as string[])) 
     : [targetUsername];
 
   const cloudDecisionsMap = new Map<string, any>();
@@ -206,6 +223,7 @@ export async function syncUserDecisionsFromCloud(targetUsername: string): Promis
       storageKey,
       'echo_decisions_Guy_Kuleski',
       'echo_decisions_guy_kuleski',
+      'echo_decisions_guy kuleski',
       'echo_decisions_guy_founder',
       'echo_decisions_guykul',
       'echo_decisions_GUYKUL'
@@ -241,6 +259,7 @@ export async function syncUserDecisionsFromCloud(targetUsername: string): Promis
       if (isFounder) {
         localStorage.setItem('echo_decisions_Guy_Kuleski', JSON.stringify(mergedList));
         localStorage.setItem('echo_decisions_guy_kuleski', JSON.stringify(mergedList));
+        localStorage.setItem('echo_decisions_guy kuleski', JSON.stringify(mergedList));
         localStorage.setItem('echo_decisions_guy_founder', JSON.stringify(mergedList));
       }
     } catch {}
@@ -274,11 +293,15 @@ export async function syncUserDecisionsFromCloud(targetUsername: string): Promis
 
 export async function saveDecisionToCloud(decision: any, targetUsername: string): Promise<boolean> {
   if (!decision || !decision.id || !targetUsername) return false;
+  const normTarget = (targetUsername || '').trim();
   const isFounder = (
-    targetUsername === 'Guy_Kuleski' || 
-    targetUsername === 'guy_founder' || 
-    targetUsername === 'guy_kuleski' || 
-    targetUsername.toLowerCase() === 'guykul'
+    normTarget === 'Guy_Kuleski' || 
+    normTarget === 'guy_founder' || 
+    normTarget === 'guy_kuleski' || 
+    normTarget === 'guy kuleski' || 
+    normTarget.toLowerCase() === 'guykul' ||
+    normTarget.toLowerCase() === 'guy kuleski' ||
+    normTarget.toLowerCase() === 'guy_kuleski'
   );
 
   // Clean payload of any undefined properties to prevent Firestore SDK exceptions
@@ -299,7 +322,7 @@ export async function saveDecisionToCloud(decision: any, targetUsername: string)
       console.warn(`[Firestore save notice for ${targetUsername}]:`, err);
     }
     if (isFounder) {
-      const founderTargets = ['Guy_Kuleski', 'guy_kuleski', 'guy_founder'];
+      const founderTargets = ['Guy_Kuleski', 'guy_kuleski', 'guy kuleski', 'guy_founder'];
       for (const target of founderTargets) {
         if (target !== targetUsername) {
           try {

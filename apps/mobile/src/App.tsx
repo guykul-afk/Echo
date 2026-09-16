@@ -54,14 +54,21 @@ export const App: React.FC = () => {
     try {
       const key = `echo_decisions_${user}`;
       let raw = localStorage.getItem(key);
+      const normUser = (user || '').trim();
       const isFounder = (
-        user === 'Guy_Kuleski' || 
-        user === 'guy_founder' || 
-        user === 'guy_kuleski' || 
-        user.toLowerCase() === 'guykul'
+        normUser === 'Guy_Kuleski' || 
+        normUser === 'guy_founder' || 
+        normUser === 'guy_kuleski' || 
+        normUser === 'guy kuleski' || 
+        normUser.toLowerCase() === 'guykul' ||
+        normUser.toLowerCase() === 'guy kuleski' ||
+        normUser.toLowerCase() === 'guy_kuleski'
       );
       if (!raw && isFounder) {
-        raw = localStorage.getItem('echo_decisions_Guy_Kuleski') || localStorage.getItem('echo_decisions_guy_founder');
+        raw = localStorage.getItem('echo_decisions_Guy_Kuleski') || 
+              localStorage.getItem('echo_decisions_guy_kuleski') ||
+              localStorage.getItem('echo_decisions_guy kuleski') ||
+              localStorage.getItem('echo_decisions_guy_founder');
       }
       if (raw) {
         const parsed = JSON.parse(raw);
@@ -242,6 +249,7 @@ export const App: React.FC = () => {
         localStorage.setItem('echo_decisions_Guy_Kuleski', JSON.stringify(updatedList));
         localStorage.setItem('echo_decisions_guy_founder', JSON.stringify(updatedList));
         localStorage.setItem('echo_decisions_guy_kuleski', JSON.stringify(updatedList));
+        localStorage.setItem('echo_decisions_guy kuleski', JSON.stringify(updatedList));
       }
     } catch {}
 
