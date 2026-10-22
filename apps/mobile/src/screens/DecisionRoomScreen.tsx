@@ -145,6 +145,7 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
   const [isAnalyzingAnswer, setIsAnalyzingAnswer] = useState<boolean>(false);
   const [analysisErrorNotice, setAnalysisErrorNotice] = useState<string | null>(null);
   const [isDecisionSummarized, setIsDecisionSummarized] = useState<boolean>(false);
+  const [isDoubtActive, setIsDoubtActive] = useState<boolean>(false);
 
   // Dual-engine Audio References
   const recognitionRef = useRef<any>(null);
@@ -523,6 +524,24 @@ export const DecisionRoomScreen: React.FC<DecisionRoomScreenProps> = ({
               placeholder="• השערות, ציפיות..."
               className="w-full bg-transparent text-sm text-stone-100 leading-relaxed focus:outline-none placeholder:opacity-50 font-medium"
             />
+            {assumptions.trim().length > 0 && (
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsDoubtActive(true)}
+                  disabled={isDoubtActive}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-colors ${!isDoubtActive ? 'cursor-pointer hover:bg-white/[0.05]' : ''}`}
+                  style={{ 
+                    borderColor: 'rgba(212, 175, 55, 0.4)', 
+                    color: LuxuryTheme.accent.gold,
+                    backgroundColor: 'transparent',
+                    opacity: isDoubtActive ? 0.7 : 1
+                  }}
+                >
+                  {isDoubtActive ? 'ספק הוטל...' : 'הטל ספק בהנחות'}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Missing Info / Core Hinge */}

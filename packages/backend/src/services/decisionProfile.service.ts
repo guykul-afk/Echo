@@ -321,18 +321,43 @@ export class DecisionProfileService {
           }
         ];
 
-    // Anchors from actual cases
+    // Anchors synthesized as core principles and techniques (cases serve as grounded examples)
     const anchors: DecisionProfileAnchor[] = cases.slice(-3).map((c, idx) => {
       const anyC = c as any;
       const rawText = (c.rawCaptureText || anyC.rawVerbatim || anyC.consideration || anyC.dimConsideration || anyC.dilemma || c.title || '').replace(/<[^>]*>/g, '').trim();
-      const goalText = (c.dimGoalsPrices || anyC.goalsPrices || anyC.goal || anyC.dimGoal || 'השגת יעדים ברורים').replace(/<[^>]*>/g, '').trim();
+      const combinedText = `${c.title || ''} ${rawText} ${c.dimGoalsPrices || anyC.goalsPrices || ''}`.toLowerCase();
+
+      let principleTitle = 'בירור נתונים ואימות ישיר בשטח';
+      let principleTag = 'עקרון יסוד';
+      let principleDesc = isFemale
+        ? 'אי-הסתפקות בהשערות כלליות, ובדיקה קפדנית של המספרים וההשלכות לפני קבלת התחייבות.'
+        : 'אי-הסתפקות בהשערות כלליות, ובדיקה קפדנית של המספרים וההשלכות לפני קבלת התחייבות.';
+
+      if (combinedText.includes('מחשב') || combinedText.includes('מסך') || combinedText.includes('apple') || combinedText.includes('mac') || combinedText.includes('חומרה')) {
+        principleTitle = 'אופטימיזציית סביבת עבודה ותשתיות כמכפיל כוח';
+        principleTag = 'תשתיות ומינוף';
+        principleDesc = isFemale
+          ? 'התייחסות לתשתיות העבודה והחומרה כהשקעה אסטרטגית המגדילה את רוחב הפס הקוגניטיבי, תוך ניפוי שיקולי פשרה או נוחות זמניים.'
+          : 'התייחסות לתשתיות העבודה והחומרה כהשקעה אסטרטגית המגדילה את רוחב הפס הקוגניטיבי, תוך ניפוי שיקולי פשרה או נוחות זמניים.';
+      } else if (combinedText.includes('שמא') || combinedText.includes('בנק') || combinedText.includes('ספק') || combinedText.includes('קבלן') || combinedText.includes('סיכון') || combinedText.includes('גידור')) {
+        principleTitle = 'גידור סיכוני קצה ושמירה על אמינות פיננסית';
+        principleTag = 'ניהול סיכונים';
+        principleDesc = isFemale
+          ? 'העדפת פיצול סיכונים וביצוע התאמות מוקדמות בשטח על פני חשיפה לשיבוש תפעולי קריטי או פגיעה באמינות מול גורמים מממנים.'
+          : 'העדפת פיצול סיכונים וביצוע התאמות מוקדמות בשטח על פני חשיפה לשיבוש תפעולי קריטי או פגיעה באמינות מול גורמים מממנים.';
+      } else if (combinedText.includes('תיעדוף') || combinedText.includes('אפיק') || combinedText.includes('עדיפויות') || combinedText.includes('הרקמה') || combinedText.includes('הקצאת')) {
+        principleTitle = 'תיעדוף קשיח לפי יחס אימפקט-מאמץ';
+        principleTag = 'טכניקת תיעדוף';
+        principleDesc = isFemale
+          ? 'נכונות מודעת לחתוך או לדחות אפיקים מבטיחים, כדי למקד את מלוא המשאבים במנוף המרכזי שמייצר את מקסימום הערך והאימפקט העסקי.'
+          : 'נכונות מודעת לחתוך או לדחות אפיקים מבטיחים, כדי למקד את מלוא המשאבים במנוף המרכזי שמייצר את מקסימום הערך והאימפקט העסקי.';
+      }
+
       return {
         id: `anchor-${c.id || idx}`,
-        title: c.title || 'הכרעה עניינית בשטח',
-        tag: evolution ? 'מיקוד אסטרטגי' : 'זהירות מבורכת',
-        description: isFemale
-          ? `הפגנת נחישות לחדד את המטרה (${goalText}) מבלי להתפזר על שיקולי סרק.`
-          : `הפגנת נחישות לחדד את המטרה (${goalText}) מבלי להתפזר על שיקולי סרק.`,
+        title: principleTitle,
+        tag: principleTag,
+        description: principleDesc,
         caseTitle: c.title || 'מקרה מתועד',
         caseId: c.id,
         authenticDilemmaQuote: rawText.slice(0, 140),

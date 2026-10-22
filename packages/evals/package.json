@@ -1,0 +1,20 @@
+{
+  "name": "@echo/evals",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "evals": "npx tsx run-evals.ts --full",
+    "evals:fast": "npx tsx run-evals.ts --fast",
+    "evals:real": "npx tsx run-real-user-evals.ts"
+  },
+  "dependencies": {
+    "@echo/backend": "^1.0.0",
+    "@echo/shared": "^1.0.0",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

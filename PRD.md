@@ -130,9 +130,9 @@ Schema Fields:
 - כעת התחדד: ...
 - הצעד שבחרת: ... (עם אפשרות לבחור מתוך 1-2 צעדים מוצעים או להזין צעד חופשי).
 
-### 4.6. יומן החלטות ופרופיל כיול (Decision Journal & Calibration)
-- **יומן החלטות (`DecisionJournalScreen`):** תיעוד כל המקרים שנחתמו, סינון לפי סטטוסים ותגיות, וצפייה בהתפתחות שיקול הדעת לאורך זמן.
-- **פרופיל וכיול (`DecisionProfileScreen`):** מעקב אחר כמות הלכידות, אחוז סגירת המעגלים, ודיוק ההנחות.
+### 4.6. יומן החלטות, פרופיל כיול והרשאות מיוחדות (Decision Journal, Profile & Founder Identity)
+- **יומן החלטות (`DecisionJournalScreen`):** תיעוד כל המקרים שנחתמו, סינון לפי סטטוסים ותגיות, וצפייה בהתפתחות שיקול הדעת לאורך זמן. המערכת כוללת מנגנון אותנטיקציה לזיהוי "מייסד" (Founder Identity - `guy@kuleski.co.il`), החושף אוטומטית את מלוא מאגר 55 ההחלטות ההיסטוריות.
+- **פרופיל וכיול אפיסטמי (`DecisionProfileScreen`):** מבוסס על מנגנון Server-driven Epistemic Profile. המערכת מזקקת עקרונות יסוד (Core Principles ו-Techniques) ישירות מהחלטות העבר של המשתמש ומשקפת אותם בצורה חיה כחלק מתעודת הזהות הקוגניטיבית שלו, לצד מעקב אחר אחוז סגירת המעגלים ודיוק ההנחות.
 
 ---
 
@@ -155,6 +155,7 @@ Schema Fields:
 2. **AI & Prompts Agent:** מכייל פרומפטים ב-`packages/backend/src/prompts` וב-`apps/mobile/src/services/aiService.ts` לחילוץ אפיסטמי נקי ללא הזיות.
 3. **Frontend UI Agent:** מפתח ומתחזק את ממשק ה-React 18 / Vite ב-`apps/mobile`, תוך ציות קפדני ל-`DESIGN_SYSTEM.md`.
 4. **Data & Security Agent:** אמון על חוקי ה-Firestore (`firestore.rules`) ובידוד המשתמשים ב-Multi-Tenancy.
+5. **Continuous Learning Agent:** אחראי על מנגנון ה-Wiki והלמידה המתמדת (`.wikiskill/wiki.md`) מכשלים ורגרסיות, דרך הפעלת `scripts/record-lesson.js` (Autonomous QA Reflection).
 
 ---
 

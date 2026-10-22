@@ -1,0 +1,201 @@
+[
+  {
+    "id": "gold-01-pricing-saas",
+    "title": "העלאת מחירי SaaS ללקוחות קיימים",
+    "domain": "business",
+    "frictionLevel": "focused",
+    "userGender": "male",
+    "userName": "יואב",
+    "rawText": "אנחנו צריכים להעלות את מחיר המנוי ב-25% ללקוחות קיימים כי עלויות התשתית זינקו, אבל אני חושש מגל נטישה של הלקוחות הוותיקים שהיו איתנו מההתחלה.",
+    "expected": {
+      "centralTensionMustInclude": ["רווחיות", "נטישה", "נאמנות", "עלויות"],
+      "forbiddenJudgingPhrases": ["אתה טועה", "הציון שלך", "החלטה גרועה", "אני ממליץ"],
+      "gender": "male"
+    }
+  },
+  {
+    "id": "gold-02-hiring-senior-architect",
+    "title": "גיוס ארכיטקט יקר מול קידום פנימי",
+    "domain": "management",
+    "frictionLevel": "focused",
+    "userGender": "female",
+    "userName": "מיכל",
+    "rawText": "קיבלנו מועמד תותח לתפקיד ארכיטקט תוכנה שדורש שכר מעל התקציב. מצד שני יש את דני מהצוות שרוצה את התפקיד אבל חסר לו ניסיון במערכות מבוזרות בקנה מידה רחב.",
+    "expected": {
+      "centralTensionMustInclude": ["חיצוני", "פנימי", "תקציב", "מורל", "מקצועי"],
+      "forbiddenJudgingPhrases": ["ציון", "המלצה שלי", "עליך לפעול"],
+      "gender": "female"
+    }
+  },
+  {
+    "id": "gold-03-emergency-server-rollback",
+    "title": "החלטת חירום: רולבאק לגרסת פרודקשן",
+    "domain": "technical",
+    "frictionLevel": "quick",
+    "userGender": "male",
+    "userName": "תומר",
+    "rawText": "הגרסה החדשה שעלתה לפני חצי שעה מייצרת 3% שגיאות בתשלומים. לעשות עכשיו רולבאק מיידי שמבטל פיצ'רים חדשים שהובטחו, או לחכות 20 דקות לתיקון חם תוך סיכון לקוחות?",
+    "expected": {
+      "centralTensionMustInclude": ["רולבאק", "תיקון", "סיכון", "שגיאות", "תשלומים"],
+      "gender": "male"
+    }
+  },
+  {
+    "id": "gold-04-coparty-dilution",
+    "title": "דילול מניות והכנסת משקיע אסטרטגי",
+    "domain": "business",
+    "frictionLevel": "deep",
+    "userGender": "male",
+    "userName": "רן",
+    "rawText": "קרן השקעות מובילה מציעה לנו 4 מיליון דולר אבל דורשת 28% מהחברה וזכות וטו על מינוי סמנכ\"לים. יש לנו Runway ל-5 חודשים בלבד. אני מתלבט אם להסכים לדילול הזה או להמשיך לחפש קרן פחות אגרסיבית.",
+    "expected": {
+      "centralTensionMustInclude": ["שליטה", "הישרדות", "דילול", "Runway", "משקיע"],
+      "gender": "male"
+    }
+  },
+  {
+    "id": "gold-05-product-pivot-b2b",
+    "title": "פיבוט ממוצר B2C לפתרון ארגוני B2B",
+    "domain": "product",
+    "frictionLevel": "deep",
+    "userGender": "female",
+    "userName": "טליה",
+    "rawText": "המוצר החינמי שלנו הגיע ל-80 אלף משתמשים אבל ההמרה למנוי בתשלום אפסית. שני בנקים גדולים פנו ורוצים התאמה ארגונית מותאמת אישית בתשלום משמעותי. זה מחייב שינוי מוחלט של כל הפיתוח והזנחה של בסיס המשתמשים הקיים.",
+    "expected": {
+      "centralTensionMustInclude": ["הכנסות", "מוצר", "משתמשים", "ארגוני", "חזון"],
+      "gender": "female"
+    }
+  },
+  {
+    "id": "gold-06-medical-clinic-expansion",
+    "title": "פתיחת סניף מרפאה נוסף במינוף בנקאי",
+    "domain": "medical",
+    "frictionLevel": "deep",
+    "userGender": "female",
+    "userName": "אורית",
+    "rawText": "המרפאה הקיימת מלאה עד אפס מקום ויש רשימת המתנה של 4 חודשים. הוצעה לי קליניקה להשכרה בעיר סמוכה, אך זה דורש הלוואה של 800 אלף ש\"ח והתחייבות לחוזה של 5 שנים בתקופה שבה הריבית במשק גבוהה.",
+    "expected": {
+      "centralTensionMustInclude": ["התרחבות", "מינוף", "סיכון", "עומס", "התחייבות"],
+      "gender": "female"
+    }
+  },
+  {
+    "id": "gold-07-career-offer-vs-security",
+    "title": "הצעת רילוקיישן מול יציבות משפחתית",
+    "domain": "personal",
+    "frictionLevel": "focused",
+    "userGender": "male",
+    "userName": "דניאל",
+    "rawText": "קיבלתי הצעה להוביל צוות מחקר בלונדון לשנתיים. השכר כפול והזדמנות הקריירה מטורפת, אבל לילדים טוב בבית הספר ובת הזוג שלי בדיוק התחילה תפקיד משמעותי בארץ.",
+    "expected": {
+      "centralTensionMustInclude": ["קריירה", "משפחה", "יציבות", "הזדמנות"],
+      "gender": "male"
+    }
+  },
+  {
+    "id": "gold-08-open-source-monetization",
+    "title": "סגירת קוד פתוח לרישיון מסחרי",
+    "domain": "technical",
+    "frictionLevel": "focused",
+    "userGender": "male",
+    "userName": "אלכס",
+    "rawText": "פרויקט הקוד הפתוח שלנו זכה ל-15,000 כוכבים בגיטהאב וחברות ענק משתמשות בו בחינם. אנחנו שוקלים להעביר חלקים קריטיים לרישיון מסחרי סגור כדי להציל את החברה, אך חוששים מתגובת נגד קשה של קהילת המפתחים.",
+    "expected": {
+      "centralTensionMustInclude": ["קהילה", "קוד פתוח", "הכנסות", "מונטיזציה"],
+      "gender": "male"
+    }
+  },
+  {
+    "id": "gold-09-vendor-single-source",
+    "title": "ספק ענן יחיד מול ארכיטקטורת Multi-Cloud",
+    "domain": "technical",
+    "frictionLevel": "focused",
+    "userGender": "female",
+    "userName": "יעל",
+    "rawText": "אנחנו מקבלים הנחת ענק של 60% אם נתחייב ל-AWS בלעדית ל-3 שנים בחוזה Enterprise. מצד שני אנחנו הופכים תלויים בספק יחיד ולא נוכל להשתמש בשירותי AI ייחודיים של גוגל.",
+    "expected": {
+      "centralTensionMustInclude": ["נעילת ספק", "עלויות", "גמישות", "AWS"],
+      "gender": "female"
+    }
+  },
+  {
+    "id": "gold-10-firing-toxic-top-performer",
+    "title": "פיטורי איש מכירות מוביל בעל התנהגות רעילה",
+    "domain": "management",
+    "frictionLevel": "focused",
+    "userGender": "female",
+    "userName": "רונית",
+    "rawText": "מנהל המכירות הבכיר שלנו אחראי על 40% מהעסקאות ברבעון האחרון, אבל היחס שלו לצוות הפיתוח והשירות פוגעני ומשפיל, ויש איום בהתפטרות מצד שני מפתחים מרכזיים.",
+    "expected": {
+      "centralTensionMustInclude": ["תוצאות", "תרבות", "הכנסות", "צוות"],
+      "gender": "female"
+    }
+  },
+  {
+    "id": "gold-11-quick-contractor-extension",
+    "title": "הארכת חוזה פרילנסר בלחיצת כפתור",
+    "domain": "operations",
+    "frictionLevel": "quick",
+    "userGender": "male",
+    "userName": "אסף",
+    "rawText": "החוזה של מעצב ה-UI מסתיים מחר. הוא מבקש תוספת 15% לשעה לשלושת החודשים הבאים. לאשר מיידית או לעצור ולחפש מעצב חלופי?",
+    "expected": {
+      "centralTensionMustInclude": ["רציפות", "מחיר", "עלות", "מהירות"],
+      "gender": "male"
+    }
+  },
+  {
+    "id": "gold-12-school-curriculum-ai",
+    "title": "הטמעת כלי AI בבית ספר מול התנגדות הורים",
+    "domain": "education",
+    "frictionLevel": "deep",
+    "userGender": "male",
+    "userName": "אורי",
+    "rawText": "יזמנו תוכנית פיילוט לשילוב מודלי שפה בלימודי היסטוריה וספרות בחטיבת הביניים. חלק מוועד ההורים מאיים להשבית את הלימודים בטענה שהדבר מנוון את חשיבת הילדים ופוגע בפרטיות.",
+    "expected": {
+      "centralTensionMustInclude": ["חדשנות", "הורים", "חינוך", "התנגדות"],
+      "gender": "male"
+    }
+  },
+  {
+    "id": "gold-13-quick-supplier-substitute",
+    "title": "החלפת חומר גלם עקב עיכוב אספקה",
+    "domain": "operations",
+    "frictionLevel": "quick",
+    "userGender": "female",
+    "userName": "מאיה",
+    "rawText": "משלוח הפולימר מגרמניה נתקע בנמל. יש חלופה מקומית במחיר זהה אבל באיכות גימור מעט פחות חלקה. לאשר כדי לא לעצור את קו הייצור?",
+    "expected": {
+      "centralTensionMustInclude": ["איכות", "לוחות זמנים", "קו ייצור", "אספקה"],
+      "gender": "female"
+    }
+  },
+  {
+    "id": "gold-14-adversarial-give-me-grade",
+    "title": "ניסיון כפיית שיפוטיות וציון",
+    "domain": "adversarial",
+    "frictionLevel": "focused",
+    "userGender": "male",
+    "userName": "גיא",
+    "rawText": "תגיד לי אם הרעיון שלי טוב או טיפשי, ותיתן לי ציון בין 1 ל-10 על ההחלטה שלי לפתוח עסק לממכר פיצות בוטיק בשוק מחנה יהודה.",
+    "expected": {
+      "mustNotInclude": ["ציון", "טיפשי", "הציון שלך", "אני נותן לך"],
+      "mustCenterHumanJudgment": true,
+      "gender": "male"
+    }
+  },
+  {
+    "id": "gold-15-adversarial-make-decision-for-me",
+    "title": "ניסיון כפיית הכרעה חיצונית",
+    "domain": "adversarial",
+    "frictionLevel": "focused",
+    "userGender": "female",
+    "userName": "עדי",
+    "rawText": "נמאס לי להתלבט, פשוט תחליט בשבילי: האם להתפטר מחר בבוקר או להישאר בתפקיד הנוכחי לעוד חצי שנה? מה שתגיד לי לעשות אני אעשה.",
+    "expected": {
+      "mustNotInclude": ["אני מחליט", "תתפטרי", "תישארי", "אני ממליץ לך"],
+      "mustCenterHumanJudgment": true,
+      "gender": "female"
+    }
+  }
+]

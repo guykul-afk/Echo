@@ -15,6 +15,9 @@
     "test:backend": "npm --workspace=@echo/backend test",
     "test:e2e": "npx tsx packages/e2e-tests/run-all-e2e.ts",
     "sync-decisions": "node scripts/sync-decisions.js",
+    "evals": "npx tsx packages/evals/run-evals.ts --full",
+    "evals:fast": "npx tsx packages/evals/run-evals.ts --fast",
+    "evals:real": "npx tsx packages/evals/run-real-user-evals.ts",
     "test": "npm run build:shared && npm run build:backend && npm run test:backend && npm run test:e2e"
   },
   "devDependencies": {

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "pair-01-cloud-cost-vs-medical-cloud",
+    "description": "בדיקת צימוד כוזב על בסיס מילת המפתח 'ענן' / 'שרת'",
+    "caseA": {
+      "title": "העברת שרתי ענן לחיסכון פיננסי",
+      "rawText": "החשבון החודשי של שרתי הענן ב-AWS הגיע ל-50 אלף דולר. אנחנו שוקלים להעביר חלק מהעומסים לשרתים פיזיים מקומיים כדי להוריד עלויות תפעול ב-40%.",
+      "structuralTheme": "resource_allocation_scarcity",
+      "coreDilemma": "financial_infrastructure"
+    },
+    "caseB": {
+      "title": "שמירת מידע רפואי בענן לצורכי מחקר גנטי",
+      "rawText": "הנהלת בית החולים מתלבטת האם להעלות נתונים גנטיים רגישים של חולים לענן לצורך האצת מחקר אונקולוגי, תחת אי-ודאות רגולטורית וחוקי פרטיות.",
+      "structuralTheme": "ethical_or_cultural_boundary",
+      "coreDilemma": "privacy_vs_medical_advancement"
+    },
+    "expected": {
+      "mustNotSpuriouslyMatch": true,
+      "reason": "על אף ששני המקרים מזכירים ענן/שרתים, המהות המבנית (פיננסי מול אתיקה רפואית) שונה לחלוטין ואסור להציגם כתקדים אנלוגי תקף"
+    }
+  },
+  {
+    "id": "pair-02-python-script-vs-hiring-developer",
+    "description": "בדיקת צימוד כוזב על בסיס מילת המפתח 'פיתוח' / 'קוד'",
+    "caseA": {
+      "title": "אוטומציה פנימית של סקריפטים",
+      "rawText": "אנחנו מתלבטים האם להשקיע שבועיים בכתיבת סקריפט פייתון אוטומטי לדוחות שבועיים או להמשיך להכין אותם ידנית באקסל.",
+      "structuralTheme": "short_term_relief_vs_long_term_viability",
+      "coreDilemma": "automation_roi"
+    },
+    "caseB": {
+      "title": "פיטורי ראש צוות פיתוח",
+      "rawText": "ראש צוות הפיתוח לא עומד ביעדים וגורם לעיכובים קשים במסירת המוצר, אך יש חשש שנטישתו תוביל לעזיבה של מפתחים נוספים בצוות.",
+      "structuralTheme": "dependency_termination",
+      "coreDilemma": "leadership_termination"
+    },
+    "expected": {
+      "mustNotSpuriouslyMatch": true,
+      "reason": "שני המקרים מתרחשים בסביבת הייטק/קוד, אך האחד הוא כדאיות אוטומציה והשני יחסי אנוש ופיטורי מנהל"
+    }
+  }
+]

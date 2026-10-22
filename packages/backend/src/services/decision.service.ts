@@ -139,7 +139,17 @@ export class DecisionService {
         recentQuestions,
         userGender ? { name: dto.userName || 'מיכל', gender: userGender } : undefined
       );
-      humanDimensions = cognitiveResult.humanDimensions || humanDimensions;
+      if (cognitiveResult.humanDimensions) {
+        humanDimensions = {
+          consideration: this.ensureString(cognitiveResult.humanDimensions.consideration),
+          centralTension: this.ensureString(cognitiveResult.humanDimensions.centralTension),
+          keyHinge: this.ensureString(cognitiveResult.humanDimensions.keyHinge),
+          goalsPrices: this.ensureString(cognitiveResult.humanDimensions.goalsPrices),
+          facts: this.ensureString(cognitiveResult.humanDimensions.facts),
+          assumptions: this.ensureString(cognitiveResult.humanDimensions.assumptions),
+          missingInfo: this.ensureString(cognitiveResult.humanDimensions.missingInfo)
+        };
+      }
       deepMechanisms = cognitiveResult.deepMechanisms;
 
       epistemicState = {

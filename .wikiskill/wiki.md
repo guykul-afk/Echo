@@ -14,3 +14,9 @@ This is the persistent knowledge base for the Echo project. Lessons learned, rul
 * **Multi-Account Founder Identity:** Never hardcode a single email string (e.g., `guykul@gmail.com`) for administrative/founder roles when the user operates across multiple verified accounts (e.g., Google Workspace `guy@kuleski.co.il` alongside personal Gmail). Always identify all verified account emails and UIDs, or map them through a canonical identity resolver.
 * **Cross-Collection Alias Aggregation:** When legacy data exists across variations in naming conventions (e.g., `Guy_Kuleski`, `guy_kuleski`, `guy kuleski` with spaces, and root collections), querying only one variant causes data starvation and false "0 decisions" reports. Queries must aggregate across all known aliases and merge unique items by canonical ID.
 
+## 18/09/2026
+* **Profile Strengths Epistemic Abstraction:** Profile strengths and anchors must always represent general, reusable decision principles and heuristics, with specific historical cases relegated to illustrative examples. (Category: Architecture/ProfileEngine)
+* **Server-Side Epistemic Profile Resilience:** Strict server-only profiles must be pre-calculated and stored in Cloud Firestore and Hosting CDN, with public read rules and a 4-tier server fetch pipeline. (Category: Architecture/Cloud)
+
+## 19/09/2026
+* **HumanDimensions Polymorphic Serialization and Gemini Flash Model Pinning:** Always sanitize cognitiveResult fields via ensureString in DecisionService to enforce strictly typed FiveHumanDimensions, and pin Judge model to active gemini-3.6-flash. (Category: AI/Evals)

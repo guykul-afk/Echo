@@ -16,3 +16,7 @@ latest_*.json
 server_latest_*.json
 last_decision_dump.json
 *.tsbuildinfo
+all_cases_summary.txt
+analysis_out.txt
+parsed*.txt
+results*.json

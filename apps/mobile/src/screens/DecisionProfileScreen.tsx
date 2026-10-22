@@ -393,8 +393,8 @@ export const DecisionProfileScreen: React.FC<DecisionProfileScreenProps> = ({
               <div className="pt-2 border-t border-white/[0.05]">
                 <div className="flex items-center justify-between">
                   <div className="text-xs text-[#E6E8EE]/50 flex items-center gap-1.5 truncate max-w-[240px]">
-                    <span>ראינו את זה ב:</span>
-                    <span className="text-[#E6E8EE]/80 font-medium">{anchor.caseTitle}</span>
+                    <span className="text-[#D4AF37]/70 font-medium">דוגמה מהשטח:</span>
+                    <span className="text-[#E6E8EE]/80 font-medium truncate">{anchor.caseTitle}</span>
                   </div>
                   {anchor.authenticDilemmaQuote && (
                     <button

@@ -376,27 +376,95 @@ export async function fetchUserProfileFromBackend(targetUsername: string): Promi
 }
 
 async function fetchProfileFromEndpoints(canonicalId: string, normTarget: string): Promise<DecisionProfileData | null> {
-  // Tier 1: Try backend server API endpoint (/api/user-profile)
-  try {
-    const res = await fetch(`/api/user-profile?userId=${encodeURIComponent(canonicalId)}`);
-    if (res.ok) {
-      const profile = await res.json();
-      if (profile && profile.mainStyle) {
-        cacheProfileLocally(canonicalId, normTarget, profile);
-        return profile;
+  const fb = initFirebase();
+  const candidateIds = Array.from(new Set([canonicalId, normTarget, 'Guy_Kuleski']));
+
+  // Tier 1: Cloud Firestore Web SDK
+  if (fb && fb.firestore) {
+    try {
+      const db = fb.firestore();
+      for (const id of candidateIds) {
+        try {
+          const profileDoc = await db.collection('profiles').doc(id).get();
+          if (profileDoc && profileDoc.exists) {
+            const data = profileDoc.data() as DecisionProfileData;
+            if (data && data.mainStyle && data.flowSteps && data.flowSteps.length > 0) {
+              cacheProfileLocally(canonicalId, normTarget, data);
+              return data;
+            }
+          }
+        } catch {}
+
+        try {
+          const userSubDoc = await db.collection('users').doc(id).collection('profile').doc('latest').get();
+          if (userSubDoc && userSubDoc.exists) {
+            const data = userSubDoc.data() as DecisionProfileData;
+            if (data && data.mainStyle && data.flowSteps && data.flowSteps.length > 0) {
+              cacheProfileLocally(canonicalId, normTarget, data);
+              return data;
+            }
+          }
+        } catch {}
       }
+    } catch (err) {
+      console.warn('[Firestore SDK profile fetch notice]:', err);
     }
-  } catch (err) {
-    console.warn('[Backend Profile fetch notice]:', err);
   }
 
-  // Tier 2: Static fallback (/USER_PROFILES.json)
+  // Tier 2: Cloud Firestore REST API (Direct HTTPS to Google Cloud Firestore)
+  const apiKey = firebaseConfig?.apiKey || 'AIzaSyCjxLuDQ7EktomeXveVoXHaDe6vrfDDxMY';
+  const projectId = firebaseConfig?.projectId || 'echo-guy-2026';
+  for (const id of candidateIds) {
+    try {
+      const restProfileUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/profiles/${encodeURIComponent(id)}?key=${apiKey}`;
+      const res = await fetch(restProfileUrl);
+      if (res.ok) {
+        const rawDoc = await res.json();
+        const decoded = decodeDoc(rawDoc) as DecisionProfileData;
+        if (decoded && decoded.mainStyle && decoded.flowSteps && decoded.flowSteps.length > 0) {
+          cacheProfileLocally(canonicalId, normTarget, decoded);
+          return decoded;
+        }
+      }
+    } catch {}
+
+    try {
+      const restSubUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${encodeURIComponent(id)}/profile/latest?key=${apiKey}`;
+      const res = await fetch(restSubUrl);
+      if (res.ok) {
+        const rawDoc = await res.json();
+        const decoded = decodeDoc(rawDoc) as DecisionProfileData;
+        if (decoded && decoded.mainStyle && decoded.flowSteps && decoded.flowSteps.length > 0) {
+          cacheProfileLocally(canonicalId, normTarget, decoded);
+          return decoded;
+        }
+      }
+    } catch {}
+  }
+
+  // Tier 3: Static Cloud CDN endpoint (/USER_PROFILES.json)
   try {
-    const res = await fetch('/USER_PROFILES.json');
-    if (res.ok) {
+    const res = await fetch(`/USER_PROFILES.json?v=${Date.now()}`);
+    const contentType = res.headers.get('content-type') || '';
+    if (res.ok && contentType.includes('application/json')) {
       const allProfiles = await res.json();
-      const profile = allProfiles[canonicalId] || allProfiles[normTarget];
-      if (profile && profile.mainStyle) {
+      for (const id of candidateIds) {
+        const profile = allProfiles[id];
+        if (profile && profile.mainStyle && profile.flowSteps && profile.flowSteps.length > 0) {
+          cacheProfileLocally(canonicalId, normTarget, profile);
+          return profile;
+        }
+      }
+    }
+  } catch {}
+
+  // Tier 4: Backend API endpoint (/api/user-profile)
+  try {
+    const res = await fetch(`/api/user-profile?userId=${encodeURIComponent(canonicalId)}`);
+    const contentType = res.headers.get('content-type') || '';
+    if (res.ok && contentType.includes('application/json')) {
+      const profile = await res.json();
+      if (profile && profile.mainStyle && profile.flowSteps && profile.flowSteps.length > 0) {
         cacheProfileLocally(canonicalId, normTarget, profile);
         return profile;
       }
